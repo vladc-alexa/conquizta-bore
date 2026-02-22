@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ConQuizta – Bore</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@400;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(ellipse at top, #3b2a1a 0%, #1a0e05 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Lato', sans-serif;
+      color: #f0e0c0;
+      padding: 16px;
+    }
+
+    h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.6rem;
+      letter-spacing: 3px;
+      color: #f5c97a;
+      margin-bottom: 20px;
+      text-shadow: 0 2px 8px #000a;
+    }
+
+    #card {
+      background: linear-gradient(160deg, #3d2510 0%, #2a1608 100%);
+      border: 2px solid #7a4e22;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px #0008, inset 0 1px 0 #c8903340;
+      width: 100%;
+      max-width: 420px;
+      padding: 28px 24px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* ---- progress bar ---- */
+    #progress-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.8rem;
+      color: #c8a070;
+    }
+    #progress-bar-bg {
+      flex: 1;
+      height: 6px;
+      background: #1a0e05;
+      border-radius: 3px;
+      overflow: hidden;
+      border: 1px solid #7a4e2240;
+    }
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #c87030, #f5c97a);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+
+    /* ---- question ---- */
+    #question-text {
+      font-family: 'Cinzel', serif;
+      font-size: 1.1rem;
+      line-height: 1.55;
+      text-align: center;
+      color: #f0e0c0;
+      min-height: 60px;
+    }
+
+    /* ---- timer ---- */
+    #timer-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: #c8a070;
+    }
+    #timer-display {
+      font-family: 'Cinzel', serif;
+      font-size: 1.3rem;
+      color: #f5c97a;
+      min-width: 60px;
+      text-align: center;
+    }
+
+    /* ---- input row ---- */
+    #input-row {
+      display: flex;
+      gap: 8px;
+    }
+    #answer-input {
+      flex: 1;
+      background: #1a0e05;
+      border: 2px solid #7a4e22;
+      border-radius: 8px;
+      color: #f5c97a;
+      font-size: 1.3rem;
+      text-align: center;
+      padding: 10px;
+      outline: none;
+      font-family: 'Lato', sans-serif;
+      transition: border-color 0.2s;
+    }
+    #answer-input:focus { border-color: #c87030; }
+    #answer-input:disabled { opacity: 0.5; }
+
+    #submit-btn {
+      background: linear-gradient(160deg, #c87030, #7a4010);
+      border: 2px solid #f5c97a60;
+      border-radius: 8px;
+      color: #f5e8c0;
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: filter 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    #submit-btn:hover:not(:disabled) { filter: brightness(1.2); transform: translateY(-1px); }
+    #submit-btn:active:not(:disabled) { transform: translateY(1px); }
+    #submit-btn:disabled { opacity: 0.4; cursor: default; }
+
+    /* ---- feedback ---- */
+    #feedback {
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      text-align: center;
+    }
+    #feedback.correct {
+      display: flex;
+      background: rgba(60,120,40,0.25);
+      border: 2px solid #5cb83060;
+    }
+    #feedback.wrong {
+      display: flex;
+      background: rgba(160,40,30,0.25);
+      border: 2px solid #c0302060;
+    }
+    #feedback-icon {
+      font-size: 1.5rem;
+    }
+    #feedback-label {
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+    }
+    #feedback-detail {
+      font-size: 0.85rem;
+      color: #d0b888;
+    }
+
+    /* ---- correct answer display ---- */
+    #correct-row {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.85rem;
+      color: #c8a070;
+    }
+    #correct-row.visible { display: flex; }
+    #correct-value {
+      border: 2px solid #f5c97a;
+      border-radius: 8px;
+      padding: 6px 20px;
+      font-family: 'Cinzel', serif;
+      font-size: 1.2rem;
+      color: #f5c97a;
+    }
+
+    /* ---- next button ---- */
+    #next-btn {
+      display: none;
+      background: linear-gradient(160deg, #7a4010, #3d2010);
+      border: 2px solid #c88040a0;
+      border-radius: 8px;
+      color: #f5e8c0;
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      padding: 12px;
+      cursor: pointer;
+      text-align: center;
+      transition: filter 0.15s;
+    }
+    #next-btn:hover { filter: brightness(1.3); }
+    #next-btn.visible { display: block; }
+
+    /* ---- scoreboard ---- */
+    #score-bar {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: #a07848;
+      padding: 0 4px;
+    }
+    #score-bar span { color: #f5c97a; font-weight: 700; }
+
+    /* ---- final screen ---- */
+    #final-screen {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+      text-align: center;
+    }
+    #final-screen h2 {
+      font-family: 'Cinzel', serif;
+      color: #f5c97a;
+      font-size: 1.4rem;
+    }
+    #final-stats {
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: #d0c090;
+    }
+    #restart-btn {
+      background: linear-gradient(160deg, #c87030, #7a4010);
+      border: 2px solid #f5c97a60;
+      border-radius: 8px;
+      color: #f5e8c0;
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      padding: 12px;
+      cursor: pointer;
+      transition: filter 0.15s;
+    }
+    #restart-btn:hover { filter: brightness(1.25); }
+
+    #quiz-wrap { width: 100%; max-width: 420px; }
+  </style>
+</head>
+<body>
+  <h1>ConQuizta-Bore</h1>
+
+  <div id="card">
+
+    <!-- progress -->
+    <div id="progress-wrap">
+      <span id="progress-label">1 / 20</span>
+      <div id="progress-bar-bg"><div id="progress-bar" style="width:5%"></div></div>
+    </div>
+
+    <!-- score bar -->
+    <div id="score-bar">
+      Corecte: <span id="score-correct">0</span> &nbsp;|&nbsp;
+      Greșite: <span id="score-wrong">0</span> &nbsp;|&nbsp;
+      Total: <span id="score-total">0</span>
+    </div>
+
+    <!-- main quiz area -->
+    <div id="quiz-wrap">
+
+      <p id="question-text"></p>
+
+
+      <!-- correct answer hint (shown after answering) -->
+      <div id="correct-row" style="margin-top:8px">
+        <span>Răspuns corect:</span>
+        <div id="correct-value"></div>
+      </div>
+
+      <!-- input -->
+      <div id="input-row" style="margin-top:14px">
+        <input id="answer-input" type="number" min="-1000000" max="1000000"
+               placeholder="Răspuns…" autocomplete="off" />
+        <button id="submit-btn">Trimite</button>
+      </div>
+
+      <!-- feedback -->
+      <div id="feedback" style="margin-top:12px">
+        <div id="feedback-icon"></div>
+        <div id="feedback-label"></div>
+        <div id="feedback-detail"></div>
+      </div>
+
+    </div>
+
+    <!-- next -->
+    <button id="next-btn">Următoarea întrebare ›</button>
+
+    <!-- final -->
+    <div id="final-screen">
+      <h2>🏆 Terminat!</h2>
+      <div id="final-stats"></div>
+      <button id="restart-btn">Reîncepe</button>
+    </div>
+
+  </div>
+
+  <script>
+    function generateQuestions(n) {
+      const qs = [];
+      for (let i = 0; i < n; i++) {
+        const x = Math.floor(Math.random() * 100001);
+        qs.push({ q: `Scrie repede numărul  ${x}`, a: x });
+      }
+      return qs;
+    }
+    const QUESTIONS = generateQuestions(20);
+
+    let questions = [];
+    let current = 0;
+    let correct = 0;
+    let wrong = 0;
+    let timerStart = 0;
+    let answered = false;
+    let totalTime = 0;
+
+    const elQuestion   = document.getElementById('question-text');
+    const elInput      = document.getElementById('answer-input');
+    const elSubmit     = document.getElementById('submit-btn');
+    const elFeedback   = document.getElementById('feedback');
+    const elFeedIcon   = document.getElementById('feedback-icon');
+    const elFeedLabel  = document.getElementById('feedback-label');
+    const elFeedDetail = document.getElementById('feedback-detail');
+    const elCorrectRow = document.getElementById('correct-row');
+    const elCorrectVal = document.getElementById('correct-value');
+    const elNext       = document.getElementById('next-btn');
+    const elFinal      = document.getElementById('final-screen');
+    const elFinalStats = document.getElementById('final-stats');
+    const elRestart    = document.getElementById('restart-btn');
+    const elProgress   = document.getElementById('progress-label');
+    const elBar        = document.getElementById('progress-bar');
+    const elScoreC     = document.getElementById('score-correct');
+    const elScoreW     = document.getElementById('score-wrong');
+    const elScoreT     = document.getElementById('score-total');
+    const elQuizWrap   = document.getElementById('quiz-wrap');
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function startTimer() {
+      timerStart = performance.now();
+    }
+
+    function stopTimer() {
+      return (performance.now() - timerStart) / 1000;
+    }
+
+    function updateScoreBar() {
+      elScoreC.textContent = correct;
+      elScoreW.textContent = wrong;
+      elScoreT.textContent = questions.length;
+    }
+
+    function loadQuestion() {
+      answered = false;
+      const q = questions[current];
+
+      elProgress.textContent = `${current + 1} / ${questions.length}`;
+      elBar.style.width = `${((current) / questions.length) * 100}%`;
+      elQuestion.textContent = q.q;
+
+      elInput.value = '';
+      elInput.disabled = false;
+      elSubmit.disabled = false;
+      elFeedback.className = '';
+      elFeedback.style.display = 'none';
+      elCorrectRow.classList.remove('visible');
+      elNext.classList.remove('visible');
+
+      elInput.focus();
+      startTimer();
+    }
+
+    function submitAnswer() {
+      if (answered) return;
+      const raw = elInput.value.trim();
+      if (raw === '') return;
+      const val = parseInt(raw, 10);
+      if (isNaN(val) || val < -1000000 || val > 1000000) {
+        elInput.style.borderColor = '#c03020';
+        setTimeout(() => { elInput.style.borderColor = ''; }, 800);
+        return;
+      }
+
+      answered = true;
+      const elapsed = stopTimer();
+      totalTime += elapsed;
+
+      elInput.disabled = true;
+      elSubmit.disabled = true;
+
+      const q = questions[current];
+      const isCorrect = val === q.a;
+
+      elCorrectVal.textContent = q.a;
+      elCorrectRow.classList.add('visible');
+
+      if (isCorrect) {
+        correct++;
+        elFeedback.className = 'correct';
+        elFeedIcon.textContent = '✔';
+        elFeedLabel.textContent = 'Corect!';
+        elFeedDetail.textContent = `Timp: ${elapsed.toFixed(2).replace('.', ',')} sec`;
+      } else {
+        wrong++;
+        elFeedback.className = 'wrong';
+        elFeedIcon.textContent = '✖';
+        elFeedLabel.textContent = 'Greșit!';
+        elFeedDetail.textContent = `Răspunsul tău: ${val} · Timp: ${elapsed.toFixed(2).replace('.', ',')} sec`;
+      }
+
+      elBar.style.width = `${((current + 1) / questions.length) * 100}%`;
+      updateScoreBar();
+
+      if (current + 1 < questions.length) {
+        elNext.classList.add('visible');
+      } else {
+        setTimeout(showFinal, 600);
+      }
+    }
+
+    function showFinal() {
+      elQuizWrap.style.display = 'none';
+      elCorrectRow.classList.remove('visible');
+      elNext.classList.remove('visible');
+      elFinal.style.display = 'flex';
+      elProgress.textContent = `${questions.length} / ${questions.length}`;
+      elBar.style.width = '100%';
+      const pct = Math.round((correct / questions.length) * 100);
+      elFinalStats.innerHTML =
+        `Răspunsuri corecte: <strong>${correct} / ${questions.length}</strong> (${pct}%)<br>
+         Răspunsuri greșite: <strong>${wrong}</strong><br>
+         Timp total: <strong>${totalTime.toFixed(2).replace('.', ',')} sec</strong><br>
+         Timp mediu / întrebare: <strong>${(totalTime / questions.length).toFixed(2).replace('.', ',')} sec</strong>`;
+    }
+
+    function init() {
+      questions = generateQuestions(20);
+      current = 0;
+      correct = 0;
+      wrong = 0;
+      totalTime = 0;
+      answered = false;
+
+      elFinal.style.display = 'none';
+      elQuizWrap.style.display = '';
+      updateScoreBar();
+      loadQuestion();
+    }
+
+    elSubmit.addEventListener('click', submitAnswer);
+    elInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitAnswer(); });
+    elNext.addEventListener('click', () => {
+      current++;
+      loadQuestion();
+    });
+    elRestart.addEventListener('click', init);
+
+    init();
+  </script>
+</body>
+</html>
