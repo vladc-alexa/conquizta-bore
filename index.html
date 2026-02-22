@@ -299,15 +299,18 @@
   </div>
 
   <script>
+    const NUMBER_SET = [1, 2, 1990, 6500, 100, 8848, 1959, 2500, 10, 1000000];
+
     function generateQuestions(n) {
+      const pool = shuffle([...NUMBER_SET]);
       const qs = [];
       for (let i = 0; i < n; i++) {
-        const x = Math.floor(Math.random() * 100001);
-        qs.push({ q: `Scrie repede numărul  ${x}`, a: x });
+        const x = pool[i % pool.length];
+        qs.push({ q: `Scrie repede numărul ${x}`, a: x });
       }
       return qs;
     }
-    const QUESTIONS = generateQuestions(20);
+    const QUESTIONS = generateQuestions(10);
 
     let questions = [];
     let current = 0;
@@ -444,7 +447,7 @@
     }
 
     function init() {
-      questions = generateQuestions(20);
+      questions = generateQuestions(10);
       current = 0;
       correct = 0;
       wrong = 0;
