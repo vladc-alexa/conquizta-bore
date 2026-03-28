@@ -36,7 +36,7 @@
       border-radius: 16px;
       box-shadow: 0 8px 32px #0008, inset 0 1px 0 #c8903340;
       width: 100%;
-      max-width: 420px;
+      max-width: 520px;
       padding: 28px 24px 24px;
       display: flex;
       flex-direction: column;
@@ -113,6 +113,9 @@
     }
     #answer-input:focus { border-color: #c87030; }
     #answer-input:disabled { opacity: 0.5; }
+    #answer-input::-webkit-outer-spin-button,
+    #answer-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    #answer-input[type=number] { -moz-appearance: textfield; }
 
     #submit-btn {
       background: linear-gradient(160deg, #c87030, #7a4010);
@@ -237,13 +240,125 @@
     }
     #restart-btn:hover { filter: brightness(1.25); }
 
+    #rank-display {
+      font-family: 'Cinzel', serif;
+      font-size: 1.05rem;
+      color: #f5c97a;
+      background: rgba(200, 112, 48, 0.15);
+      border: 1px solid #c87030a0;
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+
     #quiz-wrap { width: 100%; max-width: 420px; }
+    /* setup */
+    #setup { display: flex; flex-direction: column; gap: 10px; }
+    #setup .row { display: flex; gap: 8px; align-items: center; }
+    #start-btn { background: linear-gradient(160deg, #c87030, #7a4010); border: 2px solid #f5c97a60; border-radius: 8px; color: #f5e8c0; font-family: 'Cinzel', serif; font-size: 1rem; padding: 10px; cursor: pointer; }
+    #count-select {
+      background: #1a0e05;
+      border: 2px solid #7a4e22;
+      border-radius: 8px;
+      color: #f5c97a;
+      font-family: 'Lato', sans-serif;
+      font-size: 1rem;
+      padding: 4px 10px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23f5c97a' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 30px;
+    }
+    #count-select:focus { border-color: #c87030; }
+    #count-select option { background: #2a1608; color: #f5c97a; }
+
+    /* layout */
+    #layout { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+
+    /* name input */
+    #name-input {
+      background: #1a0e05;
+      border: 2px solid #7a4e22;
+      border-radius: 8px;
+      color: #f5c97a;
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      padding: 4px 8px;
+      width: 76px;
+      outline: none;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    #name-input:focus { border-color: #c87030; }
+    #name-input::placeholder { color: #7a4e22; letter-spacing: 1px; }
+
+    #name-submit-btn {
+      background: linear-gradient(160deg, #c87030, #7a4010);
+      border: 2px solid #f5c97a60;
+      border-radius: 8px;
+      color: #f5e8c0;
+      font-family: 'Cinzel', serif;
+      font-size: 0.9rem;
+      padding: 4px 14px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #name-submit-btn:hover { filter: brightness(1.2); }
+    #name-error { color: #e05040; font-size: 0.78rem; }
+
+    /* top 20 panel */
+    #top-panel {
+      position: fixed;
+      left: calc(50% + 270px);
+      top: 50%;
+      transform: translateY(-50%);
+      background: linear-gradient(160deg, #3d2510 0%, #2a1608 100%);
+      border: 2px solid #7a4e22;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px #0008, inset 0 1px 0 #c8903340;
+      width: 210px;
+      flex-shrink: 0;
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #top-panel h3 {
+      font-family: 'Cinzel', serif;
+      color: #f5c97a;
+      font-size: 0.85rem;
+      text-align: center;
+      letter-spacing: 2px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #7a4e2260;
+      margin-bottom: 2px;
+    }
+    .top-entry {
+      display: grid;
+      grid-template-columns: 18px 1fr auto auto;
+      gap: 4px;
+      font-size: 0.72rem;
+      padding: 3px 4px;
+      border-radius: 4px;
+      color: #d0c090;
+      align-items: center;
+    }
+    .top-entry:nth-child(even) { background: rgba(255,255,255,0.04); }
+    .top-entry.top-highlight { color: #f5c97a; background: rgba(200,112,48,0.22) !important; }
+    .te-rank { color: #a07848; font-size: 0.68rem; }
+    .te-name { font-family: 'Cinzel', serif; letter-spacing: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .te-score { color: #f5c97a; font-weight: 700; }
+    .te-time { color: #c8a070; text-align: right; }
   </style>
 </head>
 <script defer src="https://stats.dalimagic.com/script.js" data-website-id="e0a425d0-a6a0-4e0a-96e8-a0cf41410386"></script>
 <body>
   <h1>ConQuizta-Bore</h1>
 
+  <div id="layout">
   <div id="card">
 
     <!-- progress -->
@@ -257,6 +372,25 @@
       Corecte: <span id="score-correct">0</span> &nbsp;|&nbsp;
       Greșite: <span id="score-wrong">0</span> &nbsp;|&nbsp;
       Total: <span id="score-total">0</span>
+    </div>
+
+    <!-- setup: choose count and mode -->
+    <div id="setup">
+      <div class="row">
+        <label for="count-select">Întrebări:</label>
+        <select id="count-select">
+          <option value="10">10</option>
+          <option value="20">20</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Set întrebări:</label>
+        <label><input type="radio" name="mode" value="current" checked> Curent</label>
+        <label><input type="radio" name="mode" value="random"> Aleator</label>
+      </div>
+      <div class="row">
+        <button id="start-btn">Start</button>
+      </div>
     </div>
 
     <!-- main quiz area -->
@@ -294,24 +428,40 @@
     <div id="final-screen">
       <h2>🏆 Terminat!</h2>
       <div id="final-stats"></div>
+      <div id="name-submit-area" style="display:none;flex-direction:column;gap:8px;text-align:left">
+        <div style="font-size:0.82rem;color:#c8a070">Adaugă-ți numele în top (opțional, max 5 caractere):</div>
+        <div style="display:flex;gap:8px">
+          <input id="name-input" type="text" maxlength="5" placeholder="Nume…" autocomplete="off" />
+          <button id="name-submit-btn">OK</button>
+        </div>
+        <div id="name-error" style="display:none"></div>
+      </div>
+      <div id="rank-display" style="display:none"></div>
       <button id="restart-btn">Reîncepe</button>
     </div>
 
   </div>
 
+  <!-- top 20 panel -->
+  <div id="top-panel">
+    <h3>Top 30</h3>
+    <div id="top-list"></div>
+  </div>
+  </div>
+
   <script>
     const NUMBER_SET = [1, 2, 1990, 6500, 100, 8848, 1959, 2500, 10, 1000000];
 
-    function generateQuestions(n) {
-      const pool = shuffle([...NUMBER_SET]);
+    function generateQuestions(n, randomize) {
       const qs = [];
       for (let i = 0; i < n; i++) {
-        const x = pool[i % pool.length];
+        const x = randomize
+          ? Math.floor(Math.random() * 10000)
+          : NUMBER_SET[i % NUMBER_SET.length];
         qs.push({ q: `Scrie repede numărul ${x}`, a: x });
       }
       return qs;
     }
-    const QUESTIONS = generateQuestions(10);
 
     let questions = [];
     let current = 0;
@@ -320,6 +470,7 @@
     let timerStart = 0;
     let answered = false;
     let totalTime = 0;
+    let scoreSubmitted = false;
 
     const elQuestion   = document.getElementById('question-text');
     const elInput      = document.getElementById('answer-input');
@@ -340,6 +491,49 @@
     const elScoreW     = document.getElementById('score-wrong');
     const elScoreT     = document.getElementById('score-total');
     const elQuizWrap   = document.getElementById('quiz-wrap');
+    const elRankDisplay = document.getElementById('rank-display');
+    const elSetup      = document.getElementById('setup');
+    const elCount      = document.getElementById('count-select');
+    const elStart          = document.getElementById('start-btn');
+    const elTopList         = document.getElementById('top-list');
+    // name submit (in final screen)
+    const elNameSubmitArea  = document.getElementById('name-submit-area');
+    const elNameInput       = document.getElementById('name-input');
+    const elNameSubmitBtn   = document.getElementById('name-submit-btn');
+    const elNameError       = document.getElementById('name-error');
+
+    // ---- leaderboard ----
+    const TOP_KEY    = 'conquizta_bore_top';
+    const MY_NAME_KEY = 'conquizta_bore_myname';
+    const TOP_MAX    = 200;
+
+    function generateBoreName() {
+      return 'Bore' + String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+    }
+
+    function loadTop() {
+      try { return JSON.parse(localStorage.getItem(TOP_KEY)) || []; }
+      catch { return []; }
+    }
+
+    function compareEntries(a, b) {
+      const aRate = a.correct / a.total;
+      const bRate = b.correct / b.total;
+      if (bRate !== aRate) return bRate - aRate;          // more correct = better
+      return (a.time / a.total) - (b.time / b.total);    // faster avg = better
+    }
+
+    function addScore(correct, total, time, name) {
+      const top = loadTop();
+      const entry = { correct, total, time, name };
+      top.push(entry);
+      top.sort(compareEntries);
+      const rank = top.indexOf(entry) + 1;  // 1-based
+      const trimmed = top.slice(0, TOP_MAX);
+      localStorage.setItem(TOP_KEY, JSON.stringify(trimmed));
+      return rank <= TOP_MAX ? rank : null;
+    }
+    // ----------------------
 
     function shuffle(arr) {
       const a = [...arr];
@@ -427,12 +621,14 @@
 
       if (current + 1 < questions.length) {
         elNext.classList.add('visible');
+        elNext.focus();
       } else {
         setTimeout(showFinal, 600);
       }
     }
 
     function showFinal() {
+      scoreSubmitted = false;
       elQuizWrap.style.display = 'none';
       elCorrectRow.classList.remove('visible');
       elNext.classList.remove('visible');
@@ -445,16 +641,91 @@
          Răspunsuri greșite: <strong>${wrong}</strong><br>
          Timp total: <strong>${totalTime.toFixed(2).replace('.', ',')} sec</strong><br>
          Timp mediu / întrebare: <strong>${(totalTime / questions.length).toFixed(2).replace('.', ',')} sec</strong>`;
+
+      // Pre-fill saved name, show name area
+      elNameInput.value = localStorage.getItem(MY_NAME_KEY) || '';
+      elNameError.style.display = 'none';
+      elNameSubmitArea.style.display = 'flex';
+      elRankDisplay.style.display = 'none';
     }
 
-    function init() {
-      questions = generateQuestions(10);
+    function submitScore(autoName) {
+      if (scoreSubmitted) return;
+      let name;
+      if (autoName) {
+        name = autoName;
+      } else {
+        const inputVal = elNameInput.value.trim().toUpperCase().slice(0, 5);
+        const savedName = localStorage.getItem(MY_NAME_KEY) || '';
+        if (inputVal === '') {
+          name = generateBoreName();
+        } else {
+          // Allow if it matches user's own saved name
+          if (inputVal !== savedName) {
+            const top = loadTop();
+            const taken = top.some(e => e.name && e.name.toUpperCase() === inputVal);
+            if (taken) {
+              elNameError.textContent = 'Numele există deja în top! Alege altul.';
+              elNameError.style.display = 'block';
+              return;
+            }
+          }
+          name = inputVal;
+          localStorage.setItem(MY_NAME_KEY, name);
+        }
+      }
+      scoreSubmitted = true;
+      elNameSubmitArea.style.display = 'none';
+      const rank = addScore(correct, questions.length, totalTime, name);
+      renderTopPanel(rank);
+      if (rank) {
+        elRankDisplay.textContent = `Ești pe poziția ${rank} în top 200! (${name})`;
+        elRankDisplay.style.display = 'block';
+      } else {
+        elRankDisplay.style.display = 'none';
+      }
+    }
+
+    function renderTopPanel(highlightRank) {
+      const top = loadTop().slice(0, 30);
+      if (top.length === 0) {
+        elTopList.innerHTML = '<div style="color:#a07848;font-size:0.75rem;text-align:center;padding:8px">Niciun rezultat</div>';
+        return;
+      }
+      elTopList.innerHTML = top.map((e, i) => {
+        const name = e.name ? e.name.toUpperCase() : '—';
+        const score = `${e.correct}/${e.total}`;
+        const avg = (e.time / e.total).toFixed(1) + 's';
+        const hi = (highlightRank === i + 1) ? ' top-highlight' : '';
+        return `<div class="top-entry${hi}"><span class="te-rank">${i + 1}</span><span class="te-name">${name}</span><span class="te-score">${score}</span><span class="te-time">${avg}</span></div>`;
+      }).join('');
+    }
+
+    function showSetup() {
+      // If player finished but didn't submit a name, auto-submit with BoreXXXX
+      if (questions.length > 0 && !scoreSubmitted) {
+        submitScore(generateBoreName());
+      }
+      elSetup.style.display = 'flex';
+      elQuizWrap.style.display = 'none';
+      elFinal.style.display = 'none';
+      elProgress.textContent = `0 / 0`;
+      elBar.style.width = `0%`;
+      renderTopPanel(null);
+    }
+
+    function startQuiz() {
+      const count = parseInt(elCount.value, 10) || 10;
+      const mode = document.querySelector('input[name="mode"]:checked')?.value || 'current';
+      const randomize = mode === 'random';
+      questions = generateQuestions(count, randomize);
       current = 0;
       correct = 0;
       wrong = 0;
       totalTime = 0;
       answered = false;
 
+      elSetup.style.display = 'none';
       elFinal.style.display = 'none';
       elQuizWrap.style.display = '';
       updateScoreBar();
@@ -462,14 +733,24 @@
     }
 
     elSubmit.addEventListener('click', submitAnswer);
-    elInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitAnswer(); });
+    elInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (!answered) submitAnswer();
+      }
+    });
     elNext.addEventListener('click', () => {
       current++;
       loadQuestion();
     });
-    elRestart.addEventListener('click', init);
+    elNameInput.addEventListener('input', () => { elNameInput.value = elNameInput.value.toUpperCase(); });
+    elNameSubmitBtn.addEventListener('click', () => submitScore(null));
+    elNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitScore(null); } });
+    elRestart.addEventListener('click', showSetup);
+    elStart.addEventListener('click', startQuiz);
 
-    init();
+    // show setup on load
+    showSetup();
   </script>
 </body>
 </html>
