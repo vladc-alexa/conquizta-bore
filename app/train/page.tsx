@@ -1,305 +1,320 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-const NUMBER_SET = [1, 2, 1990, 6500, 100, 8848, 1959, 2500, 10, 1000000];
-const TOP_KEY = "conquizta_bore_top";
-const MY_NAME_KEY = "conquizta_bore_myname";
-const TOP_MAX = 200;
+type Mode = "rapide" | "grila" | null;
 
-interface Question {
-  q: string;
-  a: number;
+interface RapideQuestion {
+  id: string;
+  prompt: string;
+  answer: number;
 }
 
-interface ScoreEntry {
-  correct: number;
-  total: number;
-  time: number;
-  name: string;
+interface GrilaQuestion {
+  id: string;
+  prompt: string;
+  options: string[];
+  correctIndex: number;
 }
+
+const TIMER_SECONDS = 10;
+const QUESTION_COUNT = 10;
 
 export default function TrainPage() {
-  const [gameStarted, setGameStarted] = useState(false);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [current, setCurrent] = useState(0);
+  const [mode, setMode] = useState<Mode>(null);
+  const [phase, setPhase] = useState<"idle" | "loading" | "playing" | "finished">("idle");
+  const [questions, setQuestions] = useState<(RapideQuestion | GrilaQuestion)[]>([]);
+  const [idx, setIdx] = useState(0);
   const [correct, setCorrect] = useState(0);
   const [wrong, setWrong] = useState(0);
-  const [answered, setAnswered] = useState(false);
-  const [totalTime, setTotalTime] = useState(0);
-  const [scoreSubmitted, setScoreSubmitted] = useState(false);
-  const [quizFinished, setQuizFinished] = useState(false);
+  const [timeouts, setTimeouts] = useState(0);
+  const [feedback, setFeedback] = useState<{ state: "correct" | "wrong" | "timeout"; reveal: string } | null>(null);
+  const [timeLeft, setTimeLeft] = useState(TIMER_SECONDS);
   const [inputValue, setInputValue] = useState("");
-  const [feedback, setFeedback] = useState<{ type: 'correct' | 'wrong' | null, elapsed: number, val: number | null }>({ type: null, elapsed: 0, val: null });
-  const [rank, setRank] = useState<number | null>(null);
-  const [topList, setTopList] = useState<ScoreEntry[]>([]);
-  const [nameInput, setNameInput] = useState('');
-  const [nameError, setNameError] = useState('');
-  const [count, setCount] = useState(10);
-  const [mode, setMode] = useState<'current' | 'random'>('current');
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
 
-  const timerStart = useRef(0);
+  // refs mirror the state for timer callbacks (no stale closures)
+  const questionsRef = useRef<(RapideQuestion | GrilaQuestion)[]>([]);
+  const idxRef = useRef(0);
+  const modeRef = useRef<Mode>(null);
+  const deadlineRef = useRef(0);
+  const answeredRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const generateBoreName = () => 'Bore' + String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-
-  const loadTop = useCallback(() => {
-    try {
-      return JSON.parse(localStorage.getItem(TOP_KEY) || '[]');
-    } catch {
-      return [];
-    }
-  }, []);
-
-  const compareEntries = (a: ScoreEntry, b: ScoreEntry) => {
-    const aRate = a.correct / a.total;
-    const bRate = b.correct / b.total;
-    if (bRate !== aRate) return bRate - aRate;
-    return (a.time / a.total) - (b.time / b.total);
+  const clearTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = null;
   };
 
-  const updateTopList = useCallback((highlightRank?: number | null) => {
-    const top = loadTop().slice(0, 30);
-    setTopList(top);
-  }, [loadTop]);
-
-  useEffect(() => {
-    updateTopList();
-    const savedName = localStorage.getItem(MY_NAME_KEY) || '';
-    setNameInput(savedName);
-  }, [updateTopList]);
-
-  const startQuiz = () => {
-    const qs: Question[] = [];
-    for (let i = 0; i < count; i++) {
-      const x = mode === 'random'
-        ? Math.floor(Math.random() * 10000)
-        : NUMBER_SET[i % NUMBER_SET.length];
-      qs.push({ q: `Scrie repede numărul ${x}`, a: x });
-    }
-    setQuestions(qs);
-    setCurrent(0);
-    setCorrect(0);
-    setWrong(0);
-    setTotalTime(0);
-    setAnswered(false);
-    setQuizFinished(false);
-    setGameStarted(true);
-    setScoreSubmitted(false);
-    setRank(null);
-    setFeedback({ type: null, elapsed: 0, val: null });
-    setInputValue('');
-    setTimeout(() => inputRef.current?.focus(), 0);
-    timerStart.current = performance.now();
-  };
-
-  const submitAnswer = () => {
-    if (answered || !gameStarted || quizFinished) return;
-    const val = parseInt(inputValue.trim(), 10);
-    if (isNaN(val) || val < -1000000 || val > 1000000) return;
-
-    const elapsed = (performance.now() - timerStart.current) / 1000;
-    setTotalTime(prev => prev + elapsed);
-    setAnswered(true);
-
-    const isCorrect = val === questions[current].a;
-    if (isCorrect) {
-      setCorrect(prev => prev + 1);
-      setFeedback({ type: 'correct', elapsed, val });
-    } else {
-      setWrong(prev => prev + 1);
-      setFeedback({ type: 'wrong', elapsed, val });
-    }
-
-    if (current + 1 === questions.length) {
-      setTimeout(() => {
-        setQuizFinished(true);
-        setGameStarted(false);
-      }, 600);
-    }
+  const revealAnswer = (): string => {
+    const q = questionsRef.current[idxRef.current];
+    if (!q) return "";
+    if (modeRef.current === "rapide") return String((q as RapideQuestion).answer);
+    const g = q as GrilaQuestion;
+    return g.options[g.correctIndex];
   };
 
   const nextQuestion = () => {
-    setCurrent(prev => prev + 1);
-    setAnswered(false);
-    setFeedback({ type: null, elapsed: 0, val: null });
-    setInputValue('');
-    setTimeout(() => inputRef.current?.focus(), 0);
-    timerStart.current = performance.now();
-  };
-
-  const handleScoreSubmit = (autoName?: string) => {
-    if (scoreSubmitted) return;
-    let name = '';
-    if (autoName) {
-      name = autoName;
-    } else {
-      const inputVal = nameInput.trim().toUpperCase().slice(0, 5);
-      const savedName = localStorage.getItem(MY_NAME_KEY) || '';
-      if (inputVal === '') {
-        name = generateBoreName();
-      } else {
-        if (inputVal !== savedName) {
-          const top = loadTop();
-          if (top.some((e: ScoreEntry) => e.name?.toUpperCase() === inputVal)) {
-            setNameError('Numele există deja în top! Alege altul.');
-            return;
-          }
-        }
-        name = inputVal;
-        localStorage.setItem(MY_NAME_KEY, name);
-      }
+    if (idxRef.current + 1 >= questionsRef.current.length) {
+      clearTimer();
+      setPhase("finished");
+      return;
     }
-
-    const top = loadTop();
-    const entry = { correct, total: questions.length, time: totalTime, name };
-    top.push(entry);
-    top.sort(compareEntries);
-    const newRank = top.indexOf(entry) + 1;
-    const trimmed = top.slice(0, TOP_MAX);
-    localStorage.setItem(TOP_KEY, JSON.stringify(trimmed));
-
-    setScoreSubmitted(true);
-    setRank(newRank <= TOP_MAX ? newRank : null);
-    updateTopList(newRank);
+    const ni = idxRef.current + 1;
+    idxRef.current = ni;
+    setIdx(ni);
+    answeredRef.current = false;
+    setFeedback(null);
+    setTimeLeft(TIMER_SECONDS);
+    setInputValue("");
+    setSelectedOption(null);
+    deadlineRef.current = Date.now() + TIMER_SECONDS * 1000;
+    clearTimer();
+    timerRef.current = setInterval(tick, 100);
   };
+
+  const handleTimeout = () => {
+    if (answeredRef.current) return;
+    answeredRef.current = true;
+    clearTimer();
+    setTimeLeft(0);
+    setTimeouts((t) => t + 1);
+    setFeedback({ state: "timeout", reveal: revealAnswer() });
+    setTimeout(nextQuestion, 1400);
+  };
+
+  const tick = () => {
+    const left = (deadlineRef.current - Date.now()) / 1000;
+    if (left <= 0) {
+      handleTimeout();
+    } else {
+      setTimeLeft(left);
+    }
+  };
+
+  const handleAnswer = (isCorrect: boolean) => {
+    if (answeredRef.current) return;
+    answeredRef.current = true;
+    clearTimer();
+    if (isCorrect) setCorrect((c) => c + 1);
+    else setWrong((w) => w + 1);
+    setFeedback({ state: isCorrect ? "correct" : "wrong", reveal: revealAnswer() });
+    setTimeout(nextQuestion, 1400);
+  };
+
+  const startGame = async (m: Mode) => {
+    if (!m) return;
+    setMode(m);
+    modeRef.current = m;
+    setPhase("loading");
+    setIdx(0);
+    idxRef.current = 0;
+    setCorrect(0);
+    setWrong(0);
+    setTimeouts(0);
+    try {
+      const res = await fetch(`/api/questions?mode=${m}&count=${QUESTION_COUNT}`);
+      const data = await res.json();
+      const qs = data.questions ?? [];
+      if (qs.length === 0) {
+        setMode(null);
+        modeRef.current = null;
+        setPhase("idle");
+        return;
+      }
+      setQuestions(qs);
+      questionsRef.current = qs;
+      setPhase("playing");
+      answeredRef.current = false;
+      setFeedback(null);
+      setTimeLeft(TIMER_SECONDS);
+      setInputValue("");
+      setSelectedOption(null);
+      deadlineRef.current = Date.now() + TIMER_SECONDS * 1000;
+      clearTimer();
+      timerRef.current = setInterval(tick, 100);
+      setTimeout(() => inputRef.current?.focus(), 0);
+    } catch {
+      setMode(null);
+      modeRef.current = null;
+      setPhase("idle");
+    }
+  };
+
+  useEffect(() => () => clearTimer(), []);
+
+  // ---------- mode selection ----------
+  if (mode === null) {
+    return (
+      <div className="w-full max-w-3xl mx-auto flex flex-col gap-5 py-6">
+        <h1 className="text-center !mb-0">Antrenament</h1>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <button
+            onClick={() => startGame("rapide")}
+            className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-6 flex flex-col gap-2 text-left hover:border-[#c87030] hover:brightness-110 cursor-pointer transition-all"
+          >
+            <span className="text-[2rem]">⚡</span>
+            <span className="font-cinzel text-[#f5c97a] text-[1.1rem] tracking-wider">Train Întrebări Rapide</span>
+            <span className="text-[#c8a070] text-[0.8rem]">Scrie răspunsul numeric (poate fi negativ). {TIMER_SECONDS}s / întrebare.</span>
+          </button>
+          <button
+            onClick={() => startGame("grila")}
+            className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-6 flex flex-col gap-2 text-left hover:border-[#c87030] hover:brightness-110 cursor-pointer transition-all"
+          >
+            <span className="text-[2rem]">🎯</span>
+            <span className="font-cinzel text-[#f5c97a] text-[1.1rem] tracking-wider">Train Întrebări Grilă</span>
+            <span className="text-[#c8a070] text-[0.8rem]">Alege una din cele 4 variante. {TIMER_SECONDS}s / întrebare.</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "loading") {
+    return <div className="text-center font-cinzel text-[#f5c97a] py-16">Se încarcă întrebările…</div>;
+  }
+
+  if (phase === "finished") {
+    const total = correct + wrong + timeouts;
+    const accuracy = total ? Math.round((correct / total) * 100) : 0;
+    return (
+      <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-[520px] mx-auto p-7 flex flex-col gap-4 text-center">
+        <h2 className="font-cinzel text-[#f5c97a] text-[1.4rem]">🏆 Terminat!</h2>
+        <div className="text-[0.95rem] leading-[1.9] text-[#d0c090]">
+          Corecte: <strong className="text-[#f5c97a]">{correct} / {total}</strong> ({accuracy}%)<br />
+          Greșite: <strong>{wrong}</strong><br />
+          Timp expirat: <strong>{timeouts}</strong>
+        </div>
+        <div className="flex gap-2.5">
+          <button
+            onClick={() => startGame(mode)}
+            className="flex-1 bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-110 cursor-pointer"
+          >
+            Încă o dată
+          </button>
+          <button
+            onClick={() => setMode(null)}
+            className="flex-1 bg-gradient-to-br from-[#7a4010] to-[#3d2010] border-2 border-[#c88040a0] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-125 cursor-pointer"
+          >
+            Schimbă modul
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- playing ----------
+  const q = questions[idx];
+  const isGrila = mode === "grila";
+  const pct = (timeLeft / TIMER_SECONDS) * 100;
 
   return (
-    <div className="flex flex-wrap gap-2.5 items-start justify-center">
-      <div id="card" className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-[520px] p-7 flex flex-col gap-[18px]">
-        
-        {/* Progress */}
-        {(gameStarted || quizFinished) && (
-          <div className="flex items-center gap-2.5 text-[0.8rem] color-[#c8a070]">
-            <span className="min-w-[40px] text-[#c8a070]">{current + (answered || quizFinished ? 1 : 0)} / {questions.length}</span>
-            <div className="flex-1 h-1.5 bg-[#1a0e05] rounded-[3px] overflow-hidden border border-[#7a4e2240]">
-              <div className="h-full bg-gradient-to-r from-[#c87030] to-[#f5c97a] transition-all duration-400" 
-                   style={{ width: `${((current + (answered || quizFinished ? 1 : 0)) / questions.length) * 100}%` }}></div>
-            </div>
+    <div className="w-full max-w-[620px] mx-auto flex flex-col gap-4">
+      {/* progress + timer */}
+      <div className="flex items-center gap-3 text-[0.8rem] text-[#c8a070]">
+        <span className="min-w-[70px]">Întrebarea {idx + 1} / {questions.length}</span>
+        <div className="flex-1 h-1.5 bg-[#1a0e05] rounded-[3px] overflow-hidden border border-[#7a4e2240]">
+          <div className="h-full bg-gradient-to-r from-[#c87030] to-[#f5c97a] transition-all duration-100" style={{ width: `${((idx + (feedback ? 1 : 0)) / questions.length) * 100}%` }}></div>
+        </div>
+        <span className="text-[#f5c97a] font-bold">{correct}✓ {wrong}✗</span>
+      </div>
+
+      {/* question card */}
+      <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-7 flex flex-col gap-5">
+        <div className="flex items-center gap-3">
+          <div
+            className={`w-[52px] h-[52px] rounded-full border-2 flex items-center justify-center font-cinzel text-[1.1rem] shrink-0 ${
+              timeLeft <= 3 && !feedback ? "border-red-500 text-red-400" : "border-[#f5c97a] text-[#f5c97a]"
+            }`}
+          >
+            {Math.ceil(timeLeft)}
           </div>
-        )}
-
-        {/* Score Bar */}
-        {(gameStarted || quizFinished) && (
-          <div className="flex justify-between text-[0.8rem] text-[#a07848] px-1">
-            <div>Corecte: <span className="text-[#f5c97a] font-bold">{correct}</span></div>
-            <div>Greșite: <span className="text-[#f5c97a] font-bold">{wrong}</span></div>
-            <div>Total: <span className="text-[#f5c97a] font-bold">{questions.length}</span></div>
+          <div className="flex-1 h-2 bg-[#1a0e05] rounded overflow-hidden border border-[#7a4e2240]">
+            <div
+              className={`h-full transition-all duration-100 ${timeLeft <= 3 ? "bg-red-500" : "bg-gradient-to-r from-[#c87030] to-[#f5c97a]"}`}
+              style={{ width: `${pct}%` }}
+            ></div>
           </div>
-        )}
+        </div>
 
-        {!gameStarted && !quizFinished && (
-          <div className="flex flex-col gap-2.5">
-            <div className="flex gap-2 items-center">
-              <label htmlFor="count-select">Întrebări:</label>
-              <select id="count-select" className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-1 px-2.5 outline-none cursor-pointer"
-                      value={count} onChange={e => setCount(parseInt(e.target.value))}>
-                <option value="10">10</option>
-                <option value="20">20</option>
-              </select>
-            </div>
-            <div className="flex gap-2 items-center">
-              <label>Set întrebări:</label>
-              <label className="flex items-center gap-1"><input type="radio" name="mode" value="current" checked={mode === 'current'} onChange={() => setMode('current')} /> Curent</label>
-              <label className="flex items-center gap-1"><input type="radio" name="mode" value="random" checked={mode === 'random'} onChange={() => setMode('random')} /> Aleator</label>
-            </div>
-            <button onClick={startQuiz} className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-2.5 cursor-pointer">Start</button>
+        <p className="font-cinzel text-[1.05rem] leading-relaxed min-h-[60px]">{q?.prompt}</p>
+
+        {isGrila ? (
+          <div className="grid grid-cols-1 gap-2.5">
+            {(q as GrilaQuestion).options.map((opt, i) => {
+              let cls = "bg-[#1a0e05] border-2 border-[#7a4e22] hover:border-[#c87030] hover:bg-[#2a1608]";
+              if (feedback) {
+                const isCorrectOpt = i === (q as GrilaQuestion).correctIndex;
+                const isSelected = i === selectedOption;
+                if (isCorrectOpt) cls = "bg-green-900/30 border-green-500/60 text-[#f5e8c0]";
+                else if (isSelected) cls = "bg-red-900/30 border-red-500/60 text-[#f5e8c0]";
+                else cls = "bg-[#1a0e05] border-[#4a3a20] opacity-60";
+              }
+              return (
+                <button
+                  key={i}
+                  disabled={!!feedback}
+                  onClick={() => {
+                    setSelectedOption(i);
+                    handleAnswer(i === (q as GrilaQuestion).correctIndex);
+                  }}
+                  className={`${cls} rounded-xl text-left p-3.5 text-[0.95rem] cursor-pointer disabled:cursor-default transition-all`}
+                >
+                  <span className="font-cinzel text-[#c87030] mr-2">{String.fromCharCode(65 + i)}.</span>
+                  {opt}
+                </button>
+              );
+            })}
           </div>
-        )}
-
-        {gameStarted && (
-          <div className="w-full max-w-[420px] mx-auto flex flex-col gap-4">
-            <p className="font-cinzel text-[1.1rem] text-center min-h-[60px]">{questions[current]?.q}</p>
-            
-            {answered && (
-              <div className="flex justify-center items-center gap-3 text-[0.85rem] text-[#c8a070]">
-                <span>Răspuns corect:</span>
-                <div className="border-2 border-[#f5c97a] rounded-lg py-1.5 px-5 font-cinzel text-[1.2rem] text-[#f5c97a]">{questions[current]?.a}</div>
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <input ref={inputRef} type="number" value={inputValue} onChange={e => setInputValue(e.target.value)}
-                     onKeyDown={e => e.key === 'Enter' && !answered && submitAnswer()}
-                     disabled={answered} placeholder="Răspuns…" 
-                     className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[1.3rem] text-center p-2.5 outline-none focus:border-[#c87030] disabled:opacity-50" />
-              <button onClick={submitAnswer} disabled={answered || !inputValue.trim()}
-                      className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel px-[18px] hover:brightness-110 active:translate-y-px disabled:opacity-40">
-                Trimite
-              </button>
-            </div>
-
-            {feedback.type && (
-              <div className={`rounded-xl p-3.5 flex flex-col gap-2 text-center border-2 ${feedback.type === 'correct' ? 'bg-green-900/25 border-green-500/40' : 'bg-red-900/25 border-red-500/40'}`}>
-                <div className="text-2xl">{feedback.type === 'correct' ? '✔' : '✖'}</div>
-                <div className="font-cinzel">{feedback.type === 'correct' ? 'Corect!' : 'Greșit!'}</div>
-                <div className="text-[0.85rem] text-[#d0b888]">
-                  {feedback.type === 'wrong' && `Răspunsul tău: ${feedback.val} · `}
-                  Timp: {feedback.elapsed.toFixed(2).replace('.', ',')} sec
-                </div>
-              </div>
-            )}
-
-            {answered && current + 1 < questions.length && (
-              <button onClick={nextQuestion} className="bg-gradient-to-br from-[#7a4010] to-[#3d2010] border-2 border-[#c88040a0] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-125">
-                Următoarea întrebare ›
-              </button>
-            )}
-          </div>
-        )}
-
-        {quizFinished && (
-          <div className="flex flex-col gap-4 text-center">
-            <h2 className="font-cinzel text-[#f5c97a] text-[1.4rem]">🏆 Terminat!</h2>
-            <div className="text-[0.95rem] leading-[1.8] text-[#d0c090]">
-              Răspunsuri corecte: <strong>{correct} / {questions.length}</strong> ({Math.round((correct / questions.length) * 100)}%)<br/>
-              Răspunsuri greșite: <strong>{wrong}</strong><br/>
-              Timp total: <strong>{totalTime.toFixed(2).replace('.', ',')} sec</strong><br/>
-              Timp mediu / întrebare: <strong>{(totalTime / questions.length).toFixed(2).replace('.', ',')} sec</strong>
-            </div>
-
-            {!scoreSubmitted && (
-              <div className="flex flex-col gap-2 text-left">
-                <div className="text-[0.82rem] text-[#c8a070]">Adaugă-ți numele în top (opțional, max 5 caractere):</div>
-                <div className="flex gap-2">
-                  <input type="text" maxLength={5} placeholder="Nume…" value={nameInput} onChange={e => setNameInput(e.target.value.toUpperCase())}
-                         className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] font-cinzel p-1 px-2 w-[76px] outline-none uppercase tracking-widest focus:border-[#c87030]" />
-                  <button onClick={() => handleScoreSubmit()} className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel px-3.5 hover:brightness-110">OK</button>
-                </div>
-                {nameError && <div className="text-red-500 text-[0.78rem]">{nameError}</div>}
-              </div>
-            )}
-
-            {rank && (
-              <div className="font-cinzel text-[1.05rem] text-[#f5c97a] bg-[#c8703026] border border-[#c87030a0] rounded-lg p-2.5 px-3.5">
-                Ești pe poziția {rank} în top 200! ({localStorage.getItem(MY_NAME_KEY)})
-              </div>
-            )}
-
-            <button onClick={() => { setQuizFinished(false); if(!scoreSubmitted) handleScoreSubmit(generateBoreName()); }} 
-                    className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-125">
-              Reîncepe
+        ) : (
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              value={inputValue}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^0-9-]/g, "");
+                if (/^-?\d*$/.test(v)) setInputValue(v);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !feedback && inputValue !== "") {
+                  handleAnswer(parseInt(inputValue, 10) === (q as RapideQuestion).answer);
+                }
+              }}
+              disabled={!!feedback}
+              placeholder="Răspuns numeric…"
+              className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[1.3rem] text-center p-2.5 outline-none focus:border-[#c87030] disabled:opacity-50"
+            />
+            <button
+              onClick={() => handleAnswer(parseInt(inputValue, 10) === (q as RapideQuestion).answer)}
+              disabled={!!feedback || inputValue === ""}
+              className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel px-4 hover:brightness-110 disabled:opacity-40 cursor-pointer"
+            >
+              OK
             </button>
           </div>
         )}
-      </div>
 
-      <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-[210px] p-4 flex flex-col gap-1.5">
-        <h3 className="font-cinzel text-[#f5c97a] text-[0.85rem] text-center tracking-widest pb-1.5 border-b border-[#7a4e2260] mb-0.5">Top 30</h3>
-        <div className="flex flex-col">
-          {topList.length === 0 ? (
-            <div className="text-[#a07848] text-[0.75rem] text-center p-2">Niciun rezultat</div>
-          ) : (
-            topList.map((entry, i) => (
-              <div key={i} className="grid grid-cols-[18px_1fr_auto_auto] gap-1 text-[0.72rem] p-1 px-1 rounded text-[#d0c090] items-center odd:bg-white/5">
-                <span className="text-[#a07848] text-[0.68rem]">{i + 1}</span>
-                <span className="font-cinzel tracking-tighter truncate">{entry.name}</span>
-                <span className="text-[#f5c97a] font-bold">{entry.correct}/{entry.total}</span>
-                <span className="text-[#c8a070] text-right">{(entry.time / entry.total).toFixed(1)}s</span>
-              </div>
-            ))
-          )}
-        </div>
+        {feedback && (
+          <div
+            className={`rounded-xl p-3.5 text-center border-2 ${
+              feedback.state === "correct"
+                ? "bg-green-900/25 border-green-500/40"
+                : feedback.state === "wrong"
+                ? "bg-red-900/25 border-red-500/40"
+                : "bg-yellow-900/25 border-yellow-500/40"
+            }`}
+          >
+            <div className="text-2xl">{feedback.state === "correct" ? "✔" : feedback.state === "wrong" ? "✖" : "⏱"}</div>
+            <div className="font-cinzel">
+              {feedback.state === "correct" ? "Corect!" : feedback.state === "wrong" ? "Greșit!" : "Timp expirat!"}
+            </div>
+            <div className="text-[0.85rem] text-[#d0b888]">Răspuns corect: <strong className="text-[#f5c97a]">{feedback.reveal}</strong></div>
+          </div>
+        )}
       </div>
     </div>
   );
