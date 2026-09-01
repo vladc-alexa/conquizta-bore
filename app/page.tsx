@@ -33,6 +33,7 @@ export default function Dashboard() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [myColor, setMyColor] = useState<string | null>(null);
   const [showColors, setShowColors] = useState(false);
+  const [myScoreHidden, setMyScoreHidden] = useState(false);
 
   // change-password modal
   const [showPw, setShowPw] = useState(false);
@@ -78,6 +79,7 @@ export default function Dashboard() {
           setName(d.name);
           setIsAdmin(!!d.isAdmin);
           setMyColor(d.nameColor ?? DEFAULT_CHAT_COLOR);
+          setMyScoreHidden(!!d.hideScore);
         }
       })
       .catch(() => {});
@@ -165,6 +167,19 @@ export default function Dashboard() {
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/login";
+  };
+
+  const toggleMyScore = async () => {
+    try {
+      const res = await fetch("/api/auth/hide-score", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setMyScoreHidden(!!data.hideScore);
+        loadLeaderboard();
+      }
+    } catch {
+      /* ignore */
+    }
   };
 
   const changePassword = async (e: React.FormEvent) => {
@@ -354,13 +369,28 @@ export default function Dashboard() {
         <section className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full flex-1 p-[1.15rem] flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">👑 Clasamentul zilei</h3>
-            <button
-              onClick={loadLeaderboard}
-              className="text-[#c8a070] hover:text-[#f5c97a] text-[0.75rem] cursor-pointer"
-              title="Reîmprospătează"
-            >
-              ⟳
-            </button>
+            <div className="flex items-center gap-2">
+              {name && (
+                <button
+                  onClick={toggleMyScore}
+                  className={`text-[0.7rem] border rounded-lg px-2 py-1 cursor-pointer hover:brightness-110 ${
+                    myScoreHidden
+                      ? "text-[#b57edc] border-purple-500/40 bg-purple-900/20"
+                      : "text-[#c8a070] border-[#7a4e22] hover:bg-[#3d2510]"
+                  }`}
+                  title={myScoreHidden ? "Scorul tău e ascuns public — arată-l" : "Ascunde scorul tău de pe clasamentul public"}
+                >
+                  {myScoreHidden ? "🔒 Scor ascuns" : "🔒 Ascunde scorul"}
+                </button>
+              )}
+              <button
+                onClick={loadLeaderboard}
+                className="text-[#c8a070] hover:text-[#f5c97a] text-[0.75rem] cursor-pointer"
+                title="Reîmprospătează"
+              >
+                ⟳
+              </button>
+            </div>
           </div>
           {rows.length === 0 ? (
             <div className="text-[#a07848] text-[0.8rem] text-center p-6">Niciun jucător cu PRC încă. Antrenează-te!</div>
