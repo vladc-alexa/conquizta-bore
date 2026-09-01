@@ -11,10 +11,16 @@ export async function GET() {
   }
   const user = await prisma.user.findUnique({
     where: { id: session.sub },
-    select: { id: true, displayName: true, isAdmin: true },
+    select: { id: true, displayName: true, isAdmin: true, isMuted: true, nameColor: true },
   });
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  return NextResponse.json({ id: user.id, name: user.displayName, isAdmin: user.isAdmin });
+  return NextResponse.json({
+    id: user.id,
+    name: user.displayName,
+    isAdmin: user.isAdmin,
+    isMuted: user.isMuted,
+    nameColor: user.nameColor,
+  });
 }
