@@ -319,24 +319,30 @@ export default function TrainPage() {
           Greșite: <strong>{wrong}</strong><br />
           Timp expirat: <strong>{timeouts}</strong>
         </div>
-        <div className="flex gap-2.5">
+        <div className="flex gap-2.5 flex-wrap">
           <button
             onClick={() => startGame(mode)}
-            className="flex-1 bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-110 cursor-pointer"
+            className="flex-1 min-w-[130px] bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-110 cursor-pointer"
           >
             Încă o dată
           </button>
           <button
             onClick={() => setShowReview(true)}
-            className="flex-1 bg-gradient-to-br from-[#7a4010] to-[#3d2010] border-2 border-[#c88040a0] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-125 cursor-pointer"
+            className="flex-1 min-w-[130px] bg-gradient-to-br from-[#7a4010] to-[#3d2010] border-2 border-[#c88040a0] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-125 cursor-pointer"
           >
             Recenzie ({review.length})
           </button>
           <button
             onClick={() => setMode(null)}
-            className="flex-1 bg-gradient-to-br from-[#3d2010] to-[#2a1608] border-2 border-[#7a4e22] rounded-lg text-[#c8a070] font-cinzel p-3 hover:brightness-125 cursor-pointer"
+            className="flex-1 min-w-[130px] bg-gradient-to-br from-[#3d2010] to-[#2a1608] border-2 border-[#7a4e22] rounded-lg text-[#c8a070] font-cinzel p-3 hover:brightness-125 cursor-pointer"
           >
             Schimbă modul
+          </button>
+          <button
+            onClick={() => (window.location.href = "/")}
+            className="flex-1 min-w-[130px] bg-gradient-to-br from-[#7a4010] to-[#3d2010] border-2 border-[#c88040a0] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-125 cursor-pointer"
+          >
+            ← Înapoi
           </button>
         </div>
       </div>

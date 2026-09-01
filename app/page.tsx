@@ -242,7 +242,7 @@ export default function Dashboard() {
               <div className="text-[#a07848] text-[0.75rem] text-center p-4">Niciun mesaj încă. Spune salut!</div>
             ) : (
               messages.map((m) => (
-                <div key={m.id} className="text-[0.8rem] leading-snug flex items-start gap-1 group">
+                <div key={m.id} className="text-[0.9rem] leading-snug flex items-start gap-1 group">
                   <span
                     className="font-cinzel"
                     style={{ color: m.authorColor, textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}
@@ -351,7 +351,7 @@ export default function Dashboard() {
             className="bg-gradient-to-br from-[#f5c97a] to-[#c87030] border-2 border-[#f5c97a80] rounded-2xl shadow-2xl text-center p-5 hover:brightness-110 active:translate-y-px"
           >
             <div className="font-cinzel text-[#2a1608] text-[1.1rem] tracking-widest">🏋️ Train</div>
-            <div className="text-[#3d2510] text-[0.75rem] mt-1">Antrenament de viteză</div>
+            <div className="text-[#3d2510] text-[0.8rem] mt-1 font-bold">VREI SA TI-O MASORI?</div>
           </a>
 
           <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-4 flex flex-col gap-2">
