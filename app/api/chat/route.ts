@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const messages = await prisma.chatMessage.findMany({
       orderBy: { createdAt: "desc" },
-      take: 50,
+      take: 250,
       select: { id: true, authorName: true, text: true, createdAt: true },
     });
     return NextResponse.json({ messages: messages.reverse() });
