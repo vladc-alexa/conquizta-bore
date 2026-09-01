@@ -1,0 +1,9 @@
+[14:50:50] Q: TheRunner ecountry În ce an Clujul a ajuns sub coroana maghiară prin Dictatul de la Viena?
+[14:50:50] CORRECT: 09,
+[14:50:53] Q: TheRunner ecountry În ce an Clujul a ajuns sub coroana maghiară prin Dictatul de la Viena?
+[14:50:53] CORRECT: oana maghiara
+[14:51:09] Q: TheRunner StOne A câta literă în alfabetul latin este ,F"?
+[14:51:09] CORRECT: 5   Nașpa
+[14:52:03] Q: TheRunner StOne De câte ori a câștigat Juan Manuel Fangio Campionatul Mondial de Formula 1?
+[14:52:03] CORRECT: Nașpa
+[17:19:42] CORRECT: 1845

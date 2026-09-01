@@ -24,6 +24,20 @@ async function main() {
   });
   console.log(`user ${admin.email} (demo1234) -> ${admin.displayName}`);
 
+  const testUser = await prisma.user.upsert({
+    where: { email: "test@test.com" },
+    update: {
+      passwordHash: hashPassword("test"),
+      displayName: "test",
+    },
+    create: {
+      email: "test@test.com",
+      displayName: "test",
+      passwordHash: hashPassword("test"),
+    },
+  });
+  console.log(`user ${testUser.email} (test) created/updated`);
+
   const demoNames = ["Rovi", "Lxcxfxr13", "Thinker", "St0ne", "BoreKing"];
   for (const n of demoNames) {
     let u = await prisma.user.findUnique({ where: { displayName: n } });
