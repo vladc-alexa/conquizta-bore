@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { BLACK_CHAT_COLOR, CHAT_COLORS, DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
+import { BLACK_CHAT_COLOR, BLACK_NAME_OUTLINE, CHAT_COLORS, DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
 
 interface ChatMessage {
   id: string;
@@ -232,7 +232,7 @@ export default function Dashboard() {
                       }`}
                       style={{
                         backgroundColor: c.hex,
-                        ...(c.hex === BLACK_CHAT_COLOR && { boxShadow: "inset 0 0 0 2px #b57edc" }),
+                        ...(c.hex === BLACK_CHAT_COLOR && { boxShadow: `inset 0 0 0 2px ${BLACK_NAME_OUTLINE}` }),
                       }}
                     />
                   ))}
@@ -252,7 +252,7 @@ export default function Dashboard() {
                       color: m.authorColor,
                       textShadow:
                         m.authorColor === BLACK_CHAT_COLOR
-                          ? "0 0 3px #b57edc, 0 0 9px rgba(175,122,197,0.85), 0 1px 2px rgba(0,0,0,0.9)"
+                          ? `-1.5px -1.5px 0 ${BLACK_NAME_OUTLINE}, 1.5px -1.5px 0 ${BLACK_NAME_OUTLINE}, -1.5px 1.5px 0 ${BLACK_NAME_OUTLINE}, 1.5px 1.5px 0 ${BLACK_NAME_OUTLINE}, 0 -1.5px 0 ${BLACK_NAME_OUTLINE}, 0 1.5px 0 ${BLACK_NAME_OUTLINE}, -1.5px 0 0 ${BLACK_NAME_OUTLINE}, 1.5px 0 0 ${BLACK_NAME_OUTLINE}, 0 0 8px rgba(181,126,220,0.7)`
                           : "0 1px 2px rgba(0,0,0,0.9)",
                     }}
                   >
