@@ -2,18 +2,33 @@
 //
 // PRC grilă  = % corecte din ultimele GRILA_WINDOW răspunsuri grilă × 10.000
 // PRC rapide = media punctajelor din ultimele RAPIDE_WINDOW răspunsuri rapide × 100
-//   unde punctajul unei întrebări rapide:
-//     - pool = ultimele RANK_POOL răspunsuri la acea întrebare (toți jucătorii)
-//     - rank 1..pool după (|diferență față de răspunsul corect|, viteza de răspuns)
-//     - poziția x -> 101 - x; în afara pool-ului -> 1 punct
-//     - întrebările cu < MIN_ANSWERS răspunsuri în istoric nu dau punctaj
+//   unde punctajul unei întrebări rapide (joc de aproximare):
+//     - apropiere: cu cât ești mai aproape de răspunsul corect, cu atât mai bine
+//       (eroare relativă față de răspunsul corect, indiferent de semn)
+//     - viteză: bonus pentru cât de repede răspunzi (fereastră = RAPIDE_TIMER_SECONDS)
+//     - punctaj = 100 × (0.7 × apropiere + 0.3 × viteză), minim 5 puncte
+//   => maxim 100 puncte/întrebare, deci PRC rapide maxim 10.000
 // PRC total = (PRC grilă + PRC rapide) / 2 (dacă există doar una, se folosește aceea)
 import type { PrismaClient } from "@prisma/client";
 
 export const GRILA_WINDOW = 50;
 export const RAPIDE_WINDOW = 50;
-export const RANK_POOL = 100;
-export const MIN_ANSWERS = 20;
+export const RAPIDE_MAX_SCORE = 100;
+export const RAPIDE_MIN_SCORE = 5;
+export const RAPIDE_TIMER_SECONDS = 10;
+export const CLOSENESS_WEIGHT = 0.7;
+export const SPEED_WEIGHT = 0.3;
+
+// Score for one rapide answer, 5..100.
+export function rapideAnswerScore(guess: number, correct: number, elapsedMs: number): number {
+  const denom = Math.max(Math.abs(correct), 1); // protect against correct == 0
+  const relErr = Math.min(Math.abs(guess - correct) / denom, 1);
+  const closeness = 1 - relErr;
+  const windowMs = RAPIDE_TIMER_SECONDS * 1000;
+  const speed = Math.max(0, 1 - Math.min(elapsedMs, windowMs) / windowMs);
+  const score = Math.round(RAPIDE_MAX_SCORE * (CLOSENESS_WEIGHT * closeness + SPEED_WEIGHT * speed));
+  return Math.max(RAPIDE_MIN_SCORE, Math.min(RAPIDE_MAX_SCORE, score));
+}
 
 export interface PrcResult {
   grila: number | null;
@@ -24,6 +39,7 @@ export interface PrcResult {
 
 interface RawAnswer {
   quizSession: { userId: string };
+  quizSessionId: string;
   questionId: string;
   selectedOptionId: string | null;
   submittedAnswer: string | null;
@@ -38,6 +54,7 @@ export async function computeAllPrc(prisma: PrismaClient): Promise<Map<string, P
       where: { quizSession: { status: "COMPLETED" } },
       select: {
         quizSession: { select: { userId: true } },
+        quizSessionId: true,
         questionId: true,
         selectedOptionId: true,
         submittedAnswer: true,
@@ -65,13 +82,14 @@ export async function computeAllPrc(prisma: PrismaClient): Promise<Map<string, P
   // split answers
   const grilaByUser = new Map<string, RawAnswer[]>();
   const rapideByUser = new Map<string, RawAnswer[]>();
-  const rapideByQuestion = new Map<string, RawAnswer[]>();
-  const gamesByUser = new Map<string, number>();
+  const gamesByUser = new Map<string, Set<string>>();
 
   for (const a of answers as RawAnswer[]) {
     const uid = a.quizSession.userId;
     if (!uid) continue; // session lost its user (deleted) — skip
-    gamesByUser.set(uid, (gamesByUser.get(uid) ?? 0) + 1);
+    const sessions = gamesByUser.get(uid) ?? new Set<string>();
+    sessions.add(a.quizSessionId);
+    gamesByUser.set(uid, sessions);
     if (a.selectedOptionId) {
       const arr = grilaByUser.get(uid) ?? [];
       arr.push(a);
@@ -80,36 +98,7 @@ export async function computeAllPrc(prisma: PrismaClient): Promise<Map<string, P
       const arr = rapideByUser.get(uid) ?? [];
       arr.push(a);
       rapideByUser.set(uid, arr);
-      const qarr = rapideByQuestion.get(a.questionId) ?? [];
-      qarr.push(a);
-      rapideByQuestion.set(a.questionId, qarr);
     }
-  }
-
-  // ---- rapide: per-question ranking ----
-  const questionAnswerCount = new Map<string, number>();
-  for (const [qid, arr] of rapideByQuestion) {
-    questionAnswerCount.set(qid, arr.length);
-  }
-  // score per answer id
-  const rapideScore = new Map<string, number>();
-  for (const [qid, arr] of rapideByQuestion) {
-    if (arr.length < MIN_ANSWERS) continue; // question too new — no points
-    const pool = arr
-      .slice()
-      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
-      .slice(0, RANK_POOL);
-    const correct = parseInt(correctText.get(qid)!, 10);
-    const ranked = pool
-      .map((a) => ({
-        id: `${a.quizSession.userId}:${a.answeredAt.getTime()}`,
-        diff: Math.abs(parseInt(a.submittedAnswer!, 10) - correct),
-        elapsed: a.elapsedMilliseconds,
-      }))
-      .sort((a, b) => a.diff - b.diff || a.elapsed - b.elapsed);
-    ranked.forEach((r, i) => {
-      rapideScore.set(r.id, Math.max(1, RANK_POOL + 1 - (i + 1)));
-    });
   }
 
   const out = new Map<string, PrcResult>();
@@ -125,20 +114,19 @@ export async function computeAllPrc(prisma: PrismaClient): Promise<Map<string, P
       grila = Math.round((correctCount / last.length) * 10000);
     }
 
-    // rapide: last RAPIDE_WINDOW scored answers, mean × 100
+    // rapide: last RAPIDE_WINDOW answers, mean score × 100 (approximation + speed)
     let rapide: number | null = null;
     const r = rapideByUser.get(uid);
     if (r && r.length > 0) {
-      const scored = r
-        .map((a) => ({ a, score: rapideScore.get(`${a.quizSession.userId}:${a.answeredAt.getTime()}`) ?? 1 }))
-        .filter((x) => x.score !== null);
-      if (scored.length > 0) {
-        const last = scored
-          .slice()
-          .sort((x, y) => y.a.answeredAt.getTime() - x.a.answeredAt.getTime())
-          .slice(0, RAPIDE_WINDOW);
-        rapide = Math.round((last.reduce((s, x) => s + x.score, 0) / last.length) * 100);
-      }
+      const last = r
+        .slice()
+        .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
+        .slice(0, RAPIDE_WINDOW);
+      const sum = last.reduce((s, a) => {
+        const correct = parseInt(correctText.get(a.questionId)!, 10);
+        return s + rapideAnswerScore(parseInt(a.submittedAnswer!, 10), correct, a.elapsedMilliseconds);
+      }, 0);
+      rapide = Math.round((sum / last.length) * 100);
     }
 
     let total: number | null = null;
@@ -146,7 +134,7 @@ export async function computeAllPrc(prisma: PrismaClient): Promise<Map<string, P
     else if (grila !== null) total = grila;
     else if (rapide !== null) total = rapide;
 
-    out.set(uid, { grila, rapide, total, games: gamesByUser.get(uid) ?? 0 });
+    out.set(uid, { grila, rapide, total, games: gamesByUser.get(uid)?.size ?? 0 });
   }
 
   return out;

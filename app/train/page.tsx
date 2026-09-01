@@ -518,15 +518,27 @@ export default function TrainPage() {
             className={`rounded-xl p-3.5 text-center border-2 ${
               feedback.state === "correct"
                 ? "bg-green-900/25 border-green-500/40"
+                : feedback.state === "wrong" && mode === "rapide"
+                ? "bg-amber-900/25 border-amber-500/40"
                 : feedback.state === "wrong"
                 ? "bg-red-900/25 border-red-500/40"
                 : "bg-yellow-900/25 border-yellow-500/40"
             }`}
           >
-            <div className="text-2xl">{feedback.state === "correct" ? "✔" : feedback.state === "wrong" ? "✖" : "⏱"}</div>
-            <div className="font-cinzel">
-              {feedback.state === "correct" ? "Corect!" : feedback.state === "wrong" ? "Greșit!" : "Timp expirat!"}
+            <div className="text-2xl">
+              {feedback.state === "correct"
+                ? "✔"
+                : feedback.state === "wrong" && mode === "rapide"
+                ? "🎯"
+                : feedback.state === "wrong"
+                ? "✖"
+                : "⏱"}
             </div>
+            {feedback.state !== "wrong" || mode !== "rapide" ? (
+              <div className="font-cinzel">
+                {feedback.state === "correct" ? "Corect!" : feedback.state === "wrong" ? "Greșit!" : "Timp expirat!"}
+              </div>
+            ) : null}
             <div className="text-[0.85rem] text-[#d0b888]">
               Răspuns corect: <strong className="text-[#f5c97a]">{feedback.reveal}</strong>
               {feedback.elapsed != null && (
