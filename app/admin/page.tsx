@@ -9,6 +9,7 @@ interface AdminUser {
   isAdmin: boolean;
   isMuted: boolean;
   hideScore: boolean;
+  canEditQuestions: boolean;
   createdAt: string;
 }
 
@@ -17,11 +18,12 @@ interface AdminQuestion {
   prompt: string;
   isPublished: boolean;
   correctAnswer: string | null;
+  options: { id: string; text: string; isCorrect: boolean }[];
   reportCount: number;
 }
 
 export default function AdminPage() {
-  const [me, setMe] = useState<{ name: string; isAdmin: boolean } | null>(null);
+  const [me, setMe] = useState<{ name: string; isAdmin: boolean; canEditQuestions: boolean } | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -33,6 +35,11 @@ export default function AdminPage() {
   const [qSearch, setQSearch] = useState("");
   const [qStatus, setQStatus] = useState<"reported" | "all" | "published" | "disabled">("reported");
   const [qLoading, setQLoading] = useState(false);
+  const [editing, setEditing] = useState<AdminQuestion | null>(null);
+  const [editPrompt, setEditPrompt] = useState("");
+  const [editOptions, setEditOptions] = useState<{ text: string; isCorrect: boolean }[]>([]);
+  const [editBusy, setEditBusy] = useState(false);
+  const [editMsg, setEditMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
     const meRes = await fetch("/api/auth/me");
@@ -42,6 +49,7 @@ export default function AdminPage() {
     }
     const meData = await meRes.json();
     setMe(meData);
+    if (!meData.isAdmin && !meData.canEditQuestions) return;
     if (!meData.isAdmin) return;
     const res = await fetch("/api/admin/users");
     if (res.ok) {
@@ -75,6 +83,38 @@ export default function AdminPage() {
     }
   };
 
+  const openEdit = (q: AdminQuestion) => {
+    setEditing(q);
+    setEditPrompt(q.prompt);
+    setEditOptions(q.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })));
+    setEditMsg(null);
+  };
+
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editing) return;
+    setEditBusy(true);
+    setEditMsg(null);
+    try {
+      const res = await fetch(`/api/admin/questions/${editing.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: editPrompt, options: editOptions }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setEditMsg({ ok: false, text: data.error || "Eroare." });
+        return;
+      }
+      setEditing(null);
+      loadQuestions();
+    } catch {
+      setEditMsg({ ok: false, text: "Eroare de rețea." });
+    } finally {
+      setEditBusy(false);
+    }
+  };
+
   useEffect(() => {
     load();
   }, [load]);
@@ -100,6 +140,14 @@ export default function AdminPage() {
     if (res.ok) {
       const data = await res.json();
       setUsers((list) => list.map((x) => (x.id === u.id ? { ...x, hideScore: data.hideScore } : x)));
+    }
+  };
+
+  const toggleEditor = async (u: AdminUser) => {
+    const res = await fetch(`/api/admin/users/${u.id}/editor`, { method: "POST" });
+    if (res.ok) {
+      const data = await res.json();
+      setUsers((list) => list.map((x) => (x.id === u.id ? { ...x, canEditQuestions: data.canEditQuestions } : x)));
     }
   };
 
@@ -149,12 +197,12 @@ export default function AdminPage() {
     return <div className="text-center font-cinzel text-[#f5c97a] py-16">Se încarcă…</div>;
   }
 
-  if (!me.isAdmin) {
+  if (!me.isAdmin && !me.canEditQuestions) {
     return (
       <div className="text-center py-16">
         <div className="text-[2rem]">🚫</div>
         <div className="font-cinzel text-[#f5c97a] text-[1.2rem] mt-2">Acces interzis</div>
-        <div className="text-[#c8a070] text-[0.85rem] mt-1">Doar administratorii pot vedea această pagină.</div>
+        <div className="text-[#c8a070] text-[0.85rem] mt-1">Doar administratorii și editorii pot vedea această pagină.</div>
       </div>
     );
   }
@@ -166,6 +214,8 @@ export default function AdminPage() {
         <a href="/" className="text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem]">← Înapoi</a>
       </div>
 
+      {me.isAdmin && (
+        <>
       <form
         onSubmit={create}
         className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-5 flex flex-col gap-3"
@@ -227,12 +277,26 @@ export default function AdminPage() {
                 {u.hideScore && (
                   <span className="text-[0.65rem] text-[#b57edc] bg-purple-900/30 border border-purple-500/40 rounded px-1.5 py-0.5">🔒 SCOR ASCUNS</span>
                 )}
+                {u.canEditQuestions && (
+                  <span className="text-[0.65rem] text-[#f5c97a] bg-amber-900/30 border border-amber-500/40 rounded px-1.5 py-0.5">✏️ EDITOR</span>
+                )}
               </div>
               <span className="text-[#c8a070] text-[0.75rem]">{u.email || "—"}</span>
               <div className="flex items-center gap-2">
                 <span className="text-[#a07848] text-[0.7rem]">{new Date(u.createdAt).toLocaleDateString("ro-RO")}</span>
                 {!u.isAdmin && (
                   <>
+                    <button
+                      onClick={() => toggleEditor(u)}
+                      className={`text-[0.7rem] border rounded px-1.5 py-0.5 cursor-pointer hover:brightness-110 ${
+                        u.canEditQuestions
+                          ? "text-[#f5c97a] border-amber-500/40 hover:bg-amber-900/30"
+                          : "text-[#c8a070] border-[#7a4e22] hover:bg-[#3d2510]"
+                      }`}
+                      title={u.canEditQuestions ? "Revocă dreptul de editare" : "Dă drept de editare a întrebărilor"}
+                    >
+                      {u.canEditQuestions ? "Fără editare" : "Editor"}
+                    </button>
                     <button
                       onClick={() => toggleHideScore(u)}
                       className={`text-[0.7rem] border rounded px-1.5 py-0.5 cursor-pointer hover:brightness-110 ${
@@ -269,6 +333,8 @@ export default function AdminPage() {
           ))}
         </div>
       </div>
+      </>
+      )}
 
       {/* questions browser */}
       <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-5 flex flex-col gap-3">
@@ -327,21 +393,103 @@ export default function AdminPage() {
                     Corect: <strong className="text-[#f5c97a]">{q.correctAnswer ?? "—"}</strong>
                   </div>
                 </div>
-                <button
-                  onClick={() => toggleQuestion(q)}
-                  className={`self-center text-[0.72rem] border rounded-lg px-2.5 py-1.5 cursor-pointer hover:brightness-110 ${
-                    q.isPublished
-                      ? "text-red-400/90 border-red-500/40 hover:bg-red-900/30"
-                      : "text-green-400 border-green-500/40 hover:bg-green-900/30"
-                  }`}
-                >
-                  {q.isPublished ? "Dezactivează" : "Activează"}
-                </button>
+                <div className="self-center flex items-center gap-2">
+                  <button
+                    onClick={() => openEdit(q)}
+                    className="text-[0.72rem] border border-[#7a4e22] rounded-lg px-2.5 py-1.5 text-[#c8a070] hover:bg-[#3d2510] cursor-pointer"
+                    title="Editează întrebarea"
+                  >
+                    ✏️ Editează
+                  </button>
+                  <button
+                    onClick={() => toggleQuestion(q)}
+                    className={`text-[0.72rem] border rounded-lg px-2.5 py-1.5 cursor-pointer hover:brightness-110 ${
+                      q.isPublished
+                        ? "text-red-400/90 border-red-500/40 hover:bg-red-900/30"
+                        : "text-green-400 border-green-500/40 hover:bg-green-900/30"
+                    }`}
+                  >
+                    {q.isPublished ? "Dezactivează" : "Activează"}
+                  </button>
+                </div>
               </div>
             ))
           )}
         </div>
       </div>
+
+      {/* edit-question modal */}
+      {editing && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <form
+            onSubmit={saveEdit}
+            className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 flex flex-col gap-3"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">✏️ Editează întrebarea</h3>
+              <button type="button" onClick={() => setEditing(null)} className="text-[#c8a070] hover:text-[#f5c97a] cursor-pointer">
+                ✕
+              </button>
+            </div>
+            <div className="text-[0.68rem] font-mono text-[#a07848]">ID {editing.id}</div>
+            <textarea
+              required
+              maxLength={1000}
+              rows={3}
+              value={editPrompt}
+              onChange={(e) => setEditPrompt(e.target.value)}
+              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#e8d8b0] p-2.5 outline-none focus:border-[#c87030] resize-y"
+            />
+            <div className="text-[0.75rem] text-[#c8a070]">Variante de răspuns — marchează-o pe cea corectă:</div>
+            <div className="flex flex-col gap-1.5">
+              {editOptions.map((o, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="correct-option"
+                    checked={o.isCorrect}
+                    onChange={() => setEditOptions((opts) => opts.map((x, j) => ({ ...x, isCorrect: j === i })))}
+                    title="Corectă"
+                    className="accent-[#c87030] cursor-pointer shrink-0"
+                  />
+                  <input
+                    value={o.text}
+                    onChange={(e) => setEditOptions((opts) => opts.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
+                    maxLength={500}
+                    placeholder={`Varianta ${i + 1}`}
+                    className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#e8d8b0] p-2 outline-none focus:border-[#c87030]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setEditOptions((opts) => opts.filter((_, j) => j !== i))}
+                    className="text-red-400/80 hover:text-red-300 text-[0.8rem] cursor-pointer shrink-0"
+                    title="Șterge varianta"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditOptions((opts) => [...opts, { text: "", isCorrect: opts.length === 0 }])}
+              className="self-start text-[0.75rem] text-[#c8a070] border border-[#7a4e22] rounded px-2.5 py-1 hover:bg-[#3d2510] cursor-pointer"
+            >
+              + Adaugă variantă
+            </button>
+            {editMsg && (
+              <div className={`text-[0.8rem] ${editMsg.ok ? "text-green-400" : "text-red-400"}`}>{editMsg.text}</div>
+            )}
+            <button
+              type="submit"
+              disabled={editBusy}
+              className="self-start bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel px-5 py-2 hover:brightness-110 disabled:opacity-50 cursor-pointer"
+            >
+              {editBusy ? "Se salvează…" : "Salvează"}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

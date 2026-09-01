@@ -19,6 +19,7 @@ model User {
   passwordHash    String?
   displayName     String             @unique @db.VarChar(32)
   isAdmin         Boolean            @default(false)
+  canEditQuestions Boolean           @default(false)
   isMuted         Boolean            @default(false)
   hideScore       Boolean            @default(false)
   nameColor       String?            @db.VarChar(16)

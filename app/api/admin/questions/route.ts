@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isError, requireAdmin } from "@/lib/admin";
+import { isError, requireEditor } from "@/lib/admin";
 
 // GET /api/admin/questions?search=&status=reported|published|disabled|all&limit=100
-// Admin question browser: id, prompt, correct answer, publish state, report count.
-// Default status = "reported": the review queue, populated only by player reports
-// (reporting a question also unpublishes it from the game).
+// Question browser (admins + editors): id, prompt, options, correct answer,
+// publish state, report count. Default status = "reported": the review queue,
+// populated only by player reports (reporting a question also unpublishes it).
 export async function GET(req: Request) {
-  const auth = await requireAdmin();
+  const auth = await requireEditor();
   if (isError(auth)) return auth;
 
   const url = new URL(req.url);
@@ -42,7 +42,7 @@ export async function GET(req: Request) {
         prompt: true,
         isPublished: true,
         createdAt: true,
-        options: { select: { text: true, isCorrect: true } },
+        options: { select: { id: true, text: true, isCorrect: true } },
       },
     }),
     prisma.questionReport.groupBy({ by: ["questionId"], _count: { _all: true } }),
@@ -55,6 +55,7 @@ export async function GET(req: Request) {
     isPublished: q.isPublished,
     createdAt: q.createdAt,
     correctAnswer: q.options.find((o) => o.isCorrect)?.text ?? null,
+    options: q.options.map((o) => ({ id: o.id, text: o.text, isCorrect: o.isCorrect })),
     reportCount: reports.get(q.id) ?? 0,
   }));
   if (status === "reported") list.sort((a, b) => b.reportCount - a.reportCount);

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isError, requireAdmin } from "@/lib/admin";
+import { isError, requireEditor } from "@/lib/admin";
 
-// POST /api/admin/questions/[id]/toggle — enable/disable a question.
+// POST /api/admin/questions/[id]/toggle — enable/disable a question (admins + editors).
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdmin();
+  const auth = await requireEditor();
   if (isError(auth)) return auth;
 
   const { id } = await ctx.params;
