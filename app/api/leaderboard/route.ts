@@ -32,5 +32,12 @@ export async function GET() {
     .sort((a, b) => (b.prc ?? 0) - (a.prc ?? 0) || b.games - a.games)
     .slice(0, 10);
 
-  return NextResponse.json({ rows, myPos: rows.findIndex((r) => r.id === session.sub) });
+  const myPos = rows.findIndex((r) => r.id === session.sub);
+  // always include the requesting user's own row (may be below the top 10)
+  const mine = prcByUser.get(session.sub);
+  const me = mine?.total != null
+    ? { id: session.sub, name: nameById.get(session.sub) ?? session.name, prc: mine.total, grila: mine.grila, rapide: mine.rapide, games: mine.games }
+    : null;
+
+  return NextResponse.json({ rows, myPos, me });
 }
