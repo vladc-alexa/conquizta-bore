@@ -13,6 +13,16 @@ export async function requireAdmin(): Promise<{ id: string } | NextResponse> {
   return { id: session.sub };
 }
 
+// Question editor guard: admins OR users granted canEditQuestions.
+export async function requireEditor(): Promise<{ id: string } | NextResponse> {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const session = await verifySession(token);
+  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const user = await prisma.user.findUnique({ where: { id: session.sub }, select: { isAdmin: true, canEditQuestions: true } });
+  if (!user?.isAdmin && !user?.canEditQuestions) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  return { id: session.sub };
+}
+
 export function isError(x: { id: string } | NextResponse): x is NextResponse {
   return x instanceof NextResponse;
 }
