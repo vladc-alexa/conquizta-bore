@@ -27,13 +27,9 @@ export async function GET(req: Request) {
   if (status === "published") where.isPublished = true;
   if (status === "disabled") where.isPublished = false;
   if (status === "reported") {
-    const counts = await prisma.questionReport.groupBy({
-      by: ["questionId"],
-      _count: { _all: true },
-      orderBy: { _count: { _all: "desc" } },
-      take: limit,
-    });
-    where.id = { in: counts.map((r) => r.questionId) };
+    const counts = await prisma.questionReport.groupBy({ by: ["questionId"], _count: { _all: true } });
+    const top = counts.sort((a, b) => b._count._all - a._count._all).slice(0, limit);
+    where.id = { in: top.map((r) => r.questionId) };
   }
 
   const [questions, reportCounts] = await Promise.all([
