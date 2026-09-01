@@ -21,8 +21,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   });
   if (existing) return NextResponse.json({ error: "deja raportată" }, { status: 409 });
 
-  await prisma.questionReport.create({
-    data: { questionId: id, userId: session.sub, note: note || "raportată din recenzie" },
-  });
+  await prisma.$transaction([
+    prisma.questionReport.create({
+      data: { questionId: id, userId: session.sub, note: note || "raportată din recenzie" },
+    }),
+    // pull the question out of the game immediately — it lands in the admin review queue
+    prisma.question.update({ where: { id }, data: { isPublished: false } }),
+  ]);
   return NextResponse.json({ ok: true }, { status: 201 });
 }

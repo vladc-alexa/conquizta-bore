@@ -31,7 +31,7 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
   const [qSearch, setQSearch] = useState("");
-  const [qStatus, setQStatus] = useState<"all" | "published" | "disabled">("all");
+  const [qStatus, setQStatus] = useState<"reported" | "all" | "published" | "disabled">("reported");
   const [qLoading, setQLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -288,6 +288,7 @@ export default function AdminPage() {
               onChange={(e) => setQStatus(e.target.value as typeof qStatus)}
               className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[0.8rem] p-2 outline-none cursor-pointer"
             >
+              <option value="reported">Raportate</option>
               <option value="all">Toate</option>
               <option value="published">Publicate</option>
               <option value="disabled">Dezactivate</option>
@@ -296,7 +297,11 @@ export default function AdminPage() {
         </div>
         <div className="flex flex-col max-h-[420px] overflow-y-auto">
           {questions.length === 0 ? (
-            <div className="text-[#a07848] text-[0.8rem] text-center p-4">Nicio întrebare găsită.</div>
+            <div className="text-[#a07848] text-[0.8rem] text-center p-4">
+              {qStatus === "reported"
+                ? "Nicio întrebare raportată — apar aici doar întrebările raportate de jucători."
+                : "Nicio întrebare găsită."}
+            </div>
           ) : (
             questions.map((q) => (
               <div
