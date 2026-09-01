@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum QuizSessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+model User {
+  id              String              @id @default(uuid()) @db.Uuid
+  email           String?             @unique
+  displayName     String              @unique @db.VarChar(32)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  quizSessions    QuizSession[]
+  questionStats   UserQuestionStat[]
+}
+
+model Category {
+  id              String     @id @default(uuid()) @db.Uuid
+  name            String     @unique @db.VarChar(100)
+  slug            String     @unique @db.VarChar(100)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  questions       Question[]
+}
+
+model Question {
+  id              String           @id @default(uuid()) @db.Uuid
+  categoryId      String?          @db.Uuid
+  prompt          String
+  explanation     String?
+  difficulty      Int              @default(1)
+  isPublished     Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  category        Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  options         QuestionOption[]
+  sessionAnswers  SessionAnswer[]
+  userStats       UserQuestionStat[]
+
+  @@index([categoryId, isPublished])
+}
+
+model QuestionOption {
+  id              String          @id @default(uuid()) @db.Uuid
+  questionId      String          @db.Uuid
+  text            String
+  position        Int
+  isCorrect       Boolean         @default(false)
+  question        Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedAnswers SessionAnswer[] @relation("SelectedOption")
+
+  @@unique([questionId, position])
+}
+
+model QuizSession {
+  id              String            @id @default(uuid()) @db.Uuid
+  userId          String?           @db.Uuid
+  status          QuizSessionStatus @default(IN_PROGRESS)
+  questionCount   Int
+  correctCount    Int               @default(0)
+  startedAt       DateTime          @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  user            User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  answers         SessionAnswer[]
+
+  @@index([userId, completedAt])
+}
+
+model SessionAnswer {
+  id                String          @id @default(uuid()) @db.Uuid
+  quizSessionId     String          @db.Uuid
+  questionId        String          @db.Uuid
+  selectedOptionId  String?         @db.Uuid
+  submittedAnswer   String?
+  isCorrect         Boolean
+  elapsedMilliseconds Int
+  answeredAt        DateTime        @default(now())
+  quizSession       QuizSession     @relation(fields: [quizSessionId], references: [id], onDelete: Cascade)
+  question          Question        @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  selectedOption    QuestionOption? @relation("SelectedOption", fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([quizSessionId, questionId])
+  @@index([questionId])
+}
+
+model UserQuestionStat {
+  userId          String   @db.Uuid
+  questionId      String   @db.Uuid
+  attempts        Int      @default(0)
+  correctAttempts Int      @default(0)
+  lastAnsweredAt  DateTime?
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question        Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, questionId])
+  @@index([questionId])
+}
