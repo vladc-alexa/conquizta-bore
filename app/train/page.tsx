@@ -24,6 +24,7 @@ const QUESTION_COUNT = 10;
 export default function TrainPage() {
   const [mode, setMode] = useState<Mode>(null);
   const [phase, setPhase] = useState<"idle" | "loading" | "playing" | "finished">("idle");
+  const [loadError, setLoadError] = useState("");
   const [questions, setQuestions] = useState<(RapideQuestion | GrilaQuestion)[]>([]);
   const [idx, setIdx] = useState(0);
   const [correct, setCorrect] = useState(0);
@@ -195,6 +196,7 @@ export default function TrainPage() {
     setMode(m);
     modeRef.current = m;
     setPhase("loading");
+    setLoadError("");
     setIdx(0);
     idxRef.current = 0;
     setCorrect(0);
@@ -212,6 +214,7 @@ export default function TrainPage() {
         setMode(null);
         modeRef.current = null;
         setPhase("idle");
+        setLoadError("Nu sunt întrebări disponibile momentan — încearcă mai târziu.");
         return;
       }
       // start an official session (records answers toward PRC)
@@ -281,6 +284,11 @@ export default function TrainPage() {
     return (
       <div className="w-full max-w-3xl mx-auto flex flex-col gap-5 py-6">
         <h1 className="text-center !mb-0">Antrenament</h1>
+        {loadError && (
+          <div className="text-red-400 text-[0.85rem] text-center border border-red-500/40 bg-red-900/20 rounded-lg px-3 py-2">
+            {loadError}
+          </div>
+        )}
         <div className="grid sm:grid-cols-2 gap-4">
           <button
             onClick={() => startGame("rapide")}
