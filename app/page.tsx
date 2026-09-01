@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { CHAT_COLORS, DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
 
 interface ChatMessage {
   id: string;
   authorName: string;
   text: string;
   createdAt: string;
+  authorColor: string;
+  muted: boolean;
 }
 
 interface LeaderRow {
@@ -27,6 +30,8 @@ export default function Dashboard() {
   const [meRow, setMeRow] = useState<LeaderRow | null>(null);
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [myColor, setMyColor] = useState<string | null>(null);
+  const [showColors, setShowColors] = useState(false);
 
   // change-password modal
   const [showPw, setShowPw] = useState(false);
@@ -65,6 +70,7 @@ export default function Dashboard() {
         if (d) {
           setName(d.name);
           setIsAdmin(!!d.isAdmin);
+          setMyColor(d.nameColor ?? DEFAULT_CHAT_COLOR);
         }
       })
       .catch(() => {});
@@ -94,6 +100,32 @@ export default function Dashboard() {
       }
     } finally {
       setSending(false);
+    }
+  };
+
+  const deleteMessage = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/chat/${id}`, { method: "DELETE" });
+      if (res.ok) loadChat();
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const setColor = async (hex: string) => {
+    try {
+      const res = await fetch("/api/auth/color", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ color: hex }),
+      });
+      if (res.ok) {
+        setMyColor(hex);
+        setShowColors(false);
+        loadChat();
+      }
+    } catch {
+      /* ignore */
     }
   };
 
@@ -172,18 +204,63 @@ export default function Dashboard() {
       <div className="flex flex-col lg:flex-row gap-4 items-start">
         {/* Left: Chat */}
         <section className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full lg:w-[480px] shrink-0 flex flex-col h-[480px] lg:h-[calc(100vh-200px)] lg:min-h-[560px]">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#7a4e2260]">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#7a4e2260] relative">
             <h3 className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-widest">Chat general</h3>
-            <span className="text-[#a07848] text-[0.7rem]">{messages.length} mesaje</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[#a07848] text-[0.7rem]">{messages.length} mesaje</span>
+              {name && (
+                <button
+                  onClick={() => setShowColors((v) => !v)}
+                  className="text-[0.9rem] cursor-pointer hover:scale-110 transition-transform"
+                  title="Culoarea numelui tău"
+                >
+                  🎨
+                </button>
+              )}
+            </div>
+            {showColors && (
+              <div className="absolute right-3 top-11 z-20 bg-[#2a1608] border-2 border-[#7a4e22] rounded-xl p-2.5 flex flex-col gap-1.5 shadow-2xl">
+                <span className="text-[0.65rem] text-[#c8a070] uppercase tracking-wider">Culoarea numelui</span>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {CHAT_COLORS.map((c) => (
+                    <button
+                      key={c.hex}
+                      onClick={() => setColor(c.hex)}
+                      title={c.name}
+                      className={`w-7 h-7 rounded-full border-2 cursor-pointer hover:scale-110 transition-transform ${
+                        myColor === c.hex ? "border-[#f5c97a] scale-110" : "border-[#7a4e22]"
+                      }`}
+                      style={{ backgroundColor: c.hex }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5">
             {messages.length === 0 ? (
               <div className="text-[#a07848] text-[0.75rem] text-center p-4">Niciun mesaj încă. Spune salut!</div>
             ) : (
               messages.map((m) => (
-                <div key={m.id} className="text-[0.8rem] leading-snug">
-                  <span className="font-cinzel text-[#c87030]">{m.authorName}:</span>{" "}
-                  <span className="text-[#e8d8b0]">{m.text}</span>
+                <div key={m.id} className="text-[0.9rem] leading-snug flex items-start gap-1 group">
+                  <span
+                    className="font-cinzel"
+                    style={{ color: m.authorColor, textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}
+                  >
+                    {m.authorName}
+                    {m.muted && <span className="text-[#a07848] text-[0.65rem] ml-1" title="mutat">🔇</span>}
+                    {": "}
+                  </span>
+                  <span className="text-[#e8d8b0] flex-1">{m.text}</span>
+                  {isAdmin && (
+                    <button
+                      onClick={() => deleteMessage(m.id)}
+                      className="text-[#a07848] opacity-0 group-hover:opacity-100 hover:text-red-400 text-[0.7rem] cursor-pointer"
+                      title="Șterge mesajul"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               ))
             )}
@@ -274,7 +351,7 @@ export default function Dashboard() {
             className="bg-gradient-to-br from-[#f5c97a] to-[#c87030] border-2 border-[#f5c97a80] rounded-2xl shadow-2xl text-center p-5 hover:brightness-110 active:translate-y-px"
           >
             <div className="font-cinzel text-[#2a1608] text-[1.1rem] tracking-widest">🏋️ Train</div>
-            <div className="text-[#3d2510] text-[0.75rem] mt-1">Antrenament de viteză</div>
+            <div className="text-[#3d2510] text-[0.8rem] mt-1 font-bold">VREI SA TI-O MASORI?</div>
           </a>
 
           <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-4 flex flex-col gap-2">

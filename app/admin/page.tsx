@@ -7,6 +7,7 @@ interface AdminUser {
   displayName: string;
   email: string | null;
   isAdmin: boolean;
+  isMuted: boolean;
   createdAt: string;
 }
 
@@ -84,6 +85,14 @@ export default function AdminPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qSearch, qStatus, me?.isAdmin]);
+
+  const toggleMute = async (u: AdminUser) => {
+    const res = await fetch(`/api/admin/users/${u.id}/mute`, { method: "POST" });
+    if (res.ok) {
+      const data = await res.json();
+      setUsers((list) => list.map((x) => (x.id === u.id ? { ...x, isMuted: data.isMuted } : x)));
+    }
+  };
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,18 +212,34 @@ export default function AdminPage() {
                 {u.isAdmin && (
                   <span className="text-[0.65rem] text-[#2a1608] bg-[#f5c97a] rounded px-1.5 py-0.5 font-bold">ADMIN</span>
                 )}
+                {u.isMuted && (
+                  <span className="text-[0.65rem] text-red-400 bg-red-900/30 border border-red-500/40 rounded px-1.5 py-0.5">🔇 MUTAT</span>
+                )}
               </div>
               <span className="text-[#c8a070] text-[0.75rem]">{u.email || "—"}</span>
               <div className="flex items-center gap-2">
                 <span className="text-[#a07848] text-[0.7rem]">{new Date(u.createdAt).toLocaleDateString("ro-RO")}</span>
                 {!u.isAdmin && (
-                  <button
-                    onClick={() => remove(u)}
-                    className="text-red-400/80 hover:text-red-300 text-[0.75rem] cursor-pointer"
-                    title="Șterge"
-                  >
-                    ✕
-                  </button>
+                  <>
+                    <button
+                      onClick={() => toggleMute(u)}
+                      className={`text-[0.7rem] border rounded px-1.5 py-0.5 cursor-pointer hover:brightness-110 ${
+                        u.isMuted
+                          ? "text-green-400 border-green-500/40 hover:bg-green-900/30"
+                          : "text-[#c8a070] border-[#7a4e22] hover:bg-[#3d2510]"
+                      }`}
+                      title={u.isMuted ? "Dezmută" : "Mută"}
+                    >
+                      {u.isMuted ? "Dezmută" : "Mută"}
+                    </button>
+                    <button
+                      onClick={() => remove(u)}
+                      className="text-red-400/80 hover:text-red-300 text-[0.75rem] cursor-pointer"
+                      title="Șterge"
+                    >
+                      ✕
+                    </button>
+                  </>
                 )}
               </div>
             </div>
