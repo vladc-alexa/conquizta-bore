@@ -14,13 +14,26 @@ enum QuizSessionStatus {
 }
 
 model User {
-  id              String              @id @default(uuid()) @db.Uuid
-  email           String?             @unique
-  displayName     String              @unique @db.VarChar(32)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  id              String             @id @default(uuid()) @db.Uuid
+  email           String?            @unique
+  passwordHash    String?
+  displayName     String             @unique @db.VarChar(32)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
   quizSessions    QuizSession[]
   questionStats   UserQuestionStat[]
+  chatMessages    ChatMessage[]
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String?  @db.Uuid
+  authorName  String   @db.VarChar(32)
+  text        String   @db.VarChar(500)
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
 }
 
 model Category {
