@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { jokeOfTheDay } from "@/lib/jokes";
 
 interface ChatMessage {
   id: string;
@@ -24,7 +23,6 @@ export default function Dashboard() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [rows, setRows] = useState<LeaderRow[]>([]);
-  const [joke] = useState(() => jokeOfTheDay());
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -172,7 +170,7 @@ export default function Dashboard() {
 
       <div className="flex flex-col lg:flex-row gap-4 items-start">
         {/* Left: Chat */}
-        <section className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full lg:w-[320px] shrink-0 flex flex-col h-[480px]">
+        <section className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full lg:w-[480px] shrink-0 flex flex-col h-[480px] lg:h-[calc(100vh-200px)] lg:min-h-[560px]">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#7a4e2260]">
             <h3 className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-widest">Chat general</h3>
             <span className="text-[#a07848] text-[0.7rem]">{messages.length} mesaje</span>
@@ -304,7 +302,7 @@ export default function Dashboard() {
 
           <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-4 flex flex-col gap-2">
             <h3 className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-widest">😂 Gluma zilei</h3>
-            <p className="text-[#e8d8b0] text-[0.8rem] leading-relaxed italic">„{joke}”</p>
+            <p className="text-[#e8d8b0] text-[0.9rem] leading-relaxed font-cinzel">„Tu! Tu esti gluma!”</p>
           </div>
         </section>
       </div>
