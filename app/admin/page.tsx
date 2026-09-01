@@ -10,6 +10,14 @@ interface AdminUser {
   createdAt: string;
 }
 
+interface AdminQuestion {
+  id: string;
+  prompt: string;
+  isPublished: boolean;
+  correctAnswer: string | null;
+  reportCount: number;
+}
+
 export default function AdminPage() {
   const [me, setMe] = useState<{ name: string; isAdmin: boolean } | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -19,6 +27,10 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
   const [busy, setBusy] = useState(false);
+  const [questions, setQuestions] = useState<AdminQuestion[]>([]);
+  const [qSearch, setQSearch] = useState("");
+  const [qStatus, setQStatus] = useState<"all" | "published" | "disabled">("all");
+  const [qLoading, setQLoading] = useState(false);
 
   const load = useCallback(async () => {
     const meRes = await fetch("/api/auth/me");
@@ -36,9 +48,42 @@ export default function AdminPage() {
     }
   }, []);
 
+  const loadQuestions = useCallback(async (search = qSearch, status = qStatus) => {
+    setQLoading(true);
+    try {
+      const res = await fetch(
+        `/api/admin/questions?search=${encodeURIComponent(search)}&status=${status}&limit=100`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setQuestions(data.questions ?? []);
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setQLoading(false);
+    }
+  }, [qSearch, qStatus]);
+
+  const toggleQuestion = async (q: AdminQuestion) => {
+    const res = await fetch(`/api/admin/questions/${q.id}/toggle`, { method: "POST" });
+    if (res.ok) {
+      const data = await res.json();
+      setQuestions((list) => list.map((x) => (x.id === q.id ? { ...x, isPublished: data.isPublished } : x)));
+    }
+  };
+
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (me?.isAdmin) {
+      const t = setTimeout(() => loadQuestions(), 300);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qSearch, qStatus, me?.isAdmin]);
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +144,7 @@ export default function AdminPage() {
   return (
     <div className="w-full max-w-3xl mx-auto flex flex-col gap-5 py-6">
       <div className="flex items-center justify-between">
-        <h1 className="!mb-0 text-[1.3rem]">Admin — Jucători</h1>
+        <h1 className="!mb-0 text-[1.3rem]">Admin — Jucători & Întrebări</h1>
         <a href="/" className="text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem]">← Înapoi</a>
       </div>
 
@@ -174,6 +219,74 @@ export default function AdminPage() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* questions browser */}
+      <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-5 flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">
+            Întrebări {qLoading && <span className="text-[#a07848] text-[0.7rem]">(se încarcă…)</span>}
+          </h3>
+          <div className="flex gap-2">
+            <input
+              value={qSearch}
+              onChange={(e) => setQSearch(e.target.value)}
+              placeholder="Caută în întrebări…"
+              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[0.8rem] p-2 w-52 outline-none focus:border-[#c87030]"
+            />
+            <select
+              value={qStatus}
+              onChange={(e) => setQStatus(e.target.value as typeof qStatus)}
+              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[0.8rem] p-2 outline-none cursor-pointer"
+            >
+              <option value="all">Toate</option>
+              <option value="published">Publicate</option>
+              <option value="disabled">Dezactivate</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex flex-col max-h-[420px] overflow-y-auto">
+          {questions.length === 0 ? (
+            <div className="text-[#a07848] text-[0.8rem] text-center p-4">Nicio întrebare găsită.</div>
+          ) : (
+            questions.map((q) => (
+              <div
+                key={q.id}
+                className="grid grid-cols-[1fr_auto] gap-3 items-center text-[0.82rem] p-2 px-2.5 rounded odd:bg-white/5"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-[0.68rem] text-[#a07848]">ID {q.id.slice(0, 8)}</span>
+                    {q.reportCount > 0 && (
+                      <span className="text-[0.65rem] text-red-400 bg-red-900/30 border border-red-500/40 rounded px-1.5 py-0.5">
+                        ⚠ {q.reportCount} raportări
+                      </span>
+                    )}
+                    {q.isPublished ? (
+                      <span className="text-[0.65rem] text-green-400 border border-green-500/40 rounded px-1.5 py-0.5">publicată</span>
+                    ) : (
+                      <span className="text-[0.65rem] text-[#a07848] border border-[#7a4e22] rounded px-1.5 py-0.5">dezactivată</span>
+                    )}
+                  </div>
+                  <div className="text-[#e8d8b0] leading-snug mt-1">{q.prompt}</div>
+                  <div className="text-[0.72rem] text-[#c8a070] mt-0.5">
+                    Corect: <strong className="text-[#f5c97a]">{q.correctAnswer ?? "—"}</strong>
+                  </div>
+                </div>
+                <button
+                  onClick={() => toggleQuestion(q)}
+                  className={`self-center text-[0.72rem] border rounded-lg px-2.5 py-1.5 cursor-pointer hover:brightness-110 ${
+                    q.isPublished
+                      ? "text-red-400/90 border-red-500/40 hover:bg-red-900/30"
+                      : "text-green-400 border-green-500/40 hover:bg-green-900/30"
+                  }`}
+                >
+                  {q.isPublished ? "Dezactivează" : "Activează"}
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

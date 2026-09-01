@@ -14,8 +14,8 @@ const lato = Lato({
 });
 
 export const metadata: Metadata = {
-  title: "ConQuizta – Bore",
-  description: "A simple quiz game",
+  title: "MAHALADOR",
+  description: "Antrenament de cultură generală",
 };
 
 export default function RootLayout({

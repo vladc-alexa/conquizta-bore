@@ -29,10 +29,22 @@ export default function TrainPage() {
   const [correct, setCorrect] = useState(0);
   const [wrong, setWrong] = useState(0);
   const [timeouts, setTimeouts] = useState(0);
-  const [feedback, setFeedback] = useState<{ state: "correct" | "wrong" | "timeout"; reveal: string } | null>(null);
+  const [feedback, setFeedback] = useState<{ state: "correct" | "wrong" | "timeout"; reveal: string; elapsed?: number } | null>(null);
   const [timeLeft, setTimeLeft] = useState(TIMER_SECONDS);
   const [inputValue, setInputValue] = useState("");
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
+
+  interface ReviewItem {
+    id: string;
+    prompt: string;
+    myAnswer: string;
+    correctAnswer: string;
+    isCorrect: boolean;
+    timeout: boolean;
+  }
+  const [review, setReview] = useState<ReviewItem[]>([]);
+  const [reported, setReported] = useState<Set<string>>(new Set());
+  const [showReview, setShowReview] = useState(false);
 
   // refs mirror the state for timer callbacks (no stale closures)
   const questionsRef = useRef<(RapideQuestion | GrilaQuestion)[]>([]);
@@ -45,10 +57,9 @@ export default function TrainPage() {
   const sessionIdRef = useRef<string | null>(null);
   const questionStartRef = useRef(0);
 
-  const recordAnswer = (questionId: string, isCorrect: boolean, opts: { answer?: string; selectedOptionId?: string }) => {
+  const recordAnswer = (questionId: string, isCorrect: boolean, elapsedMs: number, opts: { answer?: string; selectedOptionId?: string }) => {
     const sid = sessionIdRef.current;
     if (!sid) return;
-    const elapsedMs = Math.max(0, Date.now() - questionStartRef.current);
     fetch(`/api/sessions/${sid}/answers`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -102,12 +113,44 @@ export default function TrainPage() {
     timerRef.current = setInterval(tick, 100);
   };
 
+  const pushReview = (q: RapideQuestion | GrilaQuestion, myAnswer: string, isCorrect: boolean, timeout: boolean) => {
+    setReview((r) => [
+      ...r,
+      {
+        id: q.id,
+        prompt: q.prompt,
+        myAnswer: timeout ? "—" : myAnswer || "—",
+        correctAnswer: revealAnswer(),
+        isCorrect,
+        timeout,
+      },
+    ]);
+  };
+
+  const reportQuestion = async (qid: string) => {
+    if (reported.has(qid)) return;
+    try {
+      const res = await fetch(`/api/questions/${qid}/report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: "raportată din recenzie" }),
+      });
+      if (res.ok) {
+        setReported((prev) => new Set(prev).add(qid));
+      }
+    } catch {
+      /* ignore */
+    }
+  };
+
   const handleTimeout = () => {
     if (answeredRef.current) return;
     answeredRef.current = true;
     clearTimer();
     setTimeLeft(0);
     setTimeouts((t) => t + 1);
+    const q = questionsRef.current[idxRef.current];
+    if (q) pushReview(q, "", false, true);
     setFeedback({ state: "timeout", reveal: revealAnswer() });
     setTimeout(nextQuestion, 1400);
   };
@@ -125,13 +168,25 @@ export default function TrainPage() {
     if (answeredRef.current) return;
     answeredRef.current = true;
     clearTimer();
+    const elapsedMs = Math.max(0, Date.now() - questionStartRef.current);
     const q = questionsRef.current[idxRef.current];
     if (isCorrect) {
       setCorrect((c) => c + 1);
       correctRef.current += 1;
     } else setWrong((w) => w + 1);
-    if (q) recordAnswer(q.id, isCorrect, opts);
-    setFeedback({ state: isCorrect ? "correct" : "wrong", reveal: revealAnswer() });
+    if (q) {
+      recordAnswer(q.id, isCorrect, elapsedMs, opts);
+      const myAnswer =
+        opts?.selectedOptionId != null
+          ? ((q as GrilaQuestion).options.find((o) => o.id === opts.selectedOptionId)?.text ?? "")
+          : (opts?.answer ?? "");
+      pushReview(q, myAnswer, isCorrect, false);
+    }
+    setFeedback({
+      state: isCorrect ? "correct" : "wrong",
+      reveal: revealAnswer(),
+      elapsed: modeRef.current === "rapide" ? elapsedMs : undefined,
+    });
     setTimeout(nextQuestion, 1400);
   };
 
@@ -146,6 +201,9 @@ export default function TrainPage() {
     correctRef.current = 0;
     setWrong(0);
     setTimeouts(0);
+    setReview([]);
+    setReported(new Set());
+    setShowReview(false);
     try {
       const res = await fetch(`/api/questions?mode=${m}&count=${QUESTION_COUNT}`);
       const data = await res.json();
@@ -192,6 +250,11 @@ export default function TrainPage() {
 
   useEffect(() => () => clearTimer(), []);
 
+  // auto-open the review modal when a session finishes
+  useEffect(() => {
+    if (phase === "finished") setShowReview(true);
+  }, [phase]);
+
   // keep the numeric input focused across questions
   useEffect(() => {
     if (phase === "playing" && mode === "rapide") {
@@ -235,6 +298,7 @@ export default function TrainPage() {
     const total = correct + wrong + timeouts;
     const accuracy = total ? Math.round((correct / total) * 100) : 0;
     return (
+      <>
       <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-[520px] mx-auto p-7 flex flex-col gap-4 text-center">
         <h2 className="font-cinzel text-[#f5c97a] text-[1.4rem]">🏆 Terminat!</h2>
         <div className="text-[0.95rem] leading-[1.9] text-[#d0c090]">
@@ -250,14 +314,74 @@ export default function TrainPage() {
             Încă o dată
           </button>
           <button
-            onClick={() => setMode(null)}
+            onClick={() => setShowReview(true)}
             className="flex-1 bg-gradient-to-br from-[#7a4010] to-[#3d2010] border-2 border-[#c88040a0] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-125 cursor-pointer"
+          >
+            Recenzie ({review.length})
+          </button>
+          <button
+            onClick={() => setMode(null)}
+            className="flex-1 bg-gradient-to-br from-[#3d2010] to-[#2a1608] border-2 border-[#7a4e22] rounded-lg text-[#c8a070] font-cinzel p-3 hover:brightness-125 cursor-pointer"
           >
             Schimbă modul
           </button>
         </div>
       </div>
-    );
+
+      {/* review modal */}
+      {showReview && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#7a4e2260]">
+              <h3 className="font-cinzel text-[#f5c97a] text-[0.95rem] tracking-widest">📋 Recenzia sesiunii</h3>
+              <button onClick={() => setShowReview(false)} className="text-[#c8a070] hover:text-[#f5c97a] cursor-pointer text-[1.1rem]" title="Închide">
+                ✕
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4 flex flex-col gap-2">
+              {review.length === 0 && (
+                <div className="text-[#a07848] text-[0.8rem] text-center p-4">Nicio întrebare înregistrată.</div>
+              )}
+              {review.map((r, i) => (
+                <div
+                  key={r.id + i}
+                  className={`rounded-xl border-2 p-3 flex flex-col gap-1.5 ${r.isCorrect ? "bg-green-900/15 border-green-500/30" : "bg-red-900/15 border-red-500/30"}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[0.75rem] text-[#a07848]">
+                      #{i + 1} · <span className="font-mono text-[#c8a070]">ID {r.id.slice(0, 8)}</span>
+                    </span>
+                    <span className="text-[0.85rem]">{r.isCorrect ? "✔" : r.timeout ? "⏱" : "✖"}</span>
+                  </div>
+                  <div className="text-[0.9rem] text-[#e8d8b0] leading-snug">{r.prompt}</div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.8rem]">
+                    <span className={r.isCorrect ? "text-green-400" : "text-red-400"}>
+                      Ai răspuns: <strong>{r.myAnswer}</strong>
+                    </span>
+                    {!r.isCorrect && (
+                      <span className="text-[#f5c97a]">
+                        Corect: <strong>{r.correctAnswer}</strong>
+                      </span>
+                    )}
+                    {reported.has(r.id) ? (
+                      <span className="text-[#c8a070] text-[0.7rem] ml-auto">Raportată ✓</span>
+                    ) : (
+                      <button
+                        onClick={() => reportQuestion(r.id)}
+                        className="ml-auto text-[0.7rem] text-red-400/90 border border-red-500/40 rounded px-2 py-0.5 hover:bg-red-900/30 cursor-pointer"
+                      >
+                        Raportează
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
   }
 
   // ---------- playing ----------
@@ -374,7 +498,12 @@ export default function TrainPage() {
             <div className="font-cinzel">
               {feedback.state === "correct" ? "Corect!" : feedback.state === "wrong" ? "Greșit!" : "Timp expirat!"}
             </div>
-            <div className="text-[0.85rem] text-[#d0b888]">Răspuns corect: <strong className="text-[#f5c97a]">{feedback.reveal}</strong></div>
+            <div className="text-[0.85rem] text-[#d0b888]">
+              Răspuns corect: <strong className="text-[#f5c97a]">{feedback.reveal}</strong>
+              {feedback.elapsed != null && (
+                <span className="ml-3">Timp: <strong className="text-[#f5c97a]">{(feedback.elapsed / 1000).toFixed(3).replace(".", ",")}s</strong></span>
+              )}
+            </div>
           </div>
         )}
       </div>

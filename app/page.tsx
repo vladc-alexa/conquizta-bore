@@ -161,7 +161,7 @@ export default function Dashboard() {
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 py-4">
       {/* Header */}
       <header className="flex items-center justify-between gap-3">
-        <h1 className="!mb-0 text-[1.3rem]">ConQuizta – Bore</h1>
+        <h1 className="!mb-0 text-[1.3rem]">MAHALADOR</h1>
         <div className="flex items-center gap-3">
           {isAdmin && (
             <a

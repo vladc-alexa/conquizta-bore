@@ -37,7 +37,7 @@ export default function LoginPage() {
         onSubmit={submit}
         className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-[380px] p-7 flex flex-col gap-4"
       >
-        <h1 className="text-center !mb-1">ConQuizta – Bore</h1>
+        <h1 className="text-center !mb-1">MAHALADOR</h1>
         <p className="text-center text-[0.85rem] text-[#c8a070] -mt-2">Autentificare</p>
 
         <label className="flex flex-col gap-1.5 text-[0.8rem] text-[#c8a070]">
