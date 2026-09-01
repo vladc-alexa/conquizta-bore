@@ -41,6 +41,12 @@ export default function Dashboard() {
   const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pwBusy, setPwBusy] = useState(false);
 
+  // change-name modal
+  const [showName, setShowName] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [nameMsg, setNameMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [nameBusy, setNameBusy] = useState(false);
+
   const loadLeaderboard = useCallback(async () => {
     try {
       const res = await fetch("/api/leaderboard");
@@ -130,6 +136,32 @@ export default function Dashboard() {
     }
   };
 
+  const rename = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNameMsg(null);
+    setNameBusy(true);
+    try {
+      const res = await fetch("/api/auth/name", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNameMsg({ ok: false, text: data.error || "Eroare." });
+        return;
+      }
+      setName(data.name);
+      setNameMsg({ ok: true, text: "Numele a fost schimbat." });
+      setShowName(false);
+      loadChat();
+    } catch {
+      setNameMsg({ ok: false, text: "Eroare de rețea." });
+    } finally {
+      setNameBusy(false);
+    }
+  };
+
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/login";
@@ -173,6 +205,19 @@ export default function Dashboard() {
             >
               Admin
             </a>
+          )}
+          {name && (
+            <button
+              onClick={() => {
+                setShowName(true);
+                setNameMsg(null);
+                setNewName(name);
+              }}
+              className="font-cinzel text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem] border border-[#7a4e22] rounded-lg px-3.5 py-2 bg-[#2a1608] cursor-pointer"
+              title="Schimbă numele"
+            >
+              ✏️
+            </button>
           )}
           {name && (
             <button
@@ -426,6 +471,42 @@ export default function Dashboard() {
               className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-[0.7rem] hover:brightness-110 disabled:opacity-50 cursor-pointer"
             >
               {pwBusy ? "Se salvează…" : "Salvează"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* change-name modal */}
+      {showName && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <form
+            onSubmit={rename}
+            className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-3"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">✏️ Schimbă numele</h3>
+              <button type="button" onClick={() => setShowName(false)} className="text-[#c8a070] hover:text-[#f5c97a] cursor-pointer">
+                ✕
+              </button>
+            </div>
+            <input
+              required
+              maxLength={32}
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Nume nou (max 32)"
+              autoComplete="off"
+              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-[0.7rem] outline-none focus:border-[#c87030]"
+            />
+            {nameMsg && (
+              <div className={`text-[0.8rem] ${nameMsg.ok ? "text-green-400" : "text-red-400"}`}>{nameMsg.text}</div>
+            )}
+            <button
+              type="submit"
+              disabled={nameBusy || !newName.trim()}
+              className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-[0.7rem] hover:brightness-110 disabled:opacity-50 cursor-pointer"
+            >
+              {nameBusy ? "Se salvează…" : "Salvează"}
             </button>
           </form>
         </div>
