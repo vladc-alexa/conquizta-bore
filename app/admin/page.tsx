@@ -36,7 +36,9 @@ export default function AdminPage() {
   const [qStatus, setQStatus] = useState<"reported" | "all" | "published" | "disabled">("reported");
   const [qLoading, setQLoading] = useState(false);
   const [editing, setEditing] = useState<AdminQuestion | null>(null);
+  const [editType, setEditType] = useState<"rapide" | "grila">("grila");
   const [editPrompt, setEditPrompt] = useState("");
+  const [editAnswer, setEditAnswer] = useState("");
   const [editOptions, setEditOptions] = useState<{ text: string; isCorrect: boolean }[]>([]);
   const [editBusy, setEditBusy] = useState(false);
   const [editMsg, setEditMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -86,7 +88,28 @@ export default function AdminPage() {
   const openEdit = (q: AdminQuestion) => {
     setEditing(q);
     setEditPrompt(q.prompt);
-    setEditOptions(q.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })));
+    const isRapide = q.options.length === 1;
+    setEditType(isRapide ? "rapide" : "grila");
+    setEditAnswer((q.options.find((o) => o.isCorrect)?.text ?? q.options[0]?.text ?? "").trim());
+    // grila: always exactly 4 variants; pad/truncate to 4, ensure one marked correct
+    const opts = q.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect }));
+    if (opts.length > 0 && !opts.some((o) => o.isCorrect)) opts[0].isCorrect = true;
+    while (opts.length < 4) opts.push({ text: "", isCorrect: false });
+    setEditOptions(opts.slice(0, 4));
+    setEditMsg(null);
+  };
+
+  const switchEditType = (t: "rapide" | "grila") => {
+    setEditType(t);
+    if (t === "rapide") {
+      const correct = editOptions.find((o) => o.isCorrect)?.text ?? editOptions[0]?.text ?? "";
+      setEditAnswer(correct.trim());
+    } else {
+      const opts = editAnswer.trim()
+        ? [{ text: editAnswer.trim(), isCorrect: true }, { text: "", isCorrect: false }, { text: "", isCorrect: false }, { text: "", isCorrect: false }]
+        : editOptions;
+      setEditOptions(opts.length === 4 ? opts : [{ text: "", isCorrect: true }, { text: "", isCorrect: false }, { text: "", isCorrect: false }, { text: "", isCorrect: false }]);
+    }
     setEditMsg(null);
   };
 
@@ -96,10 +119,14 @@ export default function AdminPage() {
     setEditBusy(true);
     setEditMsg(null);
     try {
+      const body =
+        editType === "rapide"
+          ? { prompt: editPrompt, options: [{ text: editAnswer.trim(), isCorrect: true }] }
+          : { prompt: editPrompt, options: editOptions };
       const res = await fetch(`/api/admin/questions/${editing.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: editPrompt, options: editOptions }),
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -440,43 +467,67 @@ export default function AdminPage() {
               onChange={(e) => setEditPrompt(e.target.value)}
               className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#e8d8b0] p-2.5 outline-none focus:border-[#c87030] resize-y"
             />
-            <div className="text-[0.75rem] text-[#c8a070]">Variante de răspuns — marchează-o pe cea corectă:</div>
-            <div className="flex flex-col gap-1.5">
-              {editOptions.map((o, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="correct-option"
-                    checked={o.isCorrect}
-                    onChange={() => setEditOptions((opts) => opts.map((x, j) => ({ ...x, isCorrect: j === i })))}
-                    title="Corectă"
-                    className="accent-[#c87030] cursor-pointer shrink-0"
-                  />
-                  <input
-                    value={o.text}
-                    onChange={(e) => setEditOptions((opts) => opts.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
-                    maxLength={500}
-                    placeholder={`Varianta ${i + 1}`}
-                    className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#e8d8b0] p-2 outline-none focus:border-[#c87030]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setEditOptions((opts) => opts.filter((_, j) => j !== i))}
-                    className="text-red-400/80 hover:text-red-300 text-[0.8rem] cursor-pointer shrink-0"
-                    title="Șterge varianta"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
+            <div className="flex gap-4">
+              <label className="flex items-center gap-1.5 text-[0.8rem] text-[#c8a070] cursor-pointer">
+                <input
+                  type="radio"
+                  name="qtype"
+                  checked={editType === "rapide"}
+                  onChange={() => switchEditType("rapide")}
+                  className="accent-[#c87030] cursor-pointer"
+                />
+                ⚡ Rapide (răspuns numeric)
+              </label>
+              <label className="flex items-center gap-1.5 text-[0.8rem] text-[#c8a070] cursor-pointer">
+                <input
+                  type="radio"
+                  name="qtype"
+                  checked={editType === "grila"}
+                  onChange={() => switchEditType("grila")}
+                  className="accent-[#c87030] cursor-pointer"
+                />
+                🎯 Grilă (4 variante)
+              </label>
             </div>
-            <button
-              type="button"
-              onClick={() => setEditOptions((opts) => [...opts, { text: "", isCorrect: opts.length === 0 }])}
-              className="self-start text-[0.75rem] text-[#c8a070] border border-[#7a4e22] rounded px-2.5 py-1 hover:bg-[#3d2510] cursor-pointer"
-            >
-              + Adaugă variantă
-            </button>
+            {editType === "rapide" ? (
+              <div className="flex flex-col gap-1.5">
+                <div className="text-[0.75rem] text-[#c8a070]">
+                  Răspunsul corect (număr între -500 și 10.000.000):
+                </div>
+                <input
+                  value={editAnswer}
+                  onChange={(e) => setEditAnswer(e.target.value.replace(/[^0-9-]/g, ""))}
+                  inputMode="numeric"
+                  placeholder="ex: 50"
+                  className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2 outline-none focus:border-[#c87030]"
+                />
+              </div>
+            ) : (
+              <>
+                <div className="text-[0.75rem] text-[#c8a070]">Exact 4 variante — marchează-o pe cea corectă:</div>
+                <div className="flex flex-col gap-1.5">
+                  {editOptions.map((o, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="correct-option"
+                        checked={o.isCorrect}
+                        onChange={() => setEditOptions((opts) => opts.map((x, j) => ({ ...x, isCorrect: j === i })))}
+                        title="Corectă"
+                        className="accent-[#c87030] cursor-pointer shrink-0"
+                      />
+                      <input
+                        value={o.text}
+                        onChange={(e) => setEditOptions((opts) => opts.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
+                        maxLength={500}
+                        placeholder={`Varianta ${i + 1}`}
+                        className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#e8d8b0] p-2 outline-none focus:border-[#c87030]"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
             {editMsg && (
               <div className={`text-[0.8rem] ${editMsg.ok ? "text-green-400" : "text-red-400"}`}>{editMsg.text}</div>
             )}
