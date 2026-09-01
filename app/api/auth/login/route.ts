@@ -25,7 +25,12 @@ export async function POST(req: Request) {
     if (!email || !password) {
       return NextResponse.json({ error: "Email și parola sunt obligatorii." }, { status: 400 });
     }
-    const user = await prisma.user.findUnique({ where: { email } });
+    // login by email OR display name (some accounts were created without email)
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email }, { displayName: { equals: email, mode: "insensitive" } }],
+      },
+    });
     if (!user?.passwordHash || !verifyPassword(password, user.passwordHash)) {
       return NextResponse.json({ error: "Email sau parolă incorecte." }, { status: 401 });
     }

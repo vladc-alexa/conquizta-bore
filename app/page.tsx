@@ -18,29 +18,22 @@ interface LeaderRow {
   games: number;
 }
 
-const PRC_BEST_KEY = "conquizta_bore_prc_best";
-const PRC_SECONDS = 30;
-
 export default function Dashboard() {
   const [name, setName] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [rows, setRows] = useState<LeaderRow[]>([]);
+  const [meRow, setMeRow] = useState<LeaderRow | null>(null);
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // PRC sprint state
-  const [prcActive, setPrcActive] = useState(false);
-  const [prcTarget, setPrcTarget] = useState(0);
-  const [prcInput, setPrcInput] = useState("");
-  const [prcCount, setPrcCount] = useState(0);
-  const [prcWrong, setPrcWrong] = useState(0);
-  const [prcTimeLeft, setPrcTimeLeft] = useState(PRC_SECONDS);
-  const [prcBest, setPrcBest] = useState<number>(0);
-  const [prcDone, setPrcDone] = useState(false);
-  const prcTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const prcInputRef = useRef<HTMLInputElement>(null);
+  // change-password modal
+  const [showPw, setShowPw] = useState(false);
+  const [curPw, setCurPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pwBusy, setPwBusy] = useState(false);
 
   const loadLeaderboard = useCallback(async () => {
     try {
@@ -48,6 +41,7 @@ export default function Dashboard() {
       if (!res.ok) return;
       const data = await res.json();
       setRows(data.rows ?? []);
+      setMeRow(data.me ?? null);
     } catch {
       /* ignore */
     }
@@ -76,8 +70,6 @@ export default function Dashboard() {
       .catch(() => {});
     loadChat();
     loadLeaderboard();
-    const best = parseInt(localStorage.getItem(PRC_BEST_KEY) || "0", 10);
-    if (!isNaN(best)) setPrcBest(best);
     const chatTimer = setInterval(loadChat, 5000);
     return () => clearInterval(chatTimer);
   }, [loadChat, loadLeaderboard]);
@@ -110,52 +102,30 @@ export default function Dashboard() {
     window.location.href = "/login";
   };
 
-  // ---- PRC sprint ----
-  const startPrc = () => {
-    setPrcActive(true);
-    setPrcDone(false);
-    setPrcCount(0);
-    setPrcWrong(0);
-    setPrcTimeLeft(PRC_SECONDS);
-    setPrcTarget(Math.floor(Math.random() * 10000));
-    setPrcInput("");
-    if (prcTimer.current) clearInterval(prcTimer.current);
-    prcTimer.current = setInterval(() => {
-      setPrcTimeLeft((t) => {
-        if (t <= 1) {
-          if (prcTimer.current) clearInterval(prcTimer.current);
-          return 0;
-        }
-        return t - 1;
+  const changePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwMsg(null);
+    setPwBusy(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword: curPw, newPassword: newPw }),
       });
-    }, 1000);
-    setTimeout(() => prcInputRef.current?.focus(), 0);
-  };
-
-  const submitPrc = () => {
-    const val = parseInt(prcInput.trim(), 10);
-    if (isNaN(val)) return;
-    if (val === prcTarget) {
-      setPrcCount((c) => c + 1);
-    } else {
-      setPrcWrong((w) => w + 1);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPwMsg({ ok: false, text: data.error || "Eroare." });
+        return;
+      }
+      setPwMsg({ ok: true, text: "Parola a fost schimbată." });
+      setCurPw("");
+      setNewPw("");
+    } catch {
+      setPwMsg({ ok: false, text: "Eroare de rețea." });
+    } finally {
+      setPwBusy(false);
     }
-    setPrcTarget(Math.floor(Math.random() * 10000));
-    setPrcInput("");
-    prcInputRef.current?.focus();
   };
-
-  useEffect(() => {
-    if (prcTimeLeft === 0 && prcActive) {
-      setPrcActive(false);
-      setPrcDone(true);
-      setPrcBest((prev) => {
-        const newBest = Math.max(prev, prcCount);
-        localStorage.setItem(PRC_BEST_KEY, String(newBest));
-        return newBest;
-      });
-    }
-  }, [prcTimeLeft, prcActive, prcCount]);
 
   return (
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 py-4">
@@ -170,6 +140,20 @@ export default function Dashboard() {
             >
               Admin
             </a>
+          )}
+          {name && (
+            <button
+              onClick={() => {
+                setShowPw(true);
+                setPwMsg(null);
+                setCurPw("");
+                setNewPw("");
+              }}
+              className="font-cinzel text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem] border border-[#7a4e22] rounded-lg px-3 py-1.5 bg-[#2a1608] cursor-pointer"
+              title="Schimbă parola"
+            >
+              🔑
+            </button>
           )}
           {name && (
             <span className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-wider border border-[#7a4e22] rounded-lg px-3 py-1.5 bg-[#2a1608]">
@@ -260,6 +244,25 @@ export default function Dashboard() {
                   </span>
                 </div>
               ))}
+              {meRow && !rows.some((r) => r.id === meRow.id) && (
+                <>
+                  <div className="border-t border-[#7a4e2260] my-1" />
+                  <div className="grid grid-cols-[24px_1fr_auto] gap-2 text-[0.82rem] p-1.5 px-2 rounded items-center bg-[#c8703026] border border-[#c87030a0]">
+                    <span className="text-[#a07848] text-[0.75rem]">{rows.length + 1}</span>
+                    <span className="min-w-0">
+                      <span className="font-cinzel truncate block text-[#f5c97a]">{meRow.name} (tu)</span>
+                      <span className="text-[0.65rem] text-[#a07848] block">
+                        {meRow.grila !== null && <>grilă {meRow.grila}</>}
+                        {meRow.grila !== null && meRow.rapide !== null && " · "}
+                        {meRow.rapide !== null && <>rapide {meRow.rapide}</>}
+                      </span>
+                    </span>
+                    <span className="font-cinzel text-[#f5c97a] font-bold text-[1rem]">
+                      {meRow.prc != null ? meRow.prc.toLocaleString("ro-RO") : "—"}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </section>
@@ -274,63 +277,58 @@ export default function Dashboard() {
             <div className="text-[#3d2510] text-[0.75rem] mt-1">Antrenament de viteză</div>
           </a>
 
-          <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-4 flex flex-col gap-2.5">
-            <h3 className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-widest">⚡ Măsoară PRC</h3>
-            {!prcActive && !prcDone && (
-              <>
-                <p className="text-[#c8a070] text-[0.75rem]">
-                  Scrie cât mai multe numere corect în {PRC_SECONDS} de secunde.
-                </p>
-                {prcBest > 0 && (
-                  <p className="text-[#f5c97a] text-[0.8rem]">Record personal: <strong>{prcBest}</strong></p>
-                )}
-                <button
-                  onClick={startPrc}
-                  className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-2.5 hover:brightness-110 cursor-pointer"
-                >
-                  Începe
-                </button>
-              </>
-            )}
-            {prcActive && (
-              <div className="flex flex-col gap-2">
-                <div className="text-center font-cinzel text-[#f5c97a] text-[1.6rem]">{prcTarget}</div>
-                <div className="text-center text-[0.75rem] text-[#c8a070]">
-                  Timp rămas: <strong className="text-[#f5c97a]">{prcTimeLeft}s</strong> · Corecte:{" "}
-                  <strong className="text-[#f5c97a]">{prcCount}</strong>
-                </div>
-                <input
-                  ref={prcInputRef}
-                  type="number"
-                  value={prcInput}
-                  onChange={(e) => setPrcInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && submitPrc()}
-                  className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[1.2rem] text-center p-2 outline-none focus:border-[#c87030]"
-                />
-              </div>
-            )}
-            {prcDone && (
-              <div className="flex flex-col gap-2 text-center">
-                <div className="font-cinzel text-[#f5c97a] text-[1.3rem]">{prcCount} corecte</div>
-                <div className="text-[0.75rem] text-[#c8a070]">
-                  Greșite: {prcWrong} · Record: <strong>{prcBest}</strong>
-                </div>
-                <button
-                  onClick={startPrc}
-                  className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-2.5 hover:brightness-110 cursor-pointer"
-                >
-                  Încă o dată
-                </button>
-              </div>
-            )}
-          </div>
-
           <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-4 flex flex-col gap-2">
             <h3 className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-widest">😂 Gluma zilei</h3>
             <p className="text-[#e8d8b0] text-[0.9rem] leading-relaxed font-cinzel">„Tu! Tu esti gluma!”</p>
           </div>
         </section>
       </div>
+
+      {/* change-password modal */}
+      {showPw && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <form
+            onSubmit={changePassword}
+            className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-3"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">🔑 Schimbă parola</h3>
+              <button type="button" onClick={() => setShowPw(false)} className="text-[#c8a070] hover:text-[#f5c97a] cursor-pointer">
+                ✕
+              </button>
+            </div>
+            <input
+              type="password"
+              required
+              value={curPw}
+              onChange={(e) => setCurPw(e.target.value)}
+              placeholder="Parola actuală"
+              autoComplete="current-password"
+              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2.5 outline-none focus:border-[#c87030]"
+            />
+            <input
+              type="password"
+              required
+              minLength={4}
+              value={newPw}
+              onChange={(e) => setNewPw(e.target.value)}
+              placeholder="Parola nouă (min 4)"
+              autoComplete="new-password"
+              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2.5 outline-none focus:border-[#c87030]"
+            />
+            {pwMsg && (
+              <div className={`text-[0.8rem] ${pwMsg.ok ? "text-green-400" : "text-red-400"}`}>{pwMsg.text}</div>
+            )}
+            <button
+              type="submit"
+              disabled={pwBusy}
+              className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-2.5 hover:brightness-110 disabled:opacity-50 cursor-pointer"
+            >
+              {pwBusy ? "Se salvează…" : "Salvează"}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

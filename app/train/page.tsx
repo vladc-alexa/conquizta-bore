@@ -263,6 +263,19 @@ export default function TrainPage() {
     }
   }, [idx, phase, mode]);
 
+  const backToLobby = () => {
+    const sid = sessionIdRef.current;
+    if (sid) {
+      fetch(`/api/sessions/${sid}/abandon`, { method: "POST" }).catch(() => {});
+      sessionIdRef.current = null;
+    }
+    clearTimer();
+    answeredRef.current = true;
+    setMode(null);
+    modeRef.current = null;
+    setPhase("idle");
+  };
+
   // ---------- mode selection ----------
   if (mode === null) {
     return (
@@ -391,6 +404,16 @@ export default function TrainPage() {
 
   return (
     <div className="w-full max-w-[620px] mx-auto flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={backToLobby}
+          className="text-[#c8a070] hover:text-[#f5c97a] text-[0.85rem] font-cinzel border border-[#7a4e22] rounded-lg px-3 py-1.5 bg-[#2a1608] cursor-pointer"
+        >
+          ← Înapoi
+        </button>
+        <span className="text-[0.7rem] text-[#a07848]">{mode === "rapide" ? "Întrebări rapide" : "Întrebări grilă"}</span>
+      </div>
+
       {/* progress + timer */}
       <div className="flex items-center gap-3 text-[0.8rem] text-[#c8a070]">
         <span className="min-w-[70px]">Întrebarea {idx + 1} / {questions.length}</span>
