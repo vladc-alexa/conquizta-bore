@@ -39,23 +39,92 @@ async function main() {
   console.log(`user ${testUser.email} (test) created/updated`);
 
   const demoNames = ["Rovi", "Lxcxfxr13", "Thinker", "St0ne", "BoreKing"];
+  const demoUsers = [];
   for (const n of demoNames) {
     let u = await prisma.user.findUnique({ where: { displayName: n } });
     if (!u) u = await prisma.user.create({ data: { displayName: n } });
-    const wins = 3 + Math.floor(Math.random() * 12);
-    for (let i = 0; i < wins; i++) {
-      await prisma.quizSession.create({
+    demoUsers.push(u);
+  }
+
+  // wipe previous demo sessions (fresh re-seed of PRC data)
+  await prisma.sessionAnswer.deleteMany({
+    where: { quizSession: { user: { displayName: { in: demoNames } } } },
+  });
+  await prisma.quizSession.deleteMany({
+    where: { user: { displayName: { in: demoNames } } },
+  });
+
+  // shared question pools so rapide ranks actually compute
+  const grilaPool = await prisma.question.findMany({
+    where: { isPublished: true, options: { some: {} } },
+    take: 100,
+    select: { id: true, options: { select: { id: true, isCorrect: true } } },
+  });
+  const grilaQ = grilaPool.filter((q) => q.options.length === 4 && q.options.filter((o) => o.isCorrect).length === 1).slice(0, 50);
+  const rapidePool = await prisma.question.findMany({
+    where: { isPublished: true, options: { some: { isCorrect: true } } },
+    take: 200,
+    select: { id: true, options: { select: { text: true, isCorrect: true } } },
+  });
+  const rapideQ = rapidePool
+    .map((q) => ({ id: q.id, answer: parseInt(q.options.find((o) => o.isCorrect).text.trim(), 10) }))
+    .filter((q) => !isNaN(q.answer))
+    .slice(0, 50);
+
+  const now = Date.now();
+  const RAPIDE_ROUNDS = 6; // 5 users × 6 rounds = 30 answers/question ≥ MIN_ANSWERS(20)
+  for (const u of demoUsers) {
+    // grila session: ~75% correct
+    const gSess = await prisma.quizSession.create({
+      data: { userId: u.id, status: "COMPLETED", questionCount: grilaQ.length, startedAt: new Date(now - 3600_000), completedAt: new Date(now) },
+    });
+    let gCorrect = 0;
+    for (let i = 0; i < grilaQ.length; i++) {
+      const q = grilaQ[i];
+      const correctId = q.options.find((o) => o.isCorrect).id;
+      const right = Math.random() < 0.75;
+      if (right) gCorrect++;
+      const chosen = right ? correctId : q.options[Math.floor(Math.random() * q.options.length)].id;
+      await prisma.sessionAnswer.create({
         data: {
-          userId: u.id,
-          status: "COMPLETED",
-          questionCount: 10,
-          correctCount: 6 + Math.floor(Math.random() * 5),
-          startedAt: new Date(Date.now() - (i + 1) * 3600000),
-          completedAt: new Date(Date.now() - i * 3600000),
+          quizSessionId: gSess.id,
+          questionId: q.id,
+          selectedOptionId: chosen,
+          isCorrect: right,
+          elapsedMilliseconds: 3000 + Math.floor(Math.random() * 5000),
+          answeredAt: new Date(now - (grilaQ.length - i) * 30_000),
         },
       });
     }
-    console.log(`seeded ${wins} sessions for ${n}`);
+    await prisma.quizSession.update({ where: { id: gSess.id }, data: { correctCount: gCorrect } });
+
+    // rapide: multiple rounds so every question gets enough answers for ranks
+    let rCorrect = 0;
+    let rTotal = 0;
+    for (let round = 0; round < RAPIDE_ROUNDS; round++) {
+      const rSess = await prisma.quizSession.create({
+        data: { userId: u.id, status: "COMPLETED", questionCount: rapideQ.length, startedAt: new Date(now - 3600_000), completedAt: new Date(now) },
+      });
+      for (let i = 0; i < rapideQ.length; i++) {
+        const q = rapideQ[i];
+        const exact = Math.random() < 0.6;
+        const val = exact ? q.answer : q.answer + (Math.random() < 0.5 ? -1 : 1) * (1 + Math.floor(Math.random() * 5));
+        if (val === q.answer) rCorrect++;
+        rTotal++;
+        await prisma.sessionAnswer.create({
+          data: {
+            quizSessionId: rSess.id,
+            questionId: q.id,
+            submittedAnswer: String(val),
+            isCorrect: val === q.answer,
+            elapsedMilliseconds: 2000 + Math.floor(Math.random() * 7000),
+            answeredAt: new Date(now - (round * rapideQ.length + i) * 30_000),
+          },
+        });
+      }
+      await prisma.quizSession.update({ where: { id: rSess.id }, data: { correctCount: rCorrect } });
+    }
+    console.log(`seeded PRC data for ${u.displayName} (grila ${gCorrect}/${grilaQ.length}, rapide ${rCorrect}/${rTotal})`);
   }
 
   const chatCount = await prisma.chatMessage.count();
