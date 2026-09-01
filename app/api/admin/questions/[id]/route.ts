@@ -27,11 +27,28 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
       position: i,
     }))
     .filter((o) => o.text.length > 0);
-  if (cleanOptions.length < 2 || cleanOptions.length > 6) {
-    return NextResponse.json({ error: "Trebuie să fie între 2 și 6 variante de răspuns." }, { status: 400 });
-  }
-  if (cleanOptions.filter((o) => o.isCorrect).length !== 1) {
-    return NextResponse.json({ error: "Trebuie marcată exact o variantă corectă." }, { status: 400 });
+
+  if (cleanOptions.length === 1) {
+    // rapide: single numeric answer, range -500 .. 10.000.000
+    const answer = cleanOptions[0].text;
+    if (!/^-?\d+$/.test(answer)) {
+      return NextResponse.json({ error: "Răspunsul la întrebările rapide trebuie să fie un număr." }, { status: 400 });
+    }
+    const n = parseInt(answer, 10);
+    if (n < -500 || n > 10000000) {
+      return NextResponse.json({ error: "Răspunsul trebuie să fie între -500 și 10.000.000." }, { status: 400 });
+    }
+    cleanOptions[0].isCorrect = true;
+  } else if (cleanOptions.length === 4) {
+    // grila: exactly 4 variants, exactly one correct
+    if (cleanOptions.filter((o) => o.isCorrect).length !== 1) {
+      return NextResponse.json({ error: "Trebuie marcată exact o variantă corectă." }, { status: 400 });
+    }
+  } else {
+    return NextResponse.json(
+      { error: "Întrebările rapide au 1 răspuns numeric, iar cele grilă exact 4 variante." },
+      { status: 400 }
+    );
   }
 
   await prisma.$transaction([
