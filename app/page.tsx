@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { CHAT_COLORS, DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
+import { BLACK_CHAT_COLOR, CHAT_COLORS, DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
 
 interface ChatMessage {
   id: string;
@@ -168,7 +168,7 @@ export default function Dashboard() {
           {isAdmin && (
             <a
               href="/admin"
-              className="font-cinzel text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem] border border-[#7a4e22] rounded-lg px-3 py-1.5 bg-[#2a1608]"
+              className="font-cinzel text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem] border border-[#7a4e22] rounded-lg px-3.5 py-2 bg-[#2a1608]"
             >
               Admin
             </a>
@@ -181,20 +181,20 @@ export default function Dashboard() {
                 setCurPw("");
                 setNewPw("");
               }}
-              className="font-cinzel text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem] border border-[#7a4e22] rounded-lg px-3 py-1.5 bg-[#2a1608] cursor-pointer"
+              className="font-cinzel text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem] border border-[#7a4e22] rounded-lg px-3.5 py-2 bg-[#2a1608] cursor-pointer"
               title="Schimbă parola"
             >
               🔑
             </button>
           )}
           {name && (
-            <span className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-wider border border-[#7a4e22] rounded-lg px-3 py-1.5 bg-[#2a1608]">
+            <span className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-wider border border-[#7a4e22] rounded-lg px-3.5 py-2 bg-[#2a1608]">
               {name}
             </span>
           )}
           <button
             onClick={logout}
-            className="bg-gradient-to-br from-[#7a4010] to-[#3d2010] border-2 border-[#c88040a0] rounded-lg text-[#f5e8c0] text-[0.8rem] font-cinzel px-3 py-1.5 hover:brightness-125 cursor-pointer"
+            className="bg-gradient-to-br from-[#7a4010] to-[#3d2010] border-2 border-[#c88040a0] rounded-lg text-[#f5e8c0] text-[0.8rem] font-cinzel px-3.5 py-2 hover:brightness-125 cursor-pointer"
           >
             Ieșire
           </button>
@@ -203,8 +203,8 @@ export default function Dashboard() {
 
       <div className="flex flex-col lg:flex-row gap-4 items-start">
         {/* Left: Chat */}
-        <section className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full lg:w-[480px] shrink-0 flex flex-col h-[480px] lg:h-[calc(100vh-200px)] lg:min-h-[560px]">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#7a4e2260] relative">
+        <section className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full lg:w-[552px] shrink-0 flex flex-col h-[552px] lg:h-[calc(100vh-200px)] lg:min-h-[644px]">
+          <div className="flex items-center justify-between px-[1.15rem] py-[0.7rem] border-b border-[#7a4e2260] relative">
             <h3 className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-widest">Chat general</h3>
             <div className="flex items-center gap-2">
               <span className="text-[#a07848] text-[0.7rem]">{messages.length} mesaje</span>
@@ -219,7 +219,7 @@ export default function Dashboard() {
               )}
             </div>
             {showColors && (
-              <div className="absolute right-3 top-11 z-20 bg-[#2a1608] border-2 border-[#7a4e22] rounded-xl p-2.5 flex flex-col gap-1.5 shadow-2xl">
+              <div className="absolute right-3 top-11 z-20 bg-[#2a1608] border-2 border-[#7a4e22] rounded-xl p-[0.7rem] flex flex-col gap-1.5 shadow-2xl">
                 <span className="text-[0.65rem] text-[#c8a070] uppercase tracking-wider">Culoarea numelui</span>
                 <div className="grid grid-cols-5 gap-1.5">
                   {CHAT_COLORS.map((c) => (
@@ -227,17 +227,20 @@ export default function Dashboard() {
                       key={c.hex}
                       onClick={() => setColor(c.hex)}
                       title={c.name}
-                      className={`w-7 h-7 rounded-full border-2 cursor-pointer hover:scale-110 transition-transform ${
+                      className={`w-8 h-8 rounded-full border-2 cursor-pointer hover:scale-110 transition-transform ${
                         myColor === c.hex ? "border-[#f5c97a] scale-110" : "border-[#7a4e22]"
                       }`}
-                      style={{ backgroundColor: c.hex }}
+                      style={{
+                        backgroundColor: c.hex,
+                        ...(c.hex === BLACK_CHAT_COLOR && { boxShadow: "inset 0 0 0 2px #b57edc" }),
+                      }}
                     />
                   ))}
                 </div>
               </div>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5">
+          <div className="flex-1 overflow-y-auto p-3.5 flex flex-col gap-1.5">
             {messages.length === 0 ? (
               <div className="text-[#a07848] text-[0.75rem] text-center p-4">Niciun mesaj încă. Spune salut!</div>
             ) : (
@@ -245,7 +248,13 @@ export default function Dashboard() {
                 <div key={m.id} className="text-[0.9rem] leading-snug flex items-start gap-1 group">
                   <span
                     className="font-cinzel"
-                    style={{ color: m.authorColor, textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}
+                    style={{
+                      color: m.authorColor,
+                      textShadow:
+                        m.authorColor === BLACK_CHAT_COLOR
+                          ? "0 0 3px #b57edc, 0 0 9px rgba(175,122,197,0.85), 0 1px 2px rgba(0,0,0,0.9)"
+                          : "0 1px 2px rgba(0,0,0,0.9)",
+                    }}
                   >
                     {m.authorName}
                     {m.muted && <span className="text-[#a07848] text-[0.65rem] ml-1" title="mutat">🔇</span>}
@@ -266,19 +275,19 @@ export default function Dashboard() {
             )}
             <div ref={chatEndRef} />
           </div>
-          <div className="p-2.5 border-t border-[#7a4e2260] flex gap-2">
+          <div className="p-[0.7rem] border-t border-[#7a4e2260] flex gap-2">
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               placeholder="Mesaj…"
               maxLength={500}
-              className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[0.85rem] p-2 outline-none focus:border-[#c87030]"
+              className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[0.85rem] p-[0.6rem] outline-none focus:border-[#c87030]"
             />
             <button
               onClick={sendMessage}
               disabled={sending || !chatInput.trim()}
-              className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] px-3 hover:brightness-110 disabled:opacity-40 cursor-pointer"
+              className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] px-3.5 hover:brightness-110 disabled:opacity-40 cursor-pointer"
               title="Trimite"
             >
               ➤
@@ -287,7 +296,7 @@ export default function Dashboard() {
         </section>
 
         {/* Center: Leaderboard */}
-        <section className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full flex-1 p-4 flex flex-col gap-2.5">
+        <section className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full flex-1 p-[1.15rem] flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">👑 Clasamentul zilei</h3>
             <button
@@ -345,16 +354,16 @@ export default function Dashboard() {
         </section>
 
         {/* Right rail */}
-        <section className="w-full lg:w-[260px] shrink-0 flex flex-col gap-4">
+        <section className="w-full lg:w-[300px] shrink-0 flex flex-col gap-4">
           <a
             href="/train"
-            className="bg-gradient-to-br from-[#f5c97a] to-[#c87030] border-2 border-[#f5c97a80] rounded-2xl shadow-2xl text-center p-5 hover:brightness-110 active:translate-y-px"
+            className="bg-gradient-to-br from-[#f5c97a] to-[#c87030] border-2 border-[#f5c97a80] rounded-2xl shadow-2xl text-center p-[1.45rem] hover:brightness-110 active:translate-y-px"
           >
             <div className="font-cinzel text-[#2a1608] text-[1.1rem] tracking-widest">🏋️ Train</div>
             <div className="text-[#3d2510] text-[0.8rem] mt-1 font-bold">VREI SA TI-O MASORI?</div>
           </a>
 
-          <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-4 flex flex-col gap-2">
+          <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-[1.15rem] flex flex-col gap-2">
             <h3 className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-widest">😂 Gluma zilei</h3>
             <p className="text-[#e8d8b0] text-[0.9rem] leading-relaxed font-cinzel">„Tu! Tu esti gluma!”</p>
           </div>
@@ -366,7 +375,7 @@ export default function Dashboard() {
         <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
           <form
             onSubmit={changePassword}
-            className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-3"
+            className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-md p-[1.75rem] flex flex-col gap-3"
           >
             <div className="flex items-center justify-between">
               <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">🔑 Schimbă parola</h3>
@@ -381,7 +390,7 @@ export default function Dashboard() {
               onChange={(e) => setCurPw(e.target.value)}
               placeholder="Parola actuală"
               autoComplete="current-password"
-              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2.5 outline-none focus:border-[#c87030]"
+              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-[0.7rem] outline-none focus:border-[#c87030]"
             />
             <input
               type="password"
@@ -391,7 +400,7 @@ export default function Dashboard() {
               onChange={(e) => setNewPw(e.target.value)}
               placeholder="Parola nouă (min 4)"
               autoComplete="new-password"
-              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2.5 outline-none focus:border-[#c87030]"
+              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-[0.7rem] outline-none focus:border-[#c87030]"
             />
             {pwMsg && (
               <div className={`text-[0.8rem] ${pwMsg.ok ? "text-green-400" : "text-red-400"}`}>{pwMsg.text}</div>
@@ -399,7 +408,7 @@ export default function Dashboard() {
             <button
               type="submit"
               disabled={pwBusy}
-              className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-2.5 hover:brightness-110 disabled:opacity-50 cursor-pointer"
+              className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-[0.7rem] hover:brightness-110 disabled:opacity-50 cursor-pointer"
             >
               {pwBusy ? "Se salvează…" : "Salvează"}
             </button>
