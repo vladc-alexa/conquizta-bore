@@ -8,7 +8,8 @@
 //     - viteză: bonus pentru cât de repede răspunzi (fereastră = RAPIDE_TIMER_SECONDS)
 //     - punctaj = 100 × (0.7 × apropiere + 0.3 × viteză), minim 5 puncte
 //   => maxim 100 puncte/întrebare, deci PRC rapide maxim 10.000
-// PRC total = (PRC grilă + PRC rapide) / 2 (dacă există doar una, se folosește aceea)
+// PRC total = (PRC grilă + PRC rapide) / 2; dacă jucătorul are doar un mod,
+// se mediează cu 5000 (mijlocul scalei 0–10.000) pentru celălalt
 import type { PrismaClient } from "@prisma/client";
 
 export const GRILA_WINDOW = 50;
@@ -131,8 +132,8 @@ export async function computeAllPrc(prisma: PrismaClient): Promise<Map<string, P
 
     let total: number | null = null;
     if (grila !== null && rapide !== null) total = Math.round((grila + rapide) / 2);
-    else if (grila !== null) total = grila;
-    else if (rapide !== null) total = rapide;
+    else if (grila !== null) total = Math.round((grila + 5000) / 2);
+    else if (rapide !== null) total = Math.round((rapide + 5000) / 2);
 
     out.set(uid, { grila, rapide, total, games: gamesByUser.get(uid)?.size ?? 0 });
   }

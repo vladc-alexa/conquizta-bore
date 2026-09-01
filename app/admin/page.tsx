@@ -8,6 +8,7 @@ interface AdminUser {
   email: string | null;
   isAdmin: boolean;
   isMuted: boolean;
+  hideScore: boolean;
   createdAt: string;
 }
 
@@ -91,6 +92,14 @@ export default function AdminPage() {
     if (res.ok) {
       const data = await res.json();
       setUsers((list) => list.map((x) => (x.id === u.id ? { ...x, isMuted: data.isMuted } : x)));
+    }
+  };
+
+  const toggleHideScore = async (u: AdminUser) => {
+    const res = await fetch(`/api/admin/users/${u.id}/hide`, { method: "POST" });
+    if (res.ok) {
+      const data = await res.json();
+      setUsers((list) => list.map((x) => (x.id === u.id ? { ...x, hideScore: data.hideScore } : x)));
     }
   };
 
@@ -215,12 +224,26 @@ export default function AdminPage() {
                 {u.isMuted && (
                   <span className="text-[0.65rem] text-red-400 bg-red-900/30 border border-red-500/40 rounded px-1.5 py-0.5">🔇 MUTAT</span>
                 )}
+                {u.hideScore && (
+                  <span className="text-[0.65rem] text-[#b57edc] bg-purple-900/30 border border-purple-500/40 rounded px-1.5 py-0.5">🔒 SCOR ASCUNS</span>
+                )}
               </div>
               <span className="text-[#c8a070] text-[0.75rem]">{u.email || "—"}</span>
               <div className="flex items-center gap-2">
                 <span className="text-[#a07848] text-[0.7rem]">{new Date(u.createdAt).toLocaleDateString("ro-RO")}</span>
                 {!u.isAdmin && (
                   <>
+                    <button
+                      onClick={() => toggleHideScore(u)}
+                      className={`text-[0.7rem] border rounded px-1.5 py-0.5 cursor-pointer hover:brightness-110 ${
+                        u.hideScore
+                          ? "text-[#b57edc] border-purple-500/40 hover:bg-purple-900/30"
+                          : "text-[#c8a070] border-[#7a4e22] hover:bg-[#3d2510]"
+                      }`}
+                      title={u.hideScore ? "Arată scorul public" : "Ascunde scorul public"}
+                    >
+                      {u.hideScore ? "Arată scor" : "Ascunde scor"}
+                    </button>
                     <button
                       onClick={() => toggleMute(u)}
                       className={`text-[0.7rem] border rounded px-1.5 py-0.5 cursor-pointer hover:brightness-110 ${
