@@ -44,7 +44,7 @@ export async function GET(req: Request) {
     select: {
       id: true,
       prompt: true,
-      options: { select: { text: true, isCorrect: true }, orderBy: { position: "asc" } },
+      options: { select: { id: true, text: true, isCorrect: true }, orderBy: { position: "asc" } },
     },
   });
 
@@ -77,7 +77,7 @@ export async function GET(req: Request) {
       return {
         id: q.id,
         prompt: q.prompt,
-        options: order.map((i) => q.options[i].text),
+        options: order.map((i) => ({ id: q.options[i].id, text: q.options[i].text })),
         correctIndex: order.indexOf(correctIndex),
       };
     })

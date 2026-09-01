@@ -14,7 +14,7 @@ interface RapideQuestion {
 interface GrilaQuestion {
   id: string;
   prompt: string;
-  options: string[];
+  options: { id: string; text: string }[];
   correctIndex: number;
 }
 
@@ -42,6 +42,31 @@ export default function TrainPage() {
   const answeredRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  const questionStartRef = useRef(0);
+
+  const recordAnswer = (questionId: string, isCorrect: boolean, opts: { answer?: string; selectedOptionId?: string }) => {
+    const sid = sessionIdRef.current;
+    if (!sid) return;
+    const elapsedMs = Math.max(0, Date.now() - questionStartRef.current);
+    fetch(`/api/sessions/${sid}/answers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionId, isCorrect, elapsedMs, ...opts }),
+    }).catch(() => {});
+  };
+
+  const completeSession = () => {
+    const sid = sessionIdRef.current;
+    if (!sid) return;
+    sessionIdRef.current = null;
+    fetch(`/api/sessions/${sid}/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ correctCount: correctRef.current }),
+    }).catch(() => {});
+  };
+  const correctRef = useRef(0);
 
   const clearTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -53,12 +78,13 @@ export default function TrainPage() {
     if (!q) return "";
     if (modeRef.current === "rapide") return String((q as RapideQuestion).answer);
     const g = q as GrilaQuestion;
-    return g.options[g.correctIndex];
+    return g.options[g.correctIndex].text;
   };
 
   const nextQuestion = () => {
     if (idxRef.current + 1 >= questionsRef.current.length) {
       clearTimer();
+      completeSession();
       setPhase("finished");
       return;
     }
@@ -70,6 +96,7 @@ export default function TrainPage() {
     setTimeLeft(TIMER_SECONDS);
     setInputValue("");
     setSelectedOption(null);
+    questionStartRef.current = Date.now();
     deadlineRef.current = Date.now() + TIMER_SECONDS * 1000;
     clearTimer();
     timerRef.current = setInterval(tick, 100);
@@ -94,12 +121,16 @@ export default function TrainPage() {
     }
   };
 
-  const handleAnswer = (isCorrect: boolean) => {
+  const handleAnswer = (isCorrect: boolean, opts?: { answer?: string; selectedOptionId?: string }) => {
     if (answeredRef.current) return;
     answeredRef.current = true;
     clearTimer();
-    if (isCorrect) setCorrect((c) => c + 1);
-    else setWrong((w) => w + 1);
+    const q = questionsRef.current[idxRef.current];
+    if (isCorrect) {
+      setCorrect((c) => c + 1);
+      correctRef.current += 1;
+    } else setWrong((w) => w + 1);
+    if (q) recordAnswer(q.id, isCorrect, opts);
     setFeedback({ state: isCorrect ? "correct" : "wrong", reveal: revealAnswer() });
     setTimeout(nextQuestion, 1400);
   };
@@ -112,6 +143,7 @@ export default function TrainPage() {
     setIdx(0);
     idxRef.current = 0;
     setCorrect(0);
+    correctRef.current = 0;
     setWrong(0);
     setTimeouts(0);
     try {
@@ -124,6 +156,20 @@ export default function TrainPage() {
         setPhase("idle");
         return;
       }
+      // start an official session (records answers toward PRC)
+      try {
+        const sres = await fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: m }),
+        });
+        if (sres.ok) {
+          const sdata = await sres.json();
+          sessionIdRef.current = sdata.sessionId ?? null;
+        }
+      } catch {
+        sessionIdRef.current = null;
+      }
       setQuestions(qs);
       questionsRef.current = qs;
       setPhase("playing");
@@ -132,6 +178,7 @@ export default function TrainPage() {
       setTimeLeft(TIMER_SECONDS);
       setInputValue("");
       setSelectedOption(null);
+      questionStartRef.current = Date.now();
       deadlineRef.current = Date.now() + TIMER_SECONDS * 1000;
       clearTimer();
       timerRef.current = setInterval(tick, 100);
@@ -268,16 +315,16 @@ export default function TrainPage() {
               }
               return (
                 <button
-                  key={i}
+                  key={opt.id}
                   disabled={!!feedback}
                   onClick={() => {
                     setSelectedOption(i);
-                    handleAnswer(i === (q as GrilaQuestion).correctIndex);
+                    handleAnswer(i === (q as GrilaQuestion).correctIndex, { selectedOptionId: opt.id });
                   }}
                   className={`${cls} rounded-xl text-left p-3.5 text-[0.95rem] cursor-pointer disabled:cursor-default transition-all`}
                 >
                   <span className="font-cinzel text-[#c87030] mr-2">{String.fromCharCode(65 + i)}.</span>
-                  {opt}
+                  {opt.text}
                 </button>
               );
             })}
@@ -296,7 +343,7 @@ export default function TrainPage() {
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !feedback && inputValue !== "") {
-                  handleAnswer(parseInt(inputValue, 10) === (q as RapideQuestion).answer);
+                  handleAnswer(parseInt(inputValue, 10) === (q as RapideQuestion).answer, { answer: inputValue });
                 }
               }}
               disabled={!!feedback}
@@ -304,7 +351,7 @@ export default function TrainPage() {
               className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[1.3rem] text-center p-2.5 outline-none focus:border-[#c87030] disabled:opacity-50"
             />
             <button
-              onClick={() => handleAnswer(parseInt(inputValue, 10) === (q as RapideQuestion).answer)}
+              onClick={() => handleAnswer(parseInt(inputValue, 10) === (q as RapideQuestion).answer, { answer: inputValue })}
               disabled={!!feedback || inputValue === ""}
               className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel px-4 hover:brightness-110 disabled:opacity-40 cursor-pointer"
             >

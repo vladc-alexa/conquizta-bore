@@ -10,9 +10,12 @@ interface ChatMessage {
 }
 
 interface LeaderRow {
+  id: string;
   name: string;
-  wins: number;
-  accuracy: number;
+  prc: number | null;
+  grila: number | null;
+  rapide: number | null;
+  games: number;
 }
 
 const PRC_BEST_KEY = "conquizta_bore_prc_best";
@@ -235,18 +238,26 @@ export default function Dashboard() {
             </button>
           </div>
           {rows.length === 0 ? (
-            <div className="text-[#a07848] text-[0.8rem] text-center p-6">Niciun joc terminat azi. Joacă-te!</div>
+            <div className="text-[#a07848] text-[0.8rem] text-center p-6">Niciun jucător cu PRC încă. Antrenează-te!</div>
           ) : (
             <div className="flex flex-col">
               {rows.map((r, i) => (
                 <div
-                  key={r.name + i}
-                  className="grid grid-cols-[24px_1fr_auto_auto] gap-2 text-[0.82rem] p-1.5 px-2 rounded items-center odd:bg-white/5"
+                  key={r.id + i}
+                  className="grid grid-cols-[24px_1fr_auto] gap-2 text-[0.82rem] p-1.5 px-2 rounded items-center odd:bg-white/5"
                 >
                   <span className="text-[#a07848] text-[0.75rem]">{i + 1}</span>
-                  <span className="font-cinzel truncate text-[#e8d8b0]">{r.name}</span>
-                  <span className="text-[#f5c97a] font-bold">{r.wins} victorii</span>
-                  <span className="text-[#c8a070] text-right text-[0.72rem]">{r.accuracy}%</span>
+                  <span className="min-w-0">
+                    <span className="font-cinzel truncate block text-[#e8d8b0]">{r.name}</span>
+                    <span className="text-[0.65rem] text-[#a07848] block">
+                      {r.grila !== null && <>grilă {r.grila}</>}
+                      {r.grila !== null && r.rapide !== null && " · "}
+                      {r.rapide !== null && <>rapide {r.rapide}</>}
+                    </span>
+                  </span>
+                  <span className="font-cinzel text-[#f5c97a] font-bold text-[1rem]">
+                    {r.prc != null ? r.prc.toLocaleString("ro-RO") : "—"}
+                  </span>
                 </div>
               ))}
             </div>
