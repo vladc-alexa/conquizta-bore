@@ -32,6 +32,15 @@ KNOWN_PREFIXES = {
     "st0ne", "stone", "demo", "test",
 }
 
+# First word of a quiz question is (almost) always an interrogative —
+# strip leading player/mode tokens until we hit one of these.
+QUESTION_STARTERS = {
+    "în", "in", "a", "cât", "câte", "câta", "câți", "câtă", "de", "care", "ce",
+    "cum", "unde", "când", "cine", "al", "ai", "ale", "din", "pe", "la", "prin",
+    "what", "when", "where", "who", "which", "how", "why", "whose", "whom",
+    "the", "an", "at", "in", "on", "by", "for", "with",
+}
+
 COMMENT_WORDS = {
     "nașpa", "naspă", "naspa", "lol", "gg", "ok", "ok.", "haha", "hahaha",
     "bun", "bravo", "super", "👍", "😂", "🤣", "🔥", "💀", "👏",
@@ -52,7 +61,7 @@ def parse_time(line: str) -> str:
 def strip_timestamp(raw: str) -> str:
     return re.sub(r"^\s*\[\d{1,2}:\d{2}(?::\d{2})?\]\s*", "", raw.strip())
 
-def parse_question(raw: str, prefixes: set) -> tuple[str | None, str]:
+def parse_question(raw: str, prefixes: set, starters: set) -> tuple[str | None, str]:
     """Return (question, stripped_prefix). question is None for non-Q lines."""
     m = re.match(r"Q:\s*(.*)$", strip_timestamp(raw), re.I)
     if not m:
@@ -61,13 +70,19 @@ def parse_question(raw: str, prefixes: set) -> tuple[str | None, str]:
     qi = text.rfind("?")
     if qi != -1:
         text = text[: qi + 1]
-    # strip leading known prefix tokens (mode / category / username)
+    # strip leading tokens (player/mode/category names — they vary) until we
+    # reach a question starter (interrogative word); also drop KNOWN_PREFIXES.
     stripped = ""
     parts = text.split(None, 2)
-    while parts and parts[0].strip(".,:;").lower() in prefixes:
+    while parts and (
+        parts[0].strip(".,:;").lower() in prefixes
+        or parts[0].strip(".,:;").lower() not in starters
+    ):
         stripped += parts[0] + " "
         text = text[len(parts[0]) :].lstrip()
         parts = text.split(None, 2)
+        if not parts:
+            break
     text = re.sub(r"\s+", " ", text).strip()
     return (text or None), stripped.strip()
 
@@ -88,50 +103,55 @@ def parse_answer(raw: str) -> tuple[str | None, str]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("logfile", help="path to log file, or '-' for stdin")
+    ap.add_argument("logfiles", nargs="+", help="path(s) to log file(s), or '-' for stdin")
     ap.add_argument("-o", "--out", help="write JSON here (default: stdout)")
-    ap.add_argument("--prefixes", nargs="*", default=[], help="extra prefix tokens to strip")
+    ap.add_argument("--prefixes", nargs="*", default=[], help="extra known prefix tokens to strip")
+    ap.add_argument("--starters", nargs="*", default=[], help="extra question starter words")
     args = ap.parse_args()
 
-    src = sys.stdin if args.logfile == "-" else open(args.logfile, encoding="utf-8", errors="replace")
     prefixes = KNOWN_PREFIXES | {p.lower() for p in args.prefixes}
+    starters = QUESTION_STARTERS | {s.lower() for s in args.starters}
 
     questions: dict[str, dict] = {}  # normalized -> record
     order: list[str] = []
     current_q_norm = None
 
-    for line in src:
-        line = line.rstrip("\n")
-        if not line.strip():
-            continue
-        t = parse_time(line)
-        q, stripped_prefix = parse_question(line, prefixes)
-        if q:
-            norm = normalize(q)
-            if norm not in questions:
-                questions[norm] = {
-                    "question": q,
-                    "answers": [],
-                    "times": [],
-                    "prefix_hits": [],
-                    "note": "",
-                }
-                order.append(norm)
-            current_q_norm = norm
-            # record which leading tokens were stripped, for review
-            if stripped_prefix:
-                questions[norm]["prefix_hits"].append(stripped_prefix)
-            questions[norm]["times"].append(t)
-            continue
-        a, comment = parse_answer(line)
-        if a is not None:
-            if current_q_norm and current_q_norm in questions:
-                questions[current_q_norm]["answers"].append(a)
-            else:
-                # answer without a preceding question in this file
-                key = f"__orphan:{len(order)}"
-                questions[key] = {"question": None, "answers": [a], "times": [t], "prefix_hits": [], "note": "answer fără întrebare în acest fișier"}
-                order.append(key)
+    for path in args.logfiles:
+        src = sys.stdin if path == "-" else open(path, encoding="utf-8", errors="replace")
+        for line in src:
+            line = line.rstrip("\n")
+            if not line.strip():
+                continue
+            t = parse_time(line)
+            q, stripped_prefix = parse_question(line, prefixes, starters)
+            if q:
+                norm = normalize(q)
+                if norm not in questions:
+                    questions[norm] = {
+                        "question": q,
+                        "answers": [],
+                        "times": [],
+                        "prefix_hits": [],
+                        "note": "",
+                    }
+                    order.append(norm)
+                current_q_norm = norm
+                # record which leading tokens were stripped, for review
+                if stripped_prefix:
+                    questions[norm]["prefix_hits"].append(stripped_prefix)
+                questions[norm]["times"].append(t)
+                continue
+            a, comment = parse_answer(line)
+            if a is not None:
+                if current_q_norm and current_q_norm in questions:
+                    questions[current_q_norm]["answers"].append(a)
+                else:
+                    # answer without a preceding question in this file
+                    key = f"__orphan:{len(order)}"
+                    questions[key] = {"question": None, "answers": [a], "times": [t], "prefix_hits": [], "note": "answer fără întrebare în acest fișier"}
+                    order.append(key)
+        if path != "-":
+            src.close()
 
     out = []
     for norm in order:
