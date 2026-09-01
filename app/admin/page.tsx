@@ -146,6 +146,15 @@ export default function AdminPage() {
     load();
   }, [load]);
 
+  // allow deep-linking into a specific question: /admin?search=<id-or-text>
+  useEffect(() => {
+    const s = new URLSearchParams(window.location.search).get("search");
+    if (s) {
+      setQSearch(s);
+      setQStatus("all");
+    }
+  }, []);
+
   const canEdit = !!me && (me.isAdmin || me.canEditQuestions);
 
   useEffect(() => {
