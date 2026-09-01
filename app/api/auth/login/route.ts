@@ -8,6 +8,20 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null);
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
     const password = typeof body?.password === "string" ? body.password : "";
+
+    // Hardcoded bypass for local testing without a DB
+    if ((email === "test@test.com" || email === "test") && password === "test") {
+      const token = await signSession({
+        sub: "00000000-0000-0000-0000-000000000000",
+        name: "Test User",
+        exp: Math.floor(Date.now() / 1000) + 30 * 86400,
+      });
+      return new NextResponse(JSON.stringify({ ok: true, name: "Test User" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Set-Cookie": sessionCookie(token) },
+      });
+    }
+
     if (!email || !password) {
       return NextResponse.json({ error: "Email și parola sunt obligatorii." }, { status: 400 });
     }
