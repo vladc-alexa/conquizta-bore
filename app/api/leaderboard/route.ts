@@ -15,12 +15,13 @@ export async function GET() {
   const prcByUser = await computeAllPrc(prisma);
   const userIds = [...prcByUser.keys()];
   const users = userIds.length
-    ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, displayName: true } })
+    ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, displayName: true, hideScore: true } })
     : [];
   const nameById = new Map(users.map((u) => [u.id, u.displayName]));
+  const hiddenIds = new Set(users.filter((u) => u.hideScore).map((u) => u.id));
 
   const rows = [...prcByUser.entries()]
-    .filter(([, p]) => p.total !== null)
+    .filter(([id, p]) => p.total !== null && !hiddenIds.has(id))
     .map(([id, p]) => ({
       id,
       name: nameById.get(id) ?? "?",
@@ -36,7 +37,7 @@ export async function GET() {
   // always include the requesting user's own row (may be below the top 10)
   const mine = prcByUser.get(session.sub);
   const me = mine?.total != null
-    ? { id: session.sub, name: nameById.get(session.sub) ?? session.name, prc: mine.total, grila: mine.grila, rapide: mine.rapide, games: mine.games }
+    ? { id: session.sub, name: nameById.get(session.sub) ?? session.name, prc: mine.total, grila: mine.grila, rapide: mine.rapide, games: mine.games, hidden: hiddenIds.has(session.sub) }
     : null;
 
   return NextResponse.json({ rows, myPos, me });

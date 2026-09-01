@@ -19,6 +19,7 @@ interface LeaderRow {
   grila: number | null;
   rapide: number | null;
   games: number;
+  hidden?: boolean;
 }
 
 export default function Dashboard() {
@@ -345,7 +346,12 @@ export default function Dashboard() {
                   <div className="grid grid-cols-[24px_1fr_auto] gap-2 text-[0.82rem] p-1.5 px-2 rounded items-center bg-[#c8703026] border border-[#c87030a0]">
                     <span className="text-[#a07848] text-[0.75rem]">{rows.length + 1}</span>
                     <span className="min-w-0">
-                      <span className="font-cinzel truncate block text-[#f5c97a]">{meRow.name} (tu)</span>
+                      <span className="font-cinzel truncate block text-[#f5c97a]">
+                        {meRow.name} (tu)
+                        {meRow.hidden && (
+                          <span className="text-[0.65rem] text-[#b57edc] ml-1.5" title="Scorul tău e ascuns public">🔒</span>
+                        )}
+                      </span>
                       <span className="text-[0.65rem] text-[#a07848] block">
                         {meRow.grila !== null && <>grilă {meRow.grila}</>}
                         {meRow.grila !== null && meRow.rapide !== null && " · "}
