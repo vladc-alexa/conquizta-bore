@@ -1,6 +1,9 @@
 // The "Negru" chat color: pure black, rendered with a purple text outline so it stays visible on the dark chat background.
 export const BLACK_CHAT_COLOR = "#000000";
 
+// Bright purple used to outline black chat names (hard stroke + glow).
+export const BLACK_NAME_OUTLINE = "#c48ce6";
+
 // Allowed chat name colors (shared by the API whitelist and the picker UI).
 export const CHAT_COLORS: { name: string; hex: string }[] = [
   { name: "Roșu", hex: "#e74c3c" },
