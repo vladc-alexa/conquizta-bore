@@ -20,6 +20,7 @@ const PRC_SECONDS = 30;
 
 export default function Dashboard() {
   const [name, setName] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [rows, setRows] = useState<LeaderRow[]>([]);
@@ -63,7 +64,12 @@ export default function Dashboard() {
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setName(d.name))
+      .then((d) => {
+        if (d) {
+          setName(d.name);
+          setIsAdmin(!!d.isAdmin);
+        }
+      })
       .catch(() => {});
     loadChat();
     loadLeaderboard();
@@ -154,6 +160,14 @@ export default function Dashboard() {
       <header className="flex items-center justify-between gap-3">
         <h1 className="!mb-0 text-[1.3rem]">ConQuizta – Bore</h1>
         <div className="flex items-center gap-3">
+          {isAdmin && (
+            <a
+              href="/admin"
+              className="font-cinzel text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem] border border-[#7a4e22] rounded-lg px-3 py-1.5 bg-[#2a1608]"
+            >
+              Admin
+            </a>
+          )}
           {name && (
             <span className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-wider border border-[#7a4e22] rounded-lg px-3 py-1.5 bg-[#2a1608]">
               {name}

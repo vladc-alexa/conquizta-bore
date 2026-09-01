@@ -53,7 +53,16 @@ export async function GET(req: Request) {
       .map((q) => {
         const correct = q.options.find((o) => o.isCorrect);
         if (!correct || !/^-?\d+$/.test(correct.text.trim())) return null;
-        return { id: q.id, prompt: q.prompt, answer: parseInt(correct.text.trim(), 10) };
+        const answer = parseInt(correct.text.trim(), 10);
+        let responseType = "număr";
+        if (/în ce an\b|în anul\b|\banul\b|când a fost|când s-a născut|când a murit|când a apărut|când a fost/i.test(q.prompt)) {
+          responseType = "an";
+        } else if (answer < 0) {
+          responseType = "număr negativ";
+        } else if (/\bcâți\b|\bcâte\b|\bcâta\b|număr de|câte/i.test(q.prompt)) {
+          responseType = "număr";
+        }
+        return { id: q.id, prompt: q.prompt, answer, responseType };
       })
       .filter(Boolean);
     return NextResponse.json({ questions: out });
