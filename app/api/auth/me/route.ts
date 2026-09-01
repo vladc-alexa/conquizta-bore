@@ -11,7 +11,7 @@ export async function GET() {
   }
   const user = await prisma.user.findUnique({
     where: { id: session.sub },
-    select: { id: true, displayName: true, isAdmin: true, isMuted: true, nameColor: true },
+    select: { id: true, displayName: true, isAdmin: true, isMuted: true, nameColor: true, hideScore: true },
   });
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -22,5 +22,6 @@ export async function GET() {
     isAdmin: user.isAdmin,
     isMuted: user.isMuted,
     nameColor: user.nameColor,
+    hideScore: user.hideScore,
   });
 }
