@@ -192,6 +192,15 @@ export default function Dashboard() {
               {name}
             </span>
           )}
+          {isAdmin && (
+            <button
+              onClick={() => (window.location.href = "/off")}
+              className="font-cinzel text-[#c8a070] hover:text-red-400 text-[0.8rem] border border-[#7a4e22] rounded-lg px-3.5 py-2 bg-[#2a1608] cursor-pointer"
+              title="Oprește site-ul (404)"
+            >
+              ⏻
+            </button>
+          )}
           <button
             onClick={logout}
             className="bg-gradient-to-br from-[#7a4010] to-[#3d2010] border-2 border-[#c88040a0] rounded-lg text-[#f5e8c0] text-[0.8rem] font-cinzel px-3.5 py-2 hover:brightness-125 cursor-pointer"
