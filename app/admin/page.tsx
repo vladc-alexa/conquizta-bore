@@ -146,13 +146,24 @@ export default function AdminPage() {
     load();
   }, [load]);
 
+  // allow deep-linking into a specific question: /admin?search=<id-or-text>
   useEffect(() => {
-    if (me?.isAdmin) {
+    const s = new URLSearchParams(window.location.search).get("search");
+    if (s) {
+      setQSearch(s);
+      setQStatus("all");
+    }
+  }, []);
+
+  const canEdit = !!me && (me.isAdmin || me.canEditQuestions);
+
+  useEffect(() => {
+    if (canEdit) {
       const t = setTimeout(() => loadQuestions(), 300);
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qSearch, qStatus, me?.isAdmin]);
+  }, [qSearch, qStatus, canEdit]);
 
   const toggleMute = async (u: AdminUser) => {
     const res = await fetch(`/api/admin/users/${u.id}/mute`, { method: "POST" });

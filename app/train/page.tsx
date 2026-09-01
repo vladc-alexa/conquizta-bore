@@ -46,6 +46,7 @@ export default function TrainPage() {
   const [review, setReview] = useState<ReviewItem[]>([]);
   const [reported, setReported] = useState<Set<string>>(new Set());
   const [showReview, setShowReview] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
 
   // refs mirror the state for timer callbacks (no stale closures)
   const questionsRef = useRef<(RapideQuestion | GrilaQuestion)[]>([]);
@@ -253,6 +254,14 @@ export default function TrainPage() {
 
   useEffect(() => () => clearTimer(), []);
 
+  // editors/admins can jump straight from the review into editing the question
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setCanEdit(!!(d.isAdmin || d.canEditQuestions)))
+      .catch(() => {});
+  }, []);
+
   // auto-open the review modal when a session finishes
   useEffect(() => {
     if (phase === "finished") setShowReview(true);
@@ -390,16 +399,27 @@ export default function TrainPage() {
                         Corect: <strong>{r.correctAnswer}</strong>
                       </span>
                     )}
-                    {reported.has(r.id) ? (
-                      <span className="text-[#c8a070] text-[0.7rem] ml-auto">Raportată ✓</span>
-                    ) : (
-                      <button
-                        onClick={() => reportQuestion(r.id)}
-                        className="ml-auto text-[0.7rem] text-red-400/90 border border-red-500/40 rounded px-2 py-0.5 hover:bg-red-900/30 cursor-pointer"
-                      >
-                        Raportează
-                      </button>
-                    )}
+                    <div className="ml-auto flex items-center gap-2">
+                      {canEdit && (
+                        <a
+                          href={`/admin?search=${r.id}`}
+                          className="text-[0.7rem] text-[#c8a070] border border-[#7a4e22] rounded px-2 py-0.5 hover:bg-[#3d2510]"
+                          title="Editează întrebarea"
+                        >
+                          ✏️ Editează
+                        </a>
+                      )}
+                      {reported.has(r.id) ? (
+                        <span className="text-[#c8a070] text-[0.7rem]">Raportată ✓</span>
+                      ) : (
+                        <button
+                          onClick={() => reportQuestion(r.id)}
+                          className="text-[0.7rem] text-red-400/90 border border-red-500/40 rounded px-2 py-0.5 hover:bg-red-900/30 cursor-pointer"
+                        >
+                          Raportează
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
