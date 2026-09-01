@@ -8,6 +8,7 @@ interface RapideQuestion {
   id: string;
   prompt: string;
   answer: number;
+  responseType?: string;
 }
 
 interface GrilaQuestion {
@@ -144,6 +145,14 @@ export default function TrainPage() {
 
   useEffect(() => () => clearTimer(), []);
 
+  // keep the numeric input focused across questions
+  useEffect(() => {
+    if (phase === "playing" && mode === "rapide") {
+      const t = setTimeout(() => inputRef.current?.focus(), 80);
+      return () => clearTimeout(t);
+    }
+  }, [idx, phase, mode]);
+
   // ---------- mode selection ----------
   if (mode === null) {
     return (
@@ -239,6 +248,12 @@ export default function TrainPage() {
         </div>
 
         <p className="font-cinzel text-[1.05rem] leading-relaxed min-h-[60px]">{q?.prompt}</p>
+
+        {!isGrila && (q as RapideQuestion).responseType && (
+          <div className="self-start text-[0.7rem] text-[#2a1608] bg-[#c87030]/90 rounded-full px-2.5 py-1 font-bold tracking-wide">
+            Răspuns: {(q as RapideQuestion).responseType}
+          </div>
+        )}
 
         {isGrila ? (
           <div className="grid grid-cols-1 gap-2.5">

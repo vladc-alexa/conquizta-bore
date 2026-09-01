@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
 
 export async function GET() {
@@ -8,5 +9,12 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  return NextResponse.json({ id: session.sub, name: session.name });
+  const user = await prisma.user.findUnique({
+    where: { id: session.sub },
+    select: { id: true, displayName: true, isAdmin: true },
+  });
+  if (!user) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  return NextResponse.json({ id: user.id, name: user.displayName, isAdmin: user.isAdmin });
 }
