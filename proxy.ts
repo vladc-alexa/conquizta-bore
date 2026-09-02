@@ -7,12 +7,12 @@ import { isSiteOff } from "./lib/siteOff";
 const PROTECTED_PREFIXES = ["/train", "/admin"];
 
 // Themed "site off" page served to non-admins while maintenance mode is on.
+// No buttons, no links — the only way in is the secret /admin/login path.
 const OFF_HTML = `<!doctype html><html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MAHALADOR — Site oprit</title></head>
 <body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at top,#3b2a1a 0%,#1a0e05 100%);color:#f0e0c0;font-family:Georgia,'Times New Roman',serif;text-align:center">
 <div><div style="font-size:64px;line-height:1">⏻</div>
 <h1 style="color:#f5c97a;letter-spacing:3px;margin:18px 0 8px">MAHALADOR</h1>
-<p style="color:#c8a070;font-size:15px;margin:0 0 22px">Site-ul este oprit temporar.</p>
-<a href="/login" style="color:#f5c97a;font-size:13px;border:1px solid #7a4e22;border-radius:8px;padding:8px 16px;text-decoration:none">Autentificare administrator</a>
+<p style="color:#c8a070;font-size:15px;margin:0">Site-ul este oprit temporar.</p>
 </div></body></html>`;
 
 export async function proxy(req: NextRequest) {
@@ -25,8 +25,8 @@ export async function proxy(req: NextRequest) {
       const user = await prisma.user.findUnique({ where: { id: session.sub }, select: { isAdmin: true } });
       if (user?.isAdmin) return NextResponse.next(); // admin passes everywhere
     }
-    // non-admin: allow the login flow only, block everything else
-    if (pathname === "/login" || pathname === "/api/auth/login" || pathname === "/api/auth/logout") {
+    // non-admin: the secret /admin/login path is the only way in
+    if (pathname === "/admin/login" || pathname === "/api/auth/login" || pathname === "/api/auth/logout") {
       return NextResponse.next();
     }
     if (pathname.startsWith("/api/")) {
@@ -36,6 +36,15 @@ export async function proxy(req: NextRequest) {
       status: 503,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
+  }
+
+  // /admin/login is only meaningful while the site is off — otherwise send
+  // visitors to the regular login/dashboard.
+  if (pathname === "/admin/login") {
+    const url = req.nextUrl.clone();
+    url.pathname = session ? "/" : "/login";
+    url.search = "";
+    return NextResponse.redirect(url);
   }
 
   // ---- normal auth logic ----
@@ -59,5 +68,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/train/:path*", "/admin", "/api/:path*"],
+  matcher: ["/", "/login", "/train/:path*", "/admin", "/admin/login", "/api/:path*"],
 };

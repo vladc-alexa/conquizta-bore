@@ -182,7 +182,7 @@ export default function Dashboard() {
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/login";
+    window.location.href = mySiteOff ? "/admin/login" : "/login";
   };
 
   const toggleMyScore = async () => {
