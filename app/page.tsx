@@ -34,6 +34,7 @@ export default function Dashboard() {
   const [myColor, setMyColor] = useState<string | null>(null);
   const [showColors, setShowColors] = useState(false);
   const [myScoreHidden, setMyScoreHidden] = useState(false);
+  const [mySiteOff, setMySiteOff] = useState(false);
 
   // change-password modal
   const [showPw, setShowPw] = useState(false);
@@ -80,6 +81,7 @@ export default function Dashboard() {
           setIsAdmin(!!d.isAdmin);
           setMyColor(d.nameColor ?? DEFAULT_CHAT_COLOR);
           setMyScoreHidden(!!d.hideScore);
+          setMySiteOff(!!d.siteOff);
         }
       })
       .catch(() => {});
@@ -161,6 +163,20 @@ export default function Dashboard() {
       setNameMsg({ ok: false, text: "Eroare de rețea." });
     } finally {
       setNameBusy(false);
+    }
+  };
+
+  const toggleSite = async () => {
+    const turningOff = !mySiteOff;
+    if (!window.confirm(turningOff ? "Oprești site-ul? Doar adminii îl vor mai vedea." : "Porngi site-ul înapoi?")) return;
+    try {
+      const res = await fetch("/api/admin/site-off", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setMySiteOff(!!data.off);
+      }
+    } catch {
+      /* ignore */
     }
   };
 
@@ -255,11 +271,13 @@ export default function Dashboard() {
           )}
           {isAdmin && (
             <button
-              onClick={() => (window.location.href = "/off")}
-              className="font-cinzel text-[#c8a070] hover:text-red-400 text-[0.8rem] border border-[#7a4e22] rounded-lg px-3.5 py-2 bg-[#2a1608] cursor-pointer"
-              title="Oprește site-ul (404)"
+              onClick={toggleSite}
+              className={`font-cinzel text-[0.8rem] border rounded-lg px-3.5 py-2 bg-[#2a1608] cursor-pointer ${
+                mySiteOff ? "text-green-400 border-green-500/50 hover:brightness-125" : "text-[#c8a070] border-[#7a4e22] hover:text-red-400"
+              }`}
+              title={mySiteOff ? "Site oprit — pornește-l" : "Oprește site-ul (doar adminii îl mai văd)"}
             >
-              ⏻
+              {mySiteOff ? "▶" : "⏻"}
             </button>
           )}
           <button

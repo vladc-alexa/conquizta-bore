@@ -189,6 +189,25 @@ export default function AdminPage() {
     }
   };
 
+  const renameUser = async (u: AdminUser) => {
+    const newName = window.prompt(`Nume nou pentru ${u.displayName}:`, u.displayName);
+    if (!newName || newName.trim() === u.displayName) return;
+    setError("");
+    setOk("");
+    const res = await fetch(`/api/admin/users/${u.id}/name`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName.trim() }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || "Eroare la redenumire.");
+      return;
+    }
+    setOk(`Jucătorul ${u.displayName} a fost redenumit în ${data.name}.`);
+    load();
+  };
+
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -322,6 +341,13 @@ export default function AdminPage() {
               <span className="text-[#c8a070] text-[0.75rem]">{u.email || "—"}</span>
               <div className="flex items-center gap-2">
                 <span className="text-[#a07848] text-[0.7rem]">{new Date(u.createdAt).toLocaleDateString("ro-RO")}</span>
+                <button
+                  onClick={() => renameUser(u)}
+                  className="text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem] cursor-pointer"
+                  title="Redenumește"
+                >
+                  ✏️
+                </button>
                 {!u.isAdmin && (
                   <>
                     <button
