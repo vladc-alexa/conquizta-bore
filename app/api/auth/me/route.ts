@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
+import { isSiteOff } from "@/lib/siteOff";
 
 export async function GET() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
@@ -24,5 +25,6 @@ export async function GET() {
     nameColor: user.nameColor,
     hideScore: user.hideScore,
     canEditQuestions: user.canEditQuestions,
+    siteOff: await isSiteOff(prisma),
   });
 }
