@@ -87,8 +87,30 @@ export default function Dashboard() {
       .catch(() => {});
     loadChat();
     loadLeaderboard();
-    const chatTimer = setInterval(loadChat, 5000);
-    return () => clearInterval(chatTimer);
+    // chat polls every 5s — refresh the leaderboard (PRC) on the same tick so a
+    // finished training session shows up without a manual reload
+    const chatTimer = setInterval(() => {
+      loadChat();
+      loadLeaderboard();
+    }, 5000);
+    // returning to the tab (incl. browser-back from /train restoring the page)
+    // should show fresh PRC immediately, not up to 5s later
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        loadChat();
+        loadLeaderboard();
+      }
+    };
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) loadLeaderboard();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      clearInterval(chatTimer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", onPageShow);
+    };
   }, [loadChat, loadLeaderboard]);
 
   useEffect(() => {
