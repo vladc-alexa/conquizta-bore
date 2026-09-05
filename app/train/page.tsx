@@ -403,8 +403,10 @@ export default function TrainPage() {
                       {canEdit && (
                         <a
                           href={`/admin?search=${r.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="text-[0.7rem] text-[#c8a070] border border-[#7a4e22] rounded px-2 py-0.5 hover:bg-[#3d2510]"
-                          title="Editează întrebarea"
+                          title="Editează întrebarea (se deschide în filă nouă)"
                         >
                           ✏️ Editează
                         </a>

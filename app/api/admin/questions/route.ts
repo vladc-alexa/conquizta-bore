@@ -17,12 +17,20 @@ export async function GET(req: Request) {
 
   const where: Record<string, unknown> = {};
   if (search) {
-    // allow searching by question ID prefix (as shown in the review modal)
+    // allow searching by question ID: full uuid, hyphenless uuid, or the short prefix
+    // shown in the review modal. "Question"."id" is a native uuid column, so Prisma
+    // string filters (startsWith/contains) are invalid on it — match via SQL LIKE on
+    // the text form, with hyphens stripped on both sides (keeps prefix matching exact).
+    const or: Record<string, unknown>[] = [{ prompt: { contains: search, mode: "insensitive" } }];
     if (/^[0-9a-f-]{4,}$/i.test(search)) {
-      where.OR = [{ prompt: { contains: search, mode: "insensitive" } }, { id: { startsWith: search.toLowerCase() } }];
-    } else {
-      where.prompt = { contains: search, mode: "insensitive" };
+      const idPattern = search.toLowerCase().replace(/-/g, "");
+      const byId = await prisma.$queryRaw<{ id: string }[]>`
+        SELECT id FROM "Question"
+        WHERE replace(id::text, '-', '') LIKE ${idPattern + "%"}
+        LIMIT ${limit}`;
+      if (byId.length) or.push({ id: { in: byId.map((r) => r.id) } });
     }
+    where.OR = or;
   }
   if (status === "published") where.isPublished = true;
   if (status === "disabled") where.isPublished = false;
