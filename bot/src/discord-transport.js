@@ -1,0 +1,334 @@
+'use strict';
+// Discord transport (discord.js v14).
+//
+// STATUS: written, NOT yet exercised against Discord — the token was still missing
+// while this was built. The engine it drives is proven by src/harness.js against the
+// real question DB. First run with a token must be treated as a smoke test.
+//
+// Intents used: Guilds only. No Message Content — every interaction is a slash
+// command, a button or a modal.
+const fs = require('fs');
+const path = require('path');
+const {
+  Client,
+  GatewayIntentBits,
+  REST,
+  Routes,
+  SlashCommandBuilder,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ChannelType,
+} = require('discord.js');
+
+const R = require('./rules');
+const { TrainRun, Duel, Royale, LABELS } = require('./engine');
+const { pullMixed } = require('./questions');
+const { Store } = require('./store');
+const { resolveUser } = require('./identity');
+
+const WANT_CHANNELS = [
+  { key: 'train', name: 'antrenament' },
+  { key: 'duel', name: '1vs1' },
+];
+const STATE_FILE = path.join(__dirname, '..', '.discord-channels.json');
+
+const msgs = new Map(); // token -> { channelId, messageId }
+
+const err = (msg) => ({ content: msg, ephemeral: true });
+
+function loadState() {
+  try {
+    return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+function saveState(state) {
+  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+}
+
+/** Create #antrenament / #1vs1 if they do not exist yet, remember their ids. */
+async function ensureChannels(guild, state) {
+  for (const want of WANT_CHANNELS) {
+    let id = state[want.key];
+    let ch = id ? guild.channels.cache.get(id) : null;
+    if (!ch) ch = guild.channels.cache.find((c) => c.name === want.name && c.type === ChannelType.GuildText);
+    if (!ch) {
+      ch = await guild.channels.create({ name: want.name, type: ChannelType.GuildText, reason: 'ConQuizta arena' });
+      console.log(`created #${want.name} (${ch.id})`);
+    }
+    state[want.key] = ch.id;
+  }
+  saveState(state);
+  return state;
+}
+
+function commandDefs() {
+  return [
+    new SlashCommandBuilder().setName('antrenament').setDescription('10 întrebări, fără eliminare — intră pe clasament (PRC)'),
+    new SlashCommandBuilder().setName('royale').setDescription('Battle royale: răspuns greșit sau prea lent = OUT; ultimul rămâne în joc'),
+    new SlashCommandBuilder()
+      .setName('duel')
+      .setDescription('Duel 1 la 1, primul la 4 runde câștigate (max 7)')
+      .addUserOption((o) => o.setName('adversar').setDescription('Cu cine joci').setRequired(true)),
+  ].map((c) => c.toJSON());
+}
+
+/** Public payload -> Discord embed + components. The correct answer never leaves the server. */
+function renderQuestion({ gameId, token, round, mode, prompt, options, timeoutMs, extra }) {
+  const title = mode === 'grila' ? `Întrebarea ${round} · grilă` : `Întrebarea ${round} · rapidă`;
+  const embed = new EmbedBuilder()
+    .setColor(mode === 'grila' ? 0x5865f2 : 0xeb459e)
+    .setTitle(title)
+    .setDescription(`${options ? options.map((o) => `${o.label} ${o.text}`).join('\n') : 'Răspunde cu un număr.'}\n\n⏱️ ${Math.round(timeoutMs / 1000)}s`)
+    .setFooter({ text: `${prompt.slice(0, 200)}${extra && extra.escalate ? '  ·  timp redus' : ''}` });
+
+  let row;
+  if (options) {
+    row = new ActionRowBuilder().addComponents(
+      options.map((o) =>
+        new ButtonBuilder()
+          .setCustomId(`${gameId}|${token}|${o.index}`)
+          .setLabel(o.label)
+          .setStyle(ButtonStyle.Primary)
+      )
+    );
+  } else {
+    row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`${gameId}|${token}|modal`).setLabel('Răspunde').setStyle(ButtonStyle.Success)
+    );
+  }
+  return { embeds: [embed], components: [row] };
+}
+
+const key = (gameId, round) => `${gameId}|${round}`;
+
+/** Engine events -> channel messages. */
+function makeEventHandler(ch, questionsFor) {
+  return async (game, ev, data) => {
+    if (ev === 'question') {
+      const pub = data.public;
+      const sent = await ch.send(
+        renderQuestion({
+          gameId: game.id,
+          token: data.token,
+          round: data.round,
+          mode: pub.mode,
+          prompt: pub.prompt,
+          options: pub.options,
+          timeoutMs: data.timeoutMs,
+          extra: data,
+        })
+      );
+      msgs.set(key(game.id, data.round), { channelId: ch.id, messageId: sent.id });
+      return;
+    }
+    if (ev === 'reveal') {
+      const ref = msgs.get(key(game.id, data.round));
+      const lines = (data.results || []).map((r) => {
+        const nm = game.nameOf(r.playerId);
+        const show = r.graded.answered ? (r.graded.raw ?? '—') : 'fără răspuns';
+        const mark = r.won ? '🏆' : r.graded.isCorrect ? '✔' : '✘';
+        const pts = r.graded.mode === 'rapide' && r.graded.answered ? ` · ${r.graded.score} pct` : '';
+        return `${mark} **${nm}** → ${show}${pts}`;
+      });
+      const embed = new EmbedBuilder()
+        .setColor(0x57f287)
+        .setTitle(`Răspuns corect: ${data.correctLabel}`)
+        .setDescription(lines.join('\n') || '—')
+        .setFooter({ text: data.note || '' });
+      if (data.eliminated && data.eliminated.length) embed.addFields({ name: 'OUT', value: `${data.eliminated.join(', ')}\nîn joc: ${data.alive.join(', ')}` });
+      if (ref) {
+        const msg = await ch.messages.fetch(ref.messageId).catch(() => null);
+        if (msg) await msg.edit({ embeds: [embed], components: [] }).catch(() => {});
+      } else {
+        await ch.send({ embeds: [embed] });
+      }
+      return;
+    }
+    if (ev === 'gameEnd') {
+      const head =
+        data.mode === 'royale' ? `👑 ${data.winner} câștigă battle royale`
+        : data.mode === 'duel' ? `🏆 ${data.winner} câștigă duelul ${data.score}`
+        : `Antrenament terminat: ${data.correct}/${data.total} corecte`;
+      await ch.send({ embeds: [new EmbedBuilder().setColor(0xfee75c).setTitle(head).setFooter({ text: 'ConQuizta · rezultatul intră în PRC' })] });
+    }
+  };
+}
+
+async function startRoyale(client, ch, prisma, store, userId, userName, state) {
+  const gameId = `royale-${Date.now()}`;
+  const joiners = new Map([[userId, userName]]);
+  const joinRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`join|${gameId}`).setLabel('Intră în joc').setStyle(ButtonStyle.Success)
+  );
+  const joinMsg = await ch.send({
+    embeds: [new EmbedBuilder().setColor(0xed4245).setTitle('Battle royale').setDescription(`Se strâng jucători… **${R.ROYALE.joinWindowMs / 1000}s**\nRăspuns greșit sau prea lent = OUT.`)],
+    components: [joinRow],
+  });
+  client.joinLobbies.set(gameId, { joiners, ch });
+  setTimeout(async () => {
+    const lobby = client.joinLobbies.get(gameId);
+    client.joinLobbies.delete(gameId);
+    await joinMsg.edit({ components: [] }).catch(() => {});
+    if (!lobby || lobby.joiners.size < R.ROYALE.minPlayers) {
+      await ch.send({ content: 'Battle royale anulat: nu s-au strâns destui jucători.' }).catch(() => {});
+      return;
+    }
+    const players = [];
+    for (const [id, name] of lobby.joiners) {
+      const u = await resolveUser(prisma, { discordId: id, displayName: name });
+      players.push({ id, name, userId: u && u.id });
+    }
+    const qs = await pullMixed(prisma, 24, 0.6);
+    const game = track(new Royale({ id: gameId, players, questions: qs, clock: realClock(), store, onEvent: makeEventHandler(ch) }));
+    await game.start();
+  }, R.ROYALE.joinWindowMs);
+  return gameId;
+}
+
+function realClock() {
+  return {
+    now: () => Date.now(),
+    schedule: (ms, fn) => setTimeout(fn, ms),
+    cancel: (h) => clearTimeout(h),
+  };
+}
+
+async function startDuel(client, ch, interaction, prisma, store) {
+  const challenger = { id: interaction.user.id, name: interaction.member?.displayName || interaction.user.username };
+  const target = interaction.options.getUser('adversar');
+  if (target.bot || target.id === challenger.id) return interaction.editReply(err('Alege un adversar uman, diferit de tine.'));
+  const gameId = `duel-${Date.now()}`;
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`da|${gameId}|${challenger.id}`).setLabel('Accept').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`nu|${gameId}|${challenger.id}`).setLabel('Refuz').setStyle(ButtonStyle.Danger)
+  );
+  await interaction.editReply({
+    embeds: [new EmbedBuilder().setColor(0x5865f2).setTitle('Duel').setDescription(`<@${challenger.id}> îl provoacă pe <@${target.id}>.\nPrimul la **${R.DUEL.target}** runde câștigate, max ${R.DUEL.rounds}.`)],
+    components: [row],
+  });
+  client.duelInvites.set(gameId, { challenger, target: { id: target.id, name: target.displayName || target.username }, ch });
+  return gameId;
+}
+
+async function startDuelMatch(client, inv, ch, prisma, store) {
+  const players = [];
+  for (const p of [inv.challenger, inv.target]) {
+    const u = await resolveUser(prisma, { discordId: p.id, displayName: p.name });
+    players.push({ ...p, userId: u && u.id });
+  }
+  const qs = await pullMixed(prisma, R.DUEL.rounds, 0.5);
+  const extra = await pullMixed(prisma, R.DUEL.suddenDeathMax, 0);
+  const game = track(new Duel({ id: `duel-${Date.now()}`, players, questions: qs, extraRapide: extra.filter((q) => q.mode === 'rapide'), clock: realClock(), store, onEvent: makeEventHandler(ch) }));
+  await game.start();
+}
+
+async function startTrain(client, ch, prisma, store, userId, userName) {
+  const u = await resolveUser(prisma, { discordId: userId, displayName: userName });
+  const qs = await pullMixed(prisma, R.TRAIN.questions, 0.6);
+  const game = track(new TrainRun({ id: `train-${Date.now()}`, player: { id: userId, name: userName, userId: u && u.id }, questions: qs, clock: realClock(), store, onEvent: makeEventHandler(ch) }));
+  await game.start();
+}
+
+async function start({ token }) {
+  const prisma = new (require('@prisma/client').PrismaClient)();
+  const store = new Store({ prisma, mode: process.env.BOT_STORE_MODE || 'commit', log: console.log });
+  const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+  client.joinLobbies = new Map();
+  client.duelInvites = new Map();
+
+  client.once('ready', async () => {
+    console.log(`logged in as ${client.user.tag}`);
+    const rest = new REST({ version: '10' }).setToken(token);
+    await rest.put(Routes.applicationCommands(client.user.id), { body: commandDefs() });
+    const state = loadState();
+    for (const guild of client.guilds.cache.values()) await ensureChannels(guild, state);
+    console.log('arena gata:', state);
+  });
+
+  client.on('interactionCreate', async (interaction) => {
+    try {
+      if (interaction.isChatInputCommand()) {
+        const state = loadState();
+        const chId = interaction.commandName === 'duel' ? state.duel : state.train;
+        if (interaction.channelId !== chId) return interaction.reply(err('Comanda se folosește în canalul potrivit (#antrenament / #1vs1).'));
+        await interaction.deferReply();
+        const name = interaction.member?.displayName || interaction.user.username;
+        const ch = interaction.channel;
+        if (interaction.commandName === 'antrenament') return void (await startTrain(client, ch, prisma, store, interaction.user.id, name));
+        if (interaction.commandName === 'royale') return void (await startRoyale(client, ch, prisma, store, interaction.user.id, name, state));
+        if (interaction.commandName === 'duel') return void (await startDuel(client, ch, interaction, prisma, store));
+        return;
+      }
+      if (interaction.isButton()) {
+        const [a, b, c] = interaction.customId.split('|');
+        if (a === 'join') {
+          const lobby = client.joinLobbies.get(b);
+          if (!lobby) return interaction.reply(err('Înscrierea s-a închis.'));
+          if (lobby.joiners.has(interaction.user.id)) return interaction.reply(err('Ești deja înscris.'));
+          lobby.joiners.set(interaction.user.id, interaction.member?.displayName || interaction.user.username);
+          return interaction.reply({ content: `Ești în joc (${lobby.joiners.size} jucători).`, ephemeral: true });
+        }
+        if (a === 'da' || a === 'nu') {
+          const inv = client.duelInvites.get(b);
+          if (!inv) return interaction.reply(err('Provocarea a expirat.'));
+          if (interaction.user.id !== inv.target.id) return interaction.reply(err('Provocarea nu e pentru tine.'));
+          client.duelInvites.delete(b);
+          if (a === 'nu') {
+            await interaction.update({ components: [] });
+            return ch_send(interaction, 'Duel refuzat.');
+          }
+          await interaction.update({ embeds: [new EmbedBuilder().setColor(0x57f287).setTitle('Duel acceptat')], components: [] });
+          return void (await startDuelMatch(client, inv, interaction.channel, prisma, store));
+        }
+        // game answer: <gameId>|<token>|<index|modal>
+        const g = findGame(a);
+        if (!g) return interaction.reply(err('Runda nu mai e activă.'));
+        if (c === 'modal') {
+          const modal = new ModalBuilder().setCustomId(`${a}|${b}|submit`).setTitle('Răspuns numeric');
+          modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('value').setLabel('Numărul tău').setStyle(TextInputStyle.Short).setRequired(true)));
+          return interaction.showModal(modal);
+        }
+        const res = await g.game.answer(interaction.user.id, { index: Number(c) }, b);
+        return interaction.reply(res.ok ? { content: 'Răspuns înregistrat.', ephemeral: true } : err(res.error));
+      }
+      if (interaction.isModalSubmit()) {
+        const [a, b] = interaction.customId.split('|');
+        const g = findGame(a);
+        if (!g) return interaction.reply(err('Runda nu mai e activă.'));
+        const value = interaction.fields.getTextInputValue('value');
+        const res = await g.game.answer(interaction.user.id, { value }, b);
+        return interaction.reply(res.ok ? { content: 'Răspuns înregistrat.', ephemeral: true } : err(res.error));
+      }
+    } catch (e) {
+      console.error('interaction error', e);
+    }
+  });
+
+  await client.login(token);
+}
+
+function findGame(id) {
+  for (const [gid, game] of ACTIVE) if (gid === id || game.id === id) return { id: gid, game };
+  return null;
+}
+const ACTIVE = new Map();
+function track(game) {
+  ACTIVE.set(game.id, game);
+  game.onEvent = ((orig) => async (g, ev, data) => {
+    if (ev === 'gameEnd') ACTIVE.delete(game.id);
+    return orig(g, ev, data);
+  })(game.onEvent);
+  return game;
+}
+function ch_send(interaction, content) {
+  return interaction.followUp({ content }).catch(() => {});
+}
+
+module.exports = { start, track };
