@@ -1,0 +1,15 @@
+{
+  "name": "conquizta-bore-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Discord game front-end for conquizta-bore: antrenament + 1v1 + battle royale. Deterministic rules, no LLM.",
+  "main": "src/index.js",
+  "scripts": {
+    "harness": "node --env-file=../.env src/harness.js",
+    "start": "node --env-file=../.env src/index.js",
+    "check": "node --check src/rules.js && node --check src/questions.js && node --check src/engine.js && node --check src/store.js && node --check src/harness.js && node --check src/discord-transport.js && node --check src/index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3"
+  }
+}
