@@ -276,8 +276,13 @@ async function start({ token }) {
     try {
       if (interaction.isChatInputCommand()) {
         const state = loadState();
-        const chId = interaction.commandName === 'duel' ? state.duel : state.train;
-        if (interaction.channelId !== chId) return interaction.reply(err('Comanda se folosește în canalul potrivit (#antrenament / #1vs1).'));
+        const mine = (state.guilds || {})[interaction.guildId] || {};
+        const want = interaction.commandName === 'duel' ? { key: 'duel', name: '1vs1' } : { key: 'train', name: 'antrenament' };
+        // Stored id first; fall back to the channel NAME so a stale/empty state file can
+        // never turn every command into a silent "wrong channel" rejection.
+        const chName = interaction.channel && interaction.channel.name;
+        const inRightChannel = interaction.channelId === mine[want.key] || chName === want.name;
+        if (!inRightChannel) return interaction.reply(err('Comanda se folosește în canalul potrivit (#antrenament / #1vs1).'));
         await interaction.deferReply();
         const name = interaction.member?.displayName || interaction.user.username;
         const ch = interaction.channel;
