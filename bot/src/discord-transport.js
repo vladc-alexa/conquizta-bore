@@ -41,11 +41,14 @@ const msgs = new Map(); // token -> { channelId, messageId }
 
 const err = (msg) => ({ content: msg, ephemeral: true });
 
+// State is keyed per guild: the bot may sit on several servers, and a flat map would
+// make the last guild processed overwrite everyone else's channel ids.
 function loadState() {
   try {
-    return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+    const raw = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+    return raw && typeof raw.guilds === 'object' ? raw : { guilds: {} };
   } catch {
-    return {};
+    return { guilds: {} };
   }
 }
 function saveState(state) {
@@ -54,18 +57,20 @@ function saveState(state) {
 
 /** Create #antrenament / #1vs1 if they do not exist yet, remember their ids. */
 async function ensureChannels(guild, state) {
+  state.guilds = state.guilds || {};
+  const mine = (state.guilds[guild.id] = state.guilds[guild.id] || {});
   for (const want of WANT_CHANNELS) {
-    let id = state[want.key];
+    const id = mine[want.key];
     let ch = id ? guild.channels.cache.get(id) : null;
     if (!ch) ch = guild.channels.cache.find((c) => c.name === want.name && c.type === ChannelType.GuildText);
     if (!ch) {
       ch = await guild.channels.create({ name: want.name, type: ChannelType.GuildText, reason: 'ConQuizta arena' });
-      console.log(`created #${want.name} (${ch.id})`);
+      console.log(`created #${want.name} (${ch.id}) in guild ${guild.id}`);
     }
-    state[want.key] = ch.id;
+    mine[want.key] = ch.id;
   }
   saveState(state);
-  return state;
+  return mine;
 }
 
 function commandDefs() {
