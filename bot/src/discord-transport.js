@@ -284,7 +284,11 @@ async function start({ token }) {
       await rest.put(Routes.applicationGuildCommands(client.user.id, guild.id), { body: commandDefs() });
       const state = loadState();
       await ensureChannels(guild, state);
+      // Visible on every start so a missing permission (e.g. Manage Messages for deleting
+      // typed answers) is obvious in the journal instead of failing silently at game time.
+      const perms = guild.members.me ? guild.members.me.permissions.toArray().sort().join(',') : 'n/a';
       console.log(`guild „${guild.name}" (${guild.id}) pregătit — canale: ${JSON.stringify(state)}`);
+      console.log(`permisiuni: ${perms}`);
     } catch (e) {
       console.error(`guild setup failed for ${guild.id}`, e);
     }
