@@ -35,7 +35,7 @@ const WANT_CHANNELS = [
   { key: 'train', name: 'antrenament' },
   { key: 'duel', name: '1vs1' },
 ];
-const STATE_FILE = path.join(__dirname, '..', '.discord-channels.json');
+const STATE_FILE = process.env.BOT_STATE_FILE || path.join(__dirname, '..', '.discord-channels.json');
 
 const msgs = new Map(); // token -> { channelId, messageId }
 
@@ -243,14 +243,29 @@ async function start({ token }) {
   client.joinLobbies = new Map();
   client.duelInvites = new Map();
 
+  const rest = new REST({ version: '10' }).setToken(token);
+
+  // Slash commands are registered PER GUILD: global registration can take up to an
+  // hour to show up, guild-scoped is instant. Nothing is registered globally, so the
+  // command picker never shows duplicates.
+  async function setupGuild(guild) {
+    try {
+      await rest.put(Routes.applicationGuildCommands(client.user.id, guild.id), { body: commandDefs() });
+      const state = loadState();
+      await ensureChannels(guild, state);
+      console.log(`guild „${guild.name}" (${guild.id}) pregătit — canale: ${JSON.stringify(state)}`);
+    } catch (e) {
+      console.error(`guild setup failed for ${guild.id}`, e);
+    }
+  }
+
   client.once('ready', async () => {
-    console.log(`logged in as ${client.user.tag}`);
-    const rest = new REST({ version: '10' }).setToken(token);
-    await rest.put(Routes.applicationCommands(client.user.id), { body: commandDefs() });
-    const state = loadState();
-    for (const guild of client.guilds.cache.values()) await ensureChannels(guild, state);
-    console.log('arena gata:', state);
+    console.log(`logged in as ${client.user.tag} (${client.user.id})`);
+    if (!client.guilds.cache.size) console.log('nu sunt încă pe niciun server — aștept invitația');
+    for (const guild of client.guilds.cache.values()) await setupGuild(guild);
   });
+
+  client.on('guildCreate', (guild) => setupGuild(guild));
 
   client.on('interactionCreate', async (interaction) => {
     try {
