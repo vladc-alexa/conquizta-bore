@@ -59,3 +59,28 @@ public.
 2. **Rezultatele de duel (W/L)** nu au tabelă — se afișează în canal, nu se stochează.
 3. **Transportul Discord nu a fost încă rulat** cu token (a fost scris înainte de a exista
    token). Motorul e dovedit; primul run real e un smoke test.
+
+## Deployment (VPS, container + user systemd unit)
+
+The bot runs in its own container, supervised by a **user** systemd unit (no root on this host):
+`~/.config/systemd/user/conquizta-bot.service` → `docker run --rm --name conquizta-bot --network host`
+with the repo mounted **read-only** (`bot/src`, `bot/node_modules`, `node_modules`) and a writable
+`conquizta-bot-state` volume for `BOT_STATE_FILE=/state/channels.json`.
+
+Image: `~/conquizta-bot/Dockerfile` (node:22-slim + openssl, which Prisma needs to pick the
+`debian-openssl-3.0.x` engine) built as `conquizta-bot:local`.
+
+```bash
+sg docker -c "docker build -t conquizta-bot:local ~/conquizta-bot"   # after dep changes
+systemctl --user restart conquizta-bot.service
+journalctl --user -u conquizta-bot.service -f
+```
+
+Secrets live outside the container: `/home/hermes/projects/conquizta-bore/bot/.env` (chmod 600,
+gitignored) is passed as `--env-file`, so no token or DB URL is on the container filesystem.
+The container has no mount of `/home/hermes` — it cannot see Hermes config, memory or sessions.
+
+Slash commands are registered **per guild** (`applicationGuildCommands`) on join: instant, and no
+global duplicates. To deploy the bot on a new server: invite it with
+`https://discord.com/oauth2/authorize?client_id=<app id>&scope=bot+applications.commands&permissions=85072`
+— it then creates `#antrenament` and `#1vs1` itself.
