@@ -32,7 +32,7 @@ const isNumericText = (s) => /^-?\d+$/.test(String(s ?? '').trim());
 
 // ---- game rules ---------------------------------------------------------
 const TRAIN = {
-  questions: 10,
+  questions: 5,
   grilaMs: 20_000,
   rapideMs: 10_000,
 };

@@ -12,6 +12,10 @@ if (!token) {
 
 const { start } = require('./discord-transport');
 
+// The arena stays up even if one interaction or one message fails.
+process.on('unhandledRejection', (e) => console.error('unhandled rejection (bot keeps running):', (e && e.message) || e));
+process.on('uncaughtException', (e) => console.error('uncaught exception (bot keeps running):', (e && e.message) || e));
+
 start({ token }).catch((err) => {
   console.error('bot failed:', err);
   process.exit(1);

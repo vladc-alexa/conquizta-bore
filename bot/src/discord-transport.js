@@ -86,15 +86,19 @@ function commandDefs() {
 
 /** Public payload -> Discord embed + components. The correct answer never leaves the server. */
 function renderQuestion({ gameId, token, round, mode, prompt, options, timeoutMs, extra }) {
-  const title = mode === 'grila' ? `Întrebarea ${round} · grilă` : `Întrebarea ${round} · rapidă`;
+  // `options` arrives as [] for rapide questions. An empty ActionRow is rejected by Discord
+  // (BASE_TYPE_BAD_LENGTH: "Must be between 1 and 5 in length") — that is what killed the round.
+  const isGrila = Array.isArray(options) && options.length > 0;
+  const head = `Întrebarea ${round}${extra && extra.total ? `/${extra.total}` : ''} · ${mode === 'grila' ? 'grilă' : 'rapidă'}`;
+  const stem = String(prompt || '').trim() || head;
   const embed = new EmbedBuilder()
-    .setColor(mode === 'grila' ? 0x5865f2 : 0xeb459e)
-    .setTitle(title)
-    .setDescription(`${options ? options.map((o) => `${o.label} ${o.text}`).join('\n') : 'Răspunde cu un număr.'}\n\n⏱️ ${Math.round(timeoutMs / 1000)}s`)
-    .setFooter({ text: `${prompt.slice(0, 200)}${extra && extra.escalate ? '  ·  timp redus' : ''}` });
+    .setColor(isGrila ? 0x5865f2 : 0xeb459e)
+    .setTitle(stem.slice(0, 250))
+    .setDescription(`${isGrila ? options.map((o) => `${o.label} ${o.text}`).join('\n') : 'Răspunde cu un număr.'}\n\n⏱️ ${Math.round(timeoutMs / 1000)}s`)
+    .setFooter({ text: `${head}${extra && extra.escalate ? '  ·  timp redus' : ''}` });
 
   let row;
-  if (options) {
+  if (isGrila) {
     row = new ActionRowBuilder().addComponents(
       options.map((o) =>
         new ButtonBuilder()
@@ -111,6 +115,16 @@ function renderQuestion({ gameId, token, round, mode, prompt, options, timeoutMs
   return { embeds: [embed], components: [row] };
 }
 
+/** Send that logs instead of throwing: one bad payload must not end the round or kill the bot. */
+async function safeSend(ch, payload) {
+  try {
+    return await ch.send(payload);
+  } catch (e) {
+    console.error(`send failed: ${e && e.message ? e.message : e}`);
+    return null;
+  }
+}
+
 const key = (gameId, round) => `${gameId}|${round}`;
 
 /** Engine events -> channel messages. */
@@ -118,19 +132,19 @@ function makeEventHandler(ch, questionsFor) {
   return async (game, ev, data) => {
     if (ev === 'question') {
       const pub = data.public;
-      const sent = await ch.send(
-        renderQuestion({
-          gameId: game.id,
-          token: data.token,
-          round: data.round,
-          mode: pub.mode,
-          prompt: pub.prompt,
-          options: pub.options,
-          timeoutMs: data.timeoutMs,
-          extra: data,
-        })
-      );
-      msgs.set(key(game.id, data.round), { channelId: ch.id, messageId: sent.id });
+      const payload = renderQuestion({
+        gameId: game.id,
+        token: data.token,
+        round: data.round,
+        mode: pub.mode,
+        prompt: pub.prompt,
+        options: pub.options,
+        timeoutMs: data.timeoutMs,
+        extra: data,
+      });
+      let sent = await safeSend(ch, payload);
+      if (!sent) sent = await safeSend(ch, { embeds: payload.embeds }); // retry without buttons
+      if (sent) msgs.set(key(game.id, data.round), { channelId: ch.id, messageId: sent.id });
       return;
     }
     if (ev === 'reveal') {
@@ -161,7 +175,7 @@ function makeEventHandler(ch, questionsFor) {
         data.mode === 'royale' ? `👑 ${data.winner} câștigă battle royale`
         : data.mode === 'duel' ? `🏆 ${data.winner} câștigă duelul ${data.score}`
         : `Antrenament terminat: ${data.correct}/${data.total} corecte`;
-      await ch.send({ embeds: [new EmbedBuilder().setColor(0xfee75c).setTitle(head).setFooter({ text: 'ConQuizta · rezultatul intră în PRC' })] });
+      await safeSend(ch, { embeds: [new EmbedBuilder().setColor(0xfee75c).setTitle(head).setFooter({ text: 'ConQuizta · rezultatul intră în PRC' })] });
     }
   };
 }
@@ -357,3 +371,4 @@ function ch_send(interaction, content) {
 }
 
 module.exports = { start, track };
+
