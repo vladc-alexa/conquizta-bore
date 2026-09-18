@@ -41,6 +41,11 @@ const msgs = new Map(); // token -> { channelId, messageId }
 
 const err = (msg) => ({ content: msg, ephemeral: true });
 
+// Text answers ("42" typed straight into the arena channel) need the privileged Message
+// Content intent, so the whole path stays behind BOT_READ_MESSAGES=1: a missing portal
+// toggle must never turn into a failed login.
+let TEXT_ANSWERS = false;
+
 // State is keyed per guild: the bot may sit on several servers, and a flat map would
 // make the last guild processed overwrite everyone else's channel ids.
 function loadState() {
@@ -91,28 +96,31 @@ function renderQuestion({ gameId, token, round, mode, prompt, options, timeoutMs
   const isGrila = Array.isArray(options) && options.length > 0;
   const head = `Întrebarea ${round}${extra && extra.total ? `/${extra.total}` : ''} · ${mode === 'grila' ? 'grilă' : 'rapidă'}`;
   const stem = String(prompt || '').trim() || head;
+  const howTo = TEXT_ANSWERS
+    ? (isGrila ? 'Apasă un buton sau scrie litera (A–D).' : 'Scrie numărul direct în canal.')
+    : (isGrila ? null : 'Răspunde cu un număr.');
   const embed = new EmbedBuilder()
     .setColor(isGrila ? 0x5865f2 : 0xeb459e)
     .setTitle(stem.slice(0, 250))
-    .setDescription(`${isGrila ? options.map((o) => `${o.label} ${o.text}`).join('\n') : 'Răspunde cu un număr.'}\n\n⏱️ ${Math.round(timeoutMs / 1000)}s`)
+    .setDescription(`${[isGrila ? options.map((o) => `${o.label} ${o.text}`).join('\n') : null, howTo].filter(Boolean).join('\n')}\n\n⏱️ ${Math.round(timeoutMs / 1000)}s`)
     .setFooter({ text: `${head}${extra && extra.escalate ? '  ·  timp redus' : ''}` });
 
-  let row;
+  const components = [];
   if (isGrila) {
-    row = new ActionRowBuilder().addComponents(
+    components.push(new ActionRowBuilder().addComponents(
       options.map((o) =>
         new ButtonBuilder()
           .setCustomId(`${gameId}|${token}|${o.index}`)
           .setLabel(o.label)
           .setStyle(ButtonStyle.Primary)
       )
-    );
-  } else {
-    row = new ActionRowBuilder().addComponents(
+    ));
+  } else if (!TEXT_ANSWERS) {
+    components.push(new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId(`${gameId}|${token}|modal`).setLabel('Răspunde').setStyle(ButtonStyle.Success)
-    );
+    ));
   }
-  return { embeds: [embed], components: [row] };
+  return { embeds: [embed], components };
 }
 
 /** Send that logs instead of throwing: one bad payload must not end the round or kill the bot. */
@@ -132,6 +140,7 @@ function makeEventHandler(ch, questionsFor) {
   return async (game, ev, data) => {
     if (ev === 'question') {
       const pub = data.public;
+      game.channelId = ch.id; // where this game lives — the typed-answer path needs it
       const payload = renderQuestion({
         gameId: game.id,
         token: data.token,
@@ -258,7 +267,10 @@ async function startTrain(client, ch, prisma, store, userId, userName) {
 async function start({ token }) {
   const prisma = new (require('@prisma/client').PrismaClient)();
   const store = new Store({ prisma, mode: process.env.BOT_STORE_MODE || 'commit', log: console.log });
-  const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+  TEXT_ANSWERS = process.env.BOT_READ_MESSAGES === '1';
+  const intents = [GatewayIntentBits.Guilds];
+  if (TEXT_ANSWERS) intents.push(GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent);
+  const client = new Client({ intents });
   client.joinLobbies = new Map();
   client.duelInvites = new Map();
 
@@ -272,7 +284,11 @@ async function start({ token }) {
       await rest.put(Routes.applicationGuildCommands(client.user.id, guild.id), { body: commandDefs() });
       const state = loadState();
       await ensureChannels(guild, state);
+      // Visible on every start so a missing permission (e.g. Manage Messages for deleting
+      // typed answers) is obvious in the journal instead of failing silently at game time.
+      const perms = guild.members.me ? guild.members.me.permissions.toArray().sort().join(',') : 'n/a';
       console.log(`guild „${guild.name}" (${guild.id}) pregătit — canale: ${JSON.stringify(state)}`);
+      console.log(`permisiuni: ${perms}`);
     } catch (e) {
       console.error(`guild setup failed for ${guild.id}`, e);
     }
@@ -349,6 +365,39 @@ async function start({ token }) {
       console.error('interaction error', e);
     }
   });
+
+  if (TEXT_ANSWERS) {
+    // Typed answers: "42" for rapidă, "B" for grilă, right in the channel — like the site.
+    client.on('messageCreate', async (msg) => {
+      try {
+        if (!msg.guildId || msg.author.bot) return;
+        if (msg.mentions && msg.mentions.users.size) return;
+        const text = (msg.content || '').trim();
+        if (!text || text.startsWith('/')) return;
+        for (const game of ACTIVE.values()) {
+          if (game.channelId !== msg.channelId || game.over || !game.current) continue;
+          if (!game.players.some((p) => p.id === msg.author.id)) continue;
+          let payload = null;
+          if (game.current.mode === 'grila') {
+            const idx = 'ABCD'.indexOf(text.toUpperCase());
+            if (text.length === 1 && idx >= 0) payload = { index: idx };
+          } else if (/^-?\d+$/.test(text)) {
+            payload = { value: text };
+          }
+          if (!payload) return; // not an answer — ignore it, never consume the round
+          const res = await game.answer(msg.author.id, payload, game.currentToken);
+          msg.delete().catch(() => {}); // needs Manage Messages; stays quiet without it
+          if (!res.ok) {
+            const warn = await msg.channel.send({ content: `${msg.author}, ${res.error}` }).catch(() => null);
+            if (warn) setTimeout(() => warn.delete().catch(() => {}), 5000);
+          }
+          return;
+        }
+      } catch (e) {
+        console.error('typed answer failed:', (e && e.message) || e);
+      }
+    });
+  }
 
   await client.login(token);
 }

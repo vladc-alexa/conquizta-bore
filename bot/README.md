@@ -60,6 +60,22 @@ public.
 3. **Transportul Discord nu a fost încă rulat** cu token (a fost scris înainte de a exista
    token). Motorul e dovedit; primul run real e un smoke test.
 
+## Răspuns instant (fără popup)
+
+Întrebările **rapide** se pot răspunde prin tastare directă în canal — ca pe site — în loc de
+buton → modal → Submit (care consumă din cele 10s). Se activează cu `BOT_READ_MESSAGES=1`
+în `bot/.env` **după** ce intent-ul privilegiat e pornit în portal:
+
+1. `discord.com/developers/applications` → app → **Bot** → *Privileged Gateway Intents* →
+   **Message Content Intent** = ON (fără el, login-ul eșuează cu `Used disallowed intents`).
+2. `printf 'BOT_READ_MESSAGES=1\n' >> bot/.env && systemctl --user restart conquizta-bot`.
+3. Opțional: re-invite cu **Manage Messages** (link de invitație cu `permissions=93264`) ca
+   răspunsul tastat să fie șters imediat (altfel rămâne vizibil — contează la royale/duel).
+
+Cu flag-ul pornit: rapidă = „Scrie numărul direct în canal.", grilă = butoane **și** litera
+(A–D). Un mesaj care nu e răspuns valid (chat, link, mesaj de la bot) e ignorat, nu consumă
+runda. Răspunsul greșit/întârziat primește un avertisment temporar.
+
 ## Deployment (VPS, container + user systemd unit)
 
 The bot runs in its own container, supervised by a **user** systemd unit (no root on this host):
