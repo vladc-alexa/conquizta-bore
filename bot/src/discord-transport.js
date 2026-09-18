@@ -271,6 +271,14 @@ async function start({ token }) {
   const intents = [GatewayIntentBits.Guilds];
   if (TEXT_ANSWERS) intents.push(GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent);
   const client = new Client({ intents });
+  // Gateway health: without these listeners a dead-but-"active" connection is invisible,
+  // which is exactly how a late interaction (10062) would look from the outside.
+  client.on('error', (e) => console.error('client error:', (e && e.message) || e));
+  client.on('warn', (m) => console.warn('client warn:', m));
+  client.on('shardDisconnect', (code, id) => console.warn(`shard ${id} deconectat (code ${code})`));
+  client.on('shardReconnecting', (id) => console.warn(`shard ${id} reconectare...`));
+  client.on('shardResume', (id, replayed) => console.log(`shard ${id} reluat (replay ${replayed})`));
+  client.on('shardReady', (id) => console.log(`shard ${id} gata`));
   client.joinLobbies = new Map();
   client.duelInvites = new Map();
 
@@ -313,6 +321,10 @@ async function start({ token }) {
         const chName = interaction.channel && interaction.channel.name;
         const inRightChannel = interaction.channelId === mine[want.key] || chName === want.name;
         if (!inRightChannel) return interaction.reply(err('Comanda se folosește în canalul potrivit (#antrenament / #1vs1).'));
+        // Discord's ack window is 3s: if the link is slow/dead the interaction arrives too
+        // late and the reply fails with 10062. Log how late it was instead of guessing.
+        const lateMs = Date.now() - interaction.createdTimestamp;
+        if (lateMs > 1500) console.warn(`interaction primit cu ${lateMs}ms întârziere`);
         await interaction.deferReply();
         const name = interaction.member?.displayName || interaction.user.username;
         const ch = interaction.channel;
@@ -362,7 +374,11 @@ async function start({ token }) {
         return interaction.reply(res.ok ? { content: 'Răspuns înregistrat.', ephemeral: true } : err(res.error));
       }
     } catch (e) {
-      console.error('interaction error', e);
+      if (e && e.code === 10062) {
+        console.error('interaction expirat (10062): ack prea târziu — comanda trebuie reluată');
+      } else {
+        console.error('interaction error', e);
+      }
     }
   });
 
