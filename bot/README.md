@@ -9,7 +9,7 @@ din aceleași tabele pe care le folosește site-ul, iar răspunsurile se scriu �
 
 | Mod | Canal | Reguli |
 |---|---|---|
-| `/antrenament` | #antrenament | 10 întrebări, grilă 20s / rapidă 10s, fără eliminare. Fiecare jucător are propria rundă, concurent. |
+| `/antrenament` | #antrenament | 5 întrebări, grilă 20s / rapidă 10s, fără eliminare. Fiecare jucător are propria rundă, concurent. |
 | `/royale` | #antrenament | 60s înscriere (buton), apoi runde pe aceeași întrebare: greșit **sau** prea lent = OUT. Timpul scade la 75% după runda 5 (min 6s). Ultimul rămas câștigă. |
 | `/duel @x` | #1vs1 | Accept/Refuz, apoi max 7 runde alternate grilă/rapidă. Prima rundă câștigată = 1 victorie de rundă; primul la 4 câștigă duelul; la egalitate după 7 runde → runde rapide de departajare. |
 

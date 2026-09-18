@@ -2,7 +2,7 @@
 // Game engine — deterministic, transport-agnostic, LLM-free.
 //
 // Modes:
-//   TrainRun : 10 questions, no elimination, one player, PRC-counted
+//   TrainRun : 5 questions, no elimination, one player, PRC-counted
 //   Duel     : 2 players, best of 7 (first to 4), alternates grila/rapide
 //   Royale   : N players, same question to everyone, wrong or too slow = OUT, last standing wins
 //
