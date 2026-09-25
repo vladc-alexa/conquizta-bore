@@ -31,8 +31,8 @@ const {
 } = require('discord.js');
 
 const R = require('./rules');
+const { publicQuestion, pullMixed } = require('./questions');
 const { TrainRun, Duel, Royale, LABELS } = require('./engine');
-const { pullMixed } = require('./questions');
 const { Store } = require('./store');
 const { resolveUser } = require('./identity');
 
@@ -207,6 +207,21 @@ async function sendCard(ch, shapes) {
 
 const key = (gameId, round) => `${gameId}|${round}`;
 
+/** The question for a modal that is being opened *now*. The render-time cache is the fast path;
+ *  this reads the live round straight from the engine (public projection only) when the token
+ *  has no cache entry, so an answer window can never open blind. */
+function currentCardFor(game, token) {
+  if (!game || !game.current || game.currentToken !== token) return null;
+  const pub = publicQuestion(game.current);
+  return {
+    round: game.round,
+    total: game.total || game.questionCount,
+    mode: pub.mode,
+    stem: pub.prompt,
+    options: pub.options,
+  };
+}
+
 /** Engine events -> channel messages. */
 function makeEventHandler(ch, questionsFor) {
   return async (game, ev, data) => {
@@ -285,6 +300,110 @@ function makeEventHandler(ch, questionsFor) {
   };
 }
 
+/** Solo antrenament: a private window instead of channel messages. The question and a ticking
+ *  countdown live in the deferred reply (one message that cycles question → question), while
+ *  results — the correct answer and the player's own time — arrive as private follow-ups. So the
+ *  round is answerable by just typing (no button to press) and nothing lands in the channel.
+ *  A modal can never be opened by itself (Discord only shows one in response to a click or the
+ *  command itself), which is why the window is a message; it is still private and self-updating. */
+function makePrivateEventHandler(interaction, ch) {
+  let ticks = null;
+  const stopTicks = () => {
+    if (ticks) {
+      clearInterval(ticks);
+      ticks = null;
+    }
+  };
+  const edit = async (payload) => {
+    try {
+      return await interaction.editReply(payload);
+    } catch (e) {
+      console.error(`fereastra privată: edit eșuat (${e && e.message ? e.message : e})`);
+      // Degrade to the channel rather than losing the round — and drop the ephemeral bit, which
+      // is only legal on an interaction response.
+      return safeSend(ch, { ...payload, flags: V2 });
+    }
+  };
+  const follow = async (payload) => {
+    try {
+      return await interaction.followUp({ ...payload, flags: V2 | MessageFlags.Ephemeral });
+    } catch (e) {
+      console.error(`fereastra privată: follow-up eșuat (${e && e.message ? e.message : e})`);
+      return null;
+    }
+  };
+
+  return async (game, ev, data) => {
+    if (ev === 'question') {
+      const pub = data.public;
+      game.channelId = ch.id;
+      game.notify = (content) => follow({ content, flags: MessageFlags.Ephemeral });
+      QCARDS.set(data.token, { round: data.round, total: data.total, mode: pub.mode, stem: pub.prompt, options: pub.options });
+      const isGrila = Array.isArray(pub.options) && pub.options.length > 0;
+      const deadline = Date.now() + data.timeoutMs;
+      const left = () => Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      const endsAt = Math.floor(deadline / 1000);
+      const row = new ActionRowBuilder().addComponents(
+        ...(isGrila
+          ? pub.options.map((o) => new ButtonBuilder().setCustomId(`${game.id}|${data.token}|${o.index}`).setLabel(o.label).setStyle(ButtonStyle.Primary))
+          : [new ButtonBuilder().setCustomId(`${game.id}|${data.token}|modal`).setLabel('Răspunde în fereastră').setStyle(ButtonStyle.Secondary)])
+      );
+      const payload = () => {
+        const c = new ContainerBuilder()
+          .setAccentColor(isGrila ? 0x5865f2 : 0xeb459e)
+          .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+            `## Întrebarea ${data.round}${data.total ? `/${data.total}` : ''} · ${isGrila ? 'grilă' : 'rapidă'}\n**${pub.prompt}**`
+          ))
+          .addSeparatorComponents(new SeparatorBuilder())
+          .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+            isGrila
+              ? pub.options.map((o) => `${o.label} ${o.text}`).join('\n')
+              : 'Scrie doar numărul, direct în canal — nu e nimic de apăsat.'
+          ))
+          .addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ⏳ rămân ${left()}s · se închide <t:${endsAt}:R>`));
+        return { flags: V2 | MessageFlags.Ephemeral, components: [c, row] }; // private window
+      };
+      stopTicks();
+      await edit(payload());
+      // The <t:…:R> stamp ticks client-side; these edits are the belt to that braces (the
+      // countdown must be readable even if a client does not re-render relative timestamps).
+      ticks = setInterval(() => {
+        if (left() <= 0) return stopTicks();
+        edit(payload());
+      }, 2000);
+      return;
+    }
+    if (ev === 'reveal') {
+      stopTicks();
+      const graded = ((data.results || [])[0] || {}).graded || {};
+      const mine = graded.answered && graded.raw != null && graded.raw !== '' ? String(graded.raw) : 'fără răspuns';
+      const secs = graded.elapsedMs != null ? (graded.elapsedMs / 1000).toFixed(1) : '—';
+      const ok = !!graded.isCorrect;
+      const c = new ContainerBuilder()
+        .setAccentColor(ok ? 0x57f287 : 0xed4245)
+        .addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ${ok ? '✔ corect' : '✘ greșit'} · răspuns corect: ${data.correctLabel}`))
+        .addSeparatorComponents(new SeparatorBuilder())
+        .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+          `răspunsul tău: **${mine}**\n⏱️ timpul tău: **${secs}s**${graded.mode === 'rapide' && graded.answered ? ` · ${graded.score} pct` : ''}`
+        ));
+      if (data.note) c.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${data.note}`));
+      await follow({ flags: V2, components: [c] });
+      return;
+    }
+    if (ev === 'gameEnd') {
+      stopTicks();
+      for (const t of [...QCARDS.keys()]) if (t.startsWith(`${game.id}:`)) QCARDS.delete(t);
+      const c = new ContainerBuilder()
+        .setAccentColor(0xfee75c)
+        .addTextDisplayComponents(new TextDisplayBuilder().setContent(`## Antrenament terminat: ${data.correct}/${data.total} corecte`))
+        .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+          `-# ${data.rapideMean != null ? `medie la rapide ${data.rapideMean} pct · ` : ''}rezultatul intră în PRC`
+        ));
+      await edit({ flags: V2 | MessageFlags.Ephemeral, components: [c] });
+    }
+  };
+}
+
 async function startRoyale(client, ch, prisma, store, userId, userName, state) {
   const gameId = `royale-${Date.now()}`;
   const joiners = new Map([[userId, userName]]);
@@ -353,10 +472,13 @@ async function startDuelMatch(client, inv, ch, prisma, store) {
   await game.start();
 }
 
-async function startTrain(client, ch, prisma, store, userId, userName) {
+async function startTrain(client, ch, prisma, store, userId, userName, interaction) {
   const u = await resolveUser(prisma, { discordId: userId, displayName: userName });
   const qs = await pullMixed(prisma, R.TRAIN.questions, 0.6);
-  const game = track(new TrainRun({ id: `train-${Date.now()}`, player: { id: userId, name: userName, userId: u && u.id }, questions: qs, clock: realClock(), store, onEvent: makeEventHandler(ch) }));
+  // Solo: play in the private window opened by the command. Without an interaction (older call
+  // sites, tests) fall back to the public question card.
+  const onEvent = interaction ? makePrivateEventHandler(interaction, ch) : makeEventHandler(ch);
+  const game = track(new TrainRun({ id: `train-${Date.now()}`, player: { id: userId, name: userName, userId: u && u.id }, questions: qs, clock: realClock(), store, onEvent }));
   await game.start();
 }
 
@@ -421,10 +543,12 @@ async function start({ token }) {
         // late and the reply fails with 10062. Log how late it was instead of guessing.
         const lateMs = Date.now() - interaction.createdTimestamp;
         if (lateMs > 1500) console.warn(`interaction primit cu ${lateMs}ms întârziere`);
-        await interaction.deferReply();
+        // Antrenament is solo, so it gets a private window; the duel/royale replies stay public.
+        if (interaction.commandName === 'antrenament') await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        else await interaction.deferReply();
         const name = interaction.member?.displayName || interaction.user.username;
         const ch = interaction.channel;
-        if (interaction.commandName === 'antrenament') return void (await startTrain(client, ch, prisma, store, interaction.user.id, name));
+        if (interaction.commandName === 'antrenament') return void (await startTrain(client, ch, prisma, store, interaction.user.id, name, interaction));
         if (interaction.commandName === 'royale') return void (await startRoyale(client, ch, prisma, store, interaction.user.id, name, state));
         if (interaction.commandName === 'duel') return void (await startDuel(client, ch, interaction, prisma, store));
         return;
@@ -461,12 +585,17 @@ async function start({ token }) {
             m.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('value').setLabel('Numărul tău').setStyle(TextInputStyle.Short).setRequired(true)));
             return m;
           };
-          const card = QCARDS.get(b);
-          if (!card) return interaction.showModal(plain());
-          // The modal carries the question. If Discord refuses the Text Display shape (older
-          // API surface), fall back to the bare numeric box instead of showing nothing.
+          const card = QCARDS.get(b) || currentCardFor(g.game, b);
+          if (!card) {
+            console.log(`modal: întrebarea lipsește pentru token=${b} (cache=${QCARDS.size}) — deschid fereastra goală`);
+            return interaction.showModal(plain());
+          }
+          const m = answerModal({ ...card, customId: `${a}|${b}|submit` });
+          console.log(`modal deschis: token=${b} componente=[${m.toJSON().components.map((c) => c.type)}]`);
+          // If Discord refuses the Text Display shape (older API surface), fall back to the
+          // bare numeric box instead of showing nothing.
           try {
-            return await interaction.showModal(answerModal({ ...card, customId: `${a}|${b}|submit` }));
+            return await interaction.showModal(m);
           } catch (e) {
             console.error(`modal cu întrebare respins: ${e && e.message ? e.message : e}`);
             return interaction.showModal(plain());
@@ -480,6 +609,7 @@ async function start({ token }) {
         const g = findGame(a);
         if (!g) return interaction.reply(err('Runda nu mai e activă.'));
         const value = interaction.fields.getTextInputValue('value');
+        console.log(`modal submit: token=${b} valoare primită (${String(value).length} caractere)`);
         const res = await g.game.answer(interaction.user.id, { value }, b);
         return interaction.reply(res.ok ? { content: 'Răspuns înregistrat.', ephemeral: true } : err(res.error));
       }
@@ -514,6 +644,8 @@ async function start({ token }) {
           const res = await game.answer(msg.author.id, payload, game.currentToken);
           msg.delete().catch(() => {}); // needs Manage Messages; stays quiet without it
           if (!res.ok) {
+            // In the solo private window the warning goes to that window, not the channel.
+            if (game.notify) return void game.notify(`${msg.author}, ${res.error}`);
             const warn = await msg.channel.send({ content: `${msg.author}, ${res.error}` }).catch(() => null);
             if (warn) setTimeout(() => warn.delete().catch(() => {}), 5000);
           }
@@ -545,5 +677,5 @@ function ch_send(interaction, content) {
   return interaction.followUp({ content }).catch(() => {});
 }
 
-module.exports = { start, track, renderQuestion, answerModal };
+module.exports = { start, track, renderQuestion, answerModal, currentCardFor, makePrivateEventHandler, makeEventHandler };
 

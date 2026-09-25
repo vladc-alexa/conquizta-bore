@@ -77,6 +77,25 @@ rămân butoanele. La rapidă butonul **Răspunde în fereastră** (stil secunda
 tastat, ca să poți răspunde și dacă ai derulat sau ești pe telefon. Dacă modalul cu întrebare e
 respins, se deschide modalul vechi (doar câmpul numeric), nu un mesaj de eroare.
 
+## Antrenament în fereastră privată (fără click, cu cronometru)
+
+`/antrenament` nu mai scrie în canal: comanda deschide un **mesaj privat** (deferral efemer) care
+*este* fereastra jocului. Întrebarea, variantele și cronometrul stau acolo, iar `editReply` îl
+rescrie la fiecare rundă (la 2s se actualizează „rămân Ns", plus timestamp-ul relativ `<t:…:R>`
+care ticăie client-side). Rezultatul fiecărei runde — răspunsul corect, răspunsul tău, **timpul tău**
+și punctajul — vine ca mesaj privat separat, deci nu dispare când începe următoarea întrebare.
+Răspunsul se dă scriind în canal (intent-ul de conținut e pornit) sau, la grilă, din butoane;
+la rapidă butonul de fereastră rămâne ca opțiune, nu ca obligație.
+
+**De ce nu un modal:** Discord nu poate deschide un modal de la sine — un modal apare doar ca
+răspuns la un click sau la comandă, iar conținutul lui e static (fără cronometru care ticăie).
+Fereastra privată dă exact ce trebuie (privat, fără click, cu timp) și nu poate rata runda.
+Dacă `editReply` e refuzat (token de interacțiune expirat), handlerul cade pe cardul public din canal.
+
+Dovadă locală, motor real + întrebări reale din DB:
+`node --env-file=.env scripts/private-window-test.js` — tipărește fiecare payload (fereastră cu
+cronometru care scade, carduri de rezultat cu timp) și confirmă `channel messages=0`.
+
 ## Răspuns instant (fără popup)
 
 Întrebările **rapide** se pot răspunde prin tastare directă în canal — ca pe site — în loc de
