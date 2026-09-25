@@ -300,35 +300,37 @@ function makeEventHandler(ch, questionsFor) {
   };
 }
 
-/** Solo antrenament: a private window instead of channel messages. The question and a ticking
- *  countdown live in the deferred reply (one message that cycles question → question), while
- *  results — the correct answer and the player's own time — arrive as private follow-ups. So the
- *  round is answerable by just typing (no button to press) and nothing lands in the channel.
- *  A modal can never be opened by itself (Discord only shows one in response to a click or the
- *  command itself), which is why the window is a message; it is still private and self-updating. */
+/** Solo antrenament: a private feed instead of channel messages. Every round posts its question as
+ *  the NEWEST private message (so it is always the one at the bottom where the player is looking),
+ *  with a countdown that ticks, and the round's result — correct answer, the player's own answer and
+ *  time — lands right under it. Nothing is posted in the channel and nothing has to be clicked.
+ *  (A modal cannot be opened unprompted and its content is static, so it could never tick.) */
 function makePrivateEventHandler(interaction, ch) {
   let ticks = null;
+  let opened = false;
+  let ticking = true; // turned off if Discord refuses to update a private message
   const stopTicks = () => {
     if (ticks) {
       clearInterval(ticks);
       ticks = null;
     }
   };
-  const edit = async (payload) => {
-    try {
-      return await interaction.editReply(payload);
-    } catch (e) {
-      console.error(`fereastra privată: edit eșuat (${e && e.message ? e.message : e})`);
-      // Degrade to the channel rather than losing the round — and drop the ephemeral bit, which
-      // is only legal on an interaction response.
-      return safeSend(ch, { ...payload, flags: V2 });
-    }
-  };
-  const follow = async (payload) => {
+  const send = async (payload) => {
     try {
       return await interaction.followUp({ ...payload, flags: V2 | MessageFlags.Ephemeral });
     } catch (e) {
-      console.error(`fereastra privată: follow-up eșuat (${e && e.message ? e.message : e})`);
+      console.error(`fereastra privată: trimitere eșuată (${e && e.message ? e.message : e})`);
+      // Last resort: a public card is better than a round nobody can see. Drop the ephemeral bit,
+      // which is only legal on an interaction response.
+      return safeSend(ch, { ...payload, flags: V2 });
+    }
+  };
+  const editPrivate = async (messageId, payload) => {
+    try {
+      return await interaction.webhook.editMessage(messageId, payload);
+    } catch (e) {
+      if (ticking) console.error(`fereastra privată: cronometrul nu se poate actualiza (${e && e.message ? e.message : e}) — rămâne timestamp-ul relativ`);
+      ticking = false;
       return null;
     }
   };
@@ -337,8 +339,23 @@ function makePrivateEventHandler(interaction, ch) {
     if (ev === 'question') {
       const pub = data.public;
       game.channelId = ch.id;
-      game.notify = (content) => follow({ content, flags: MessageFlags.Ephemeral });
+      game.notify = (content) => interaction.followUp({ content, flags: MessageFlags.Ephemeral }).catch(() => {});
       QCARDS.set(data.token, { round: data.round, total: data.total, mode: pub.mode, stem: pub.prompt, options: pub.options });
+      // Resolve the deferred placeholder once, so it stops saying "thinking…".
+      if (!opened) {
+        opened = true;
+        interaction
+          .editReply({
+            flags: V2 | MessageFlags.Ephemeral,
+            components: [
+              new ContainerBuilder()
+                .setAccentColor(0x5865f2)
+                .addTextDisplayComponents(new TextDisplayBuilder().setContent(`## Antrenament · ${data.total || 5} întrebări`))
+                .addTextDisplayComponents(new TextDisplayBuilder().setContent('-# scrie răspunsul direct în canal · cronometrul e pe fiecare întrebare')),
+            ],
+          })
+          .catch(() => {});
+      }
       const isGrila = Array.isArray(pub.options) && pub.options.length > 0;
       const deadline = Date.now() + data.timeoutMs;
       const left = () => Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
@@ -361,16 +378,19 @@ function makePrivateEventHandler(interaction, ch) {
               : 'Scrie doar numărul, direct în canal — nu e nimic de apăsat.'
           ))
           .addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ⏳ rămân ${left()}s · se închide <t:${endsAt}:R>`));
-        return { flags: V2 | MessageFlags.Ephemeral, components: [c, row] }; // private window
+        return { flags: V2 | MessageFlags.Ephemeral, components: [c, row] };
       };
       stopTicks();
-      await edit(payload());
-      // The <t:…:R> stamp ticks client-side; these edits are the belt to that braces (the
-      // countdown must be readable even if a client does not re-render relative timestamps).
-      ticks = setInterval(() => {
-        if (left() <= 0) return stopTicks();
-        edit(payload());
-      }, 2000);
+      const card = payload();
+      const msg = await send(card);
+      if (msg && ticking) {
+        // The <t:…:R> stamp already ticks client-side; these edits are the belt to that braces.
+        ticks = setInterval(() => {
+          if (left() <= 0) return stopTicks();
+          if (!ticking) return stopTicks();
+          editPrivate(msg.id, payload());
+        }, 2000);
+      }
       return;
     }
     if (ev === 'reveal') {
@@ -387,7 +407,7 @@ function makePrivateEventHandler(interaction, ch) {
           `răspunsul tău: **${mine}**\n⏱️ timpul tău: **${secs}s**${graded.mode === 'rapide' && graded.answered ? ` · ${graded.score} pct` : ''}`
         ));
       if (data.note) c.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${data.note}`));
-      await follow({ flags: V2, components: [c] });
+      await send({ flags: V2, components: [c] });
       return;
     }
     if (ev === 'gameEnd') {
@@ -399,7 +419,7 @@ function makePrivateEventHandler(interaction, ch) {
         .addTextDisplayComponents(new TextDisplayBuilder().setContent(
           `-# ${data.rapideMean != null ? `medie la rapide ${data.rapideMean} pct · ` : ''}rezultatul intră în PRC`
         ));
-      await edit({ flags: V2 | MessageFlags.Ephemeral, components: [c] });
+      await send({ flags: V2, components: [c] });
     }
   };
 }
