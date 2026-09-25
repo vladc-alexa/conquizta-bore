@@ -57,8 +57,25 @@ public.
    caractere) și se creează rândul la prima jucare. O migrare `discordId String? @unique`
    face legătura exactă.
 2. **Rezultatele de duel (W/L)** nu au tabelă — se afișează în canal, nu se stochează.
-3. **Transportul Discord nu a fost încă rulat** cu token (a fost scris înainte de a exista
-   token). Motorul e dovedit; primul run real e un smoke test.
+3. **Transportul Discord rulează în producție** (container `conquizta-bot`), dar payload-urile
+   noi de tip card se verifică înainte de deploy cu `scripts/card-probe.js`.
+
+## Cardul de întrebare (Components V2) + fereastra de răspuns
+
+Întrebarea e trimisă ca **Components V2** (container colorat cu `##` antet, separator, text
+display, `-#` subtext) în loc de embed. Mesajul de reveal se editează *păstrând* flag-ul V2
+(`flags: 1 << 15`) — un mesaj V2 nu poate deveni embed. Dacă Discord respinge cardul V2,
+transportul cade automat pe embed-ul clasic, apoi pe embed fără butoane, deci runda nu se
+pierde. Dovada payload-urilor reale: `node --env-file=.env scripts/card-probe.js <GUILD_ID>`
+(trimite cardurile într-un canal temporar, le editează ca la reveal, șterge tot).
+
+**Modalele nu pot ține locul unui mesaj de întrebare** — sunt private și se deschid doar la
+click, deci întrebarea nu ar fi vizibilă pentru ceilalți jucători, iar reveal-ul n-ar mai avea
+ce edita. Ce *merge*: fereastra de răspuns conține întrebarea (Discord permite Text Display în
+modal; max 5 componente de nivel 1 = Label sau Text Display, titlu ≤ 45 caractere). La grilă
+rămân butoanele. La rapidă butonul **Răspunde în fereastră** (stil secundar) stă lângă răspunsul
+tastat, ca să poți răspunde și dacă ai derulat sau ești pe telefon. Dacă modalul cu întrebare e
+respins, se deschide modalul vechi (doar câmpul numeric), nu un mesaj de eroare.
 
 ## Răspuns instant (fără popup)
 

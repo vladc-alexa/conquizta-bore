@@ -22,7 +22,12 @@ const {
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
+  LabelBuilder,
   ChannelType,
+  ContainerBuilder,
+  SeparatorBuilder,
+  TextDisplayBuilder,
+  MessageFlags,
 } = require('discord.js');
 
 const R = require('./rules');
@@ -89,7 +94,19 @@ function commandDefs() {
   ].map((c) => c.toJSON());
 }
 
-/** Public payload -> Discord embed + components. The correct answer never leaves the server. */
+// Components V2 (containers / text displays) need this flag; such a message may carry no
+// embeds and no content, only components. Available in discord.js >= 14.24 (we run 14.27).
+const V2 = MessageFlags.IsComponentsV2;
+
+// token -> the question that token belongs to. The answer modal needs the stem, and a modal
+// can only be built when the button is pressed (no token at render time), so cache it here.
+const QCARDS = new Map();
+
+const optionLines = (options) => options.map((o) => `${o.label} ${o.text}`).join('\n');
+
+/** Public payload -> Discord payload. The correct answer never leaves the server.
+ *  Returns BOTH shapes: `v2` (Components V2 container, nicer card) and `legacy`
+ *  (classic embed) so a rejected V2 payload can still deliver the round. */
 function renderQuestion({ gameId, token, round, mode, prompt, options, timeoutMs, extra }) {
   // `options` arrives as [] for rapide questions. An empty ActionRow is rejected by Discord
   // (BASE_TYPE_BAD_LENGTH: "Must be between 1 and 5 in length") — that is what killed the round.
@@ -99,11 +116,9 @@ function renderQuestion({ gameId, token, round, mode, prompt, options, timeoutMs
   const howTo = TEXT_ANSWERS
     ? (isGrila ? 'Apasă un buton sau scrie litera (A–D).' : 'Scrie numărul direct în canal.')
     : (isGrila ? null : 'Răspunde cu un număr.');
-  const embed = new EmbedBuilder()
-    .setColor(isGrila ? 0x5865f2 : 0xeb459e)
-    .setTitle(stem.slice(0, 250))
-    .setDescription(`${[isGrila ? options.map((o) => `${o.label} ${o.text}`).join('\n') : null, howTo].filter(Boolean).join('\n')}\n\n⏱️ ${Math.round(timeoutMs / 1000)}s`)
-    .setFooter({ text: `${head}${extra && extra.escalate ? '  ·  timp redus' : ''}` });
+  const accent = isGrila ? 0x5865f2 : 0xeb459e;
+  const seconds = Math.round(timeoutMs / 1000);
+  const tail = `${howTo ? howTo + '\n\n' : ''}⏱️ ${seconds}s${extra && extra.escalate ? ' · timp redus' : ''}`;
 
   const components = [];
   if (isGrila) {
@@ -115,12 +130,59 @@ function renderQuestion({ gameId, token, round, mode, prompt, options, timeoutMs
           .setStyle(ButtonStyle.Primary)
       )
     ));
-  } else if (!TEXT_ANSWERS) {
+  } else {
+    // Numeric round. Typed answers ("42" straight in the channel) stay the fast path when
+    // BOT_READ_MESSAGES=1, but the window is always offered: it now carries the question
+    // inside, so a player who scrolled away (or is on mobile) answers what they can see.
     components.push(new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(`${gameId}|${token}|modal`).setLabel('Răspunde').setStyle(ButtonStyle.Success)
+      new ButtonBuilder()
+        .setCustomId(`${gameId}|${token}|modal`)
+        .setLabel(TEXT_ANSWERS ? 'Răspunde în fereastră' : 'Răspunde')
+        .setStyle(TEXT_ANSWERS ? ButtonStyle.Secondary : ButtonStyle.Success)
     ));
   }
-  return { embeds: [embed], components };
+
+  const card = new ContainerBuilder()
+    .setAccentColor(accent)
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ${head}\n**${stem}**`))
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(`${isGrila ? optionLines(options) + '\n\n' : ''}${tail}`)
+    );
+  if (components.length) card.addActionRowComponents(...components);
+
+  const embed = new EmbedBuilder()
+    .setColor(accent)
+    .setTitle(stem.slice(0, 250))
+    .setDescription(`${[isGrila ? optionLines(options) : null, howTo].filter(Boolean).join('\n')}\n\n⏱️ ${seconds}s`)
+    .setFooter({ text: `${head}${extra && extra.escalate ? '  ·  timp redus' : ''}` });
+
+  return {
+    v2: { flags: V2, components: [card] },
+    legacy: { embeds: [embed], components },
+  };
+}
+
+/** The answer modal. Discord allows Text Display inside modals, so the question can be shown
+ *  where it is answered — a modal is private, which is exactly what an answer box wants.
+ *  Documented shape (discordjs.guide/interactions/modals): <= 5 top-level components, each a
+ *  Label or a Text Display, title <= 45 chars. */
+function answerModal({ customId, stem, options, round, total }) {
+  const isGrila = Array.isArray(options) && options.length > 0;
+  const title = `Întrebarea ${round || '?'}${total ? `/${total}` : ''}`;
+  const modal = new ModalBuilder().setCustomId(customId).setTitle(title.slice(0, 45));
+  const body = [String(stem || '').trim() || '(întrebarea nu mai e disponibilă)'];
+  if (isGrila) body.push('', ...options.map((o) => `${o.label} ${o.text}`));
+  modal.addComponents(new TextDisplayBuilder().setContent(body.join('\n').slice(0, 4000)));
+  modal.addComponents(
+    new LabelBuilder()
+      .setLabel(isGrila ? 'Răspunsul tău (A–D)' : 'Răspunsul tău')
+      .setDescription(isGrila ? 'Litera variantei corecte' : 'Scrie doar numărul, fără text')
+      .setTextInputComponent(
+        new TextInputBuilder().setCustomId('value').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(12)
+      )
+  );
+  return modal;
 }
 
 /** Send that logs instead of throwing: one bad payload must not end the round or kill the bot. */
@@ -133,6 +195,16 @@ async function safeSend(ch, payload) {
   }
 }
 
+/** Try the Components V2 card, then the embed, then the embed without its buttons.
+ *  Returns { msg, v2 } so the reveal knows which shape it must edit. */
+async function sendCard(ch, shapes) {
+  for (const attempt of [{ p: shapes.v2, v2: true }, { p: shapes.legacy, v2: false }, { p: { embeds: shapes.legacy.embeds }, v2: false }]) {
+    const msg = await safeSend(ch, attempt.p);
+    if (msg) return { msg, v2: attempt.v2 };
+  }
+  return null;
+}
+
 const key = (gameId, round) => `${gameId}|${round}`;
 
 /** Engine events -> channel messages. */
@@ -141,7 +213,8 @@ function makeEventHandler(ch, questionsFor) {
     if (ev === 'question') {
       const pub = data.public;
       game.channelId = ch.id; // where this game lives — the typed-answer path needs it
-      const payload = renderQuestion({
+      QCARDS.set(data.token, { round: data.round, total: data.total, mode: pub.mode, stem: pub.prompt, options: pub.options });
+      const shapes = renderQuestion({
         gameId: game.id,
         token: data.token,
         round: data.round,
@@ -151,9 +224,8 @@ function makeEventHandler(ch, questionsFor) {
         timeoutMs: data.timeoutMs,
         extra: data,
       });
-      let sent = await safeSend(ch, payload);
-      if (!sent) sent = await safeSend(ch, { embeds: payload.embeds }); // retry without buttons
-      if (sent) msgs.set(key(game.id, data.round), { channelId: ch.id, messageId: sent.id });
+      const sent = await sendCard(ch, shapes);
+      if (sent) msgs.set(key(game.id, data.round), { channelId: ch.id, messageId: sent.msg.id, v2: sent.v2 });
       return;
     }
     if (ev === 'reveal') {
@@ -165,21 +237,45 @@ function makeEventHandler(ch, questionsFor) {
         const pts = r.graded.mode === 'rapide' && r.graded.answered ? ` · ${r.graded.score} pct` : '';
         return `${mark} **${nm}** → ${show}${pts}`;
       });
+      const out = data.eliminated && data.eliminated.length
+        ? `**OUT:** ${data.eliminated.join(', ')}\nîn joc: ${data.alive.join(', ')}`
+        : null;
+      const card = new ContainerBuilder()
+        .setAccentColor(0x57f287)
+        .addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ✅ Răspuns corect: ${data.correctLabel}`))
+        .addSeparatorComponents(new SeparatorBuilder())
+        .addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n') || '—'));
+      if (out) card.addTextDisplayComponents(new TextDisplayBuilder().setContent(out));
+      if (data.note) card.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${data.note}`));
+
       const embed = new EmbedBuilder()
         .setColor(0x57f287)
         .setTitle(`Răspuns corect: ${data.correctLabel}`)
         .setDescription(lines.join('\n') || '—')
         .setFooter({ text: data.note || '' });
-      if (data.eliminated && data.eliminated.length) embed.addFields({ name: 'OUT', value: `${data.eliminated.join(', ')}\nîn joc: ${data.alive.join(', ')}` });
+      if (out) embed.addFields({ name: 'OUT', value: out });
       if (ref) {
         const msg = await ch.messages.fetch(ref.messageId).catch(() => null);
-        if (msg) await msg.edit({ embeds: [embed], components: [] }).catch(() => {});
+        if (msg) {
+          if (ref.v2) {
+            // The V2 flag has to stay on the edit, a V2 message cannot become an embed.
+            await msg.edit({ flags: V2, components: [card] }).catch(async (e) => {
+              console.error(`reveal edit (v2) failed: ${e && e.message ? e.message : e}`);
+              await msg.edit({ embeds: [embed], components: [] }).catch(() => {});
+            });
+          } else {
+            await msg.edit({ embeds: [embed], components: [] }).catch(() => {});
+          }
+        }
       } else {
-        await ch.send({ embeds: [embed] });
+        const sent = await safeSend(ch, { flags: V2, components: [card] });
+        if (!sent) await safeSend(ch, { embeds: [embed] });
       }
+      msgs.delete(key(game.id, data.round));
       return;
     }
     if (ev === 'gameEnd') {
+      for (const t of [...QCARDS.keys()]) if (t.startsWith(`${game.id}:`)) QCARDS.delete(t);
       const head =
         data.mode === 'royale' ? `👑 ${data.winner} câștigă battle royale`
         : data.mode === 'duel' ? `🏆 ${data.winner} câștigă duelul ${data.score}`
@@ -358,9 +454,23 @@ async function start({ token }) {
         const g = findGame(a);
         if (!g) return interaction.reply(err('Runda nu mai e activă.'));
         if (c === 'modal') {
-          const modal = new ModalBuilder().setCustomId(`${a}|${b}|submit`).setTitle('Răspuns numeric');
-          modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('value').setLabel('Numărul tău').setStyle(TextInputStyle.Short).setRequired(true)));
-          return interaction.showModal(modal);
+          // Deliberately the *old* action-row shape: if Discord rejects the new
+          // Text-Display/Label modal above, this still opens, so the round stays playable.
+          const plain = () => {
+            const m = new ModalBuilder().setCustomId(`${a}|${b}|submit`).setTitle('Răspuns numeric');
+            m.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('value').setLabel('Numărul tău').setStyle(TextInputStyle.Short).setRequired(true)));
+            return m;
+          };
+          const card = QCARDS.get(b);
+          if (!card) return interaction.showModal(plain());
+          // The modal carries the question. If Discord refuses the Text Display shape (older
+          // API surface), fall back to the bare numeric box instead of showing nothing.
+          try {
+            return await interaction.showModal(answerModal({ ...card, customId: `${a}|${b}|submit` }));
+          } catch (e) {
+            console.error(`modal cu întrebare respins: ${e && e.message ? e.message : e}`);
+            return interaction.showModal(plain());
+          }
         }
         const res = await g.game.answer(interaction.user.id, { index: Number(c) }, b);
         return interaction.reply(res.ok ? { content: 'Răspuns înregistrat.', ephemeral: true } : err(res.error));
@@ -435,5 +545,5 @@ function ch_send(interaction, content) {
   return interaction.followUp({ content }).catch(() => {});
 }
 
-module.exports = { start, track };
+module.exports = { start, track, renderQuestion, answerModal };
 
