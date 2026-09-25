@@ -360,11 +360,13 @@ function makePrivateEventHandler(interaction, ch) {
       const deadline = Date.now() + data.timeoutMs;
       const left = () => Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
       const endsAt = Math.floor(deadline / 1000);
-      const row = new ActionRowBuilder().addComponents(
-        ...(isGrila
-          ? pub.options.map((o) => new ButtonBuilder().setCustomId(`${game.id}|${data.token}|${o.index}`).setLabel(o.label).setStyle(ButtonStyle.Primary))
-          : [new ButtonBuilder().setCustomId(`${game.id}|${data.token}|modal`).setLabel('Răspunde în fereastră').setStyle(ButtonStyle.Secondary)])
-      );
+      const row = isGrila
+        ? new ActionRowBuilder().addComponents(
+            ...pub.options.map((o) => new ButtonBuilder().setCustomId(`${game.id}|${data.token}|${o.index}`).setLabel(o.label).setStyle(ButtonStyle.Primary))
+          )
+        : new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`${game.id}|${data.token}|modal`).setLabel('Fereastră (opțional)').setStyle(ButtonStyle.Secondary)
+          );
       const payload = () => {
         const c = new ContainerBuilder()
           .setAccentColor(isGrila ? 0x5865f2 : 0xeb459e)
@@ -663,6 +665,7 @@ async function start({ token }) {
           if (!payload) return; // not an answer — ignore it, never consume the round
           const res = await game.answer(msg.author.id, payload, game.currentToken);
           msg.delete().catch(() => {}); // needs Manage Messages; stays quiet without it
+          if (res.ok) console.log(`răspuns tastat acceptat: „${text}" token=${game.currentToken}`);
           if (!res.ok) {
             // In the solo private window the warning goes to that window, not the channel.
             if (game.notify) return void game.notify(`${msg.author}, ${res.error}`);
