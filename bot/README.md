@@ -77,9 +77,15 @@ rămân butoanele. La rapidă butonul **Răspunde în fereastră** (stil secunda
 tastat, ca să poți răspunde și dacă ai derulat sau ești pe telefon. Dacă modalul cu întrebare e
 respins, se deschide modalul vechi (doar câmpul numeric), nu un mesaj de eroare.
 
-## Antrenament: toate întrebările într-un singur modal (`/antrenament`)
+## Antrenament implicit: pas cu pas, cu cronometru pe fiecare întrebare
 
-Comanda deschide **direct** modalul (răspunsul la interacțiune *este* modalul, deci nu se face
+`/antrenament` (fără opțiuni) joacă **secvențial**: o întrebare per mesaj privat, cea mai nouă
+mereu la final, cu cronometru care ticăie (`rămân Ns` la 2s + `<t:…:R>` care ticăie client-side).
+Vezi secțiunea de mai jos pentru detalii.
+
+## Antrenament: foaia într-un singur modal (`/antrenament mod:foaie`)
+
+Comanda poate deschide **direct** modalul (răspunsul la interacțiune *este* modalul, deci nu se face
 `deferReply` înainte), cu 5 întrebări:
 - Discord permite maximum **5 componente de nivel 1** per modal, fiecare `Label` sau `TextDisplay`
   → o întrebare per `Label`: enunțul în `label` (≤45) + `description` (≤100, despărțit pe cuvânt),
@@ -95,15 +101,16 @@ Comanda deschide **direct** modalul (răspunsul la interacțiune *este* modalul,
 - Dacă `showModal` e refuzat (limită de componente, client vechi), cade automat pe fluxul
   întrebare-cu-întrebare de mai jos.
 
-## Antrenament în fereastră privată (rezervă: cronometru care ticăie, per întrebare)
+## Antrenament în fereastră privată (implicit: cronometru care ticăie, per întrebare)
 
-`/antrenament` nu mai scrie în canal: comanda deschide un **mesaj privat** (deferral efemer) care
-*este* fereastra jocului. Întrebarea, variantele și cronometrul stau acolo, iar `editReply` îl
-rescrie la fiecare rundă (la 2s se actualizează „rămân Ns", plus timestamp-ul relativ `<t:…:R>`
-care ticăie client-side). Rezultatul fiecărei runde — răspunsul corect, răspunsul tău, **timpul tău**
-și punctajul — vine ca mesaj privat separat, deci nu dispare când începe următoarea întrebare.
-Răspunsul se dă scriind în canal (intent-ul de conținut e pornit) sau, la grilă, din butoane;
-la rapidă butonul de fereastră rămâne ca opțiune, nu ca obligație.
+`/antrenament` nu scrie nimic în canal: comanda deschide o **fereastră privată** (deferral efemer),
+iar fiecare rundă trimite **întrebarea ca cel mai nou mesaj privat**, deci e mereu jos, unde te uiți
+(anterior întrebarea stătea în mesajul de defer și rezultatele o împingeau în sus — runda 2+ nu se
+mai vedea). Cronometrul ticăie pe mesajul întrebării: la fiecare 2s „rămân Ns" + `<t:…:R>` care
+ticăie client-side; dacă Discord refuză vreo actualizare, se loghează o dată și rămâne timestamp-ul.
+Rezultatul fiecărei runde — răspunsul corect, răspunsul tău, **timpul tău** și punctajul — vine ca
+mesaj privat imediat sub întrebare. Răspunsul se dă scriind în canal (intent-ul de conținut e
+pornit) sau, la grilă, din butoane; la rapidă butonul „Fereastră (opțional)" nu e obligatoriu.
 
 **De ce nu un modal:** Discord nu poate deschide un modal de la sine — un modal apare doar ca
 răspuns la un click sau la comandă, iar conținutul lui e static (fără cronometru care ticăie).

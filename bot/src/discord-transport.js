@@ -86,7 +86,18 @@ async function ensureChannels(guild, state) {
 
 function commandDefs() {
   return [
-    new SlashCommandBuilder().setName('antrenament').setDescription('10 întrebări, fără eliminare — intră pe clasament (PRC)'),
+    new SlashCommandBuilder()
+      .setName('antrenament')
+      .setDescription('Întrebări una câte una, cronometru pe fiecare — intră pe clasament (PRC)')
+      .addStringOption((o) =>
+        o
+          .setName('mod')
+          .setDescription('Cum vrei întrebările (implicit: pas cu pas)')
+          .addChoices(
+            { name: 'pas cu pas — cu cronometru pe fiecare', value: 'pas' },
+            { name: 'foaie — toate într-un singur modal', value: 'foaie' }
+          )
+      ),
     new SlashCommandBuilder().setName('royale').setDescription('Battle royale: răspuns greșit sau prea lent = OUT; ultimul rămâne în joc'),
     new SlashCommandBuilder()
       .setName('duel')
@@ -715,8 +726,10 @@ async function start({ token }) {
         const name = interaction.member?.displayName || interaction.user.username;
         const ch = interaction.channel;
         if (interaction.commandName === 'antrenament') {
-          // The sheet modal IS the initial response, so nothing may be deferred before it (3s budget).
-          if (await startSheet(interaction, prisma, store)) return;
+          // Sequential is the default: one question per private message with its own ticking clock.
+          // `mod:foaie` still asks for the all-in-one sheet, and a refused sheet falls back here.
+          const mod = (interaction.options.getString('mod') || 'pas').toLowerCase();
+          if (mod === 'foaie' && (await startSheet(interaction, prisma, store))) return;
           await interaction.deferReply({ flags: MessageFlags.Ephemeral });
           return void (await startTrain(client, ch, prisma, store, interaction.user.id, name, interaction));
         }
