@@ -77,7 +77,25 @@ rămân butoanele. La rapidă butonul **Răspunde în fereastră** (stil secunda
 tastat, ca să poți răspunde și dacă ai derulat sau ești pe telefon. Dacă modalul cu întrebare e
 respins, se deschide modalul vechi (doar câmpul numeric), nu un mesaj de eroare.
 
-## Antrenament în fereastră privată (fără click, cu cronometru)
+## Antrenament: toate întrebările într-un singur modal (`/antrenament`)
+
+Comanda deschide **direct** modalul (răspunsul la interacțiune *este* modalul, deci nu se face
+`deferReply` înainte), cu 5 întrebări:
+- Discord permite maximum **5 componente de nivel 1** per modal, fiecare `Label` sau `TextDisplay`
+  → o întrebare per `Label`: enunțul în `label` (≤45) + `description` (≤100, despărțit pe cuvânt),
+  iar răspunsul într-un **Radio Group** (grilă) sau într-un câmp numeric (rapidă).
+- Titlul arată bugetul: suma ferestrelor (grilă 20s / rapidă 10s) × 1.5. Un modal e static, deci
+  **nu poate** conține cronometru care ticăie — de aceea bugetul e în titlu, iar timpul tău total
+  vine în răspuns.
+- La trimitere: card privat cu fiecare răspuns, răspunsul corect și **timpul total**; sesiunea intră
+  în PRC (peste buget → se afișează, dar nu se salvează). Un singur submit nu poate purta timpi per
+  întrebare, așa că sesiunea salvează media — nu inventăm un timp „mai rapid”.
+- Dovadă locală, întrebări reale din DB: `node --env-file=.env scripts/sheet-test.js` (tipărește
+  titlul, cele 5 componente, variantele, câte enunțuri au fost scurtate și cardul de rezultat).
+- Dacă `showModal` e refuzat (limită de componente, client vechi), cade automat pe fluxul
+  întrebare-cu-întrebare de mai jos.
+
+## Antrenament în fereastră privată (rezervă: cronometru care ticăie, per întrebare)
 
 `/antrenament` nu mai scrie în canal: comanda deschide un **mesaj privat** (deferral efemer) care
 *este* fereastra jocului. Întrebarea, variantele și cronometrul stau acolo, iar `editReply` îl

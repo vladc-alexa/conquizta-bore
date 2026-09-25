@@ -23,6 +23,7 @@ const {
   TextInputBuilder,
   TextInputStyle,
   LabelBuilder,
+  RadioGroupBuilder,
   ChannelType,
   ContainerBuilder,
   SeparatorBuilder,
@@ -360,11 +361,13 @@ function makePrivateEventHandler(interaction, ch) {
       const deadline = Date.now() + data.timeoutMs;
       const left = () => Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
       const endsAt = Math.floor(deadline / 1000);
-      const row = new ActionRowBuilder().addComponents(
-        ...(isGrila
-          ? pub.options.map((o) => new ButtonBuilder().setCustomId(`${game.id}|${data.token}|${o.index}`).setLabel(o.label).setStyle(ButtonStyle.Primary))
-          : [new ButtonBuilder().setCustomId(`${game.id}|${data.token}|modal`).setLabel('Răspunde în fereastră').setStyle(ButtonStyle.Secondary)])
-      );
+      const row = isGrila
+        ? new ActionRowBuilder().addComponents(
+            ...pub.options.map((o) => new ButtonBuilder().setCustomId(`${game.id}|${data.token}|${o.index}`).setLabel(o.label).setStyle(ButtonStyle.Primary))
+          )
+        : new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`${game.id}|${data.token}|modal`).setLabel('Fereastră (opțional)').setStyle(ButtonStyle.Secondary)
+          );
       const payload = () => {
         const c = new ContainerBuilder()
           .setAccentColor(isGrila ? 0x5865f2 : 0xeb459e)
@@ -492,6 +495,150 @@ async function startDuelMatch(client, inv, ch, prisma, store) {
   await game.start();
 }
 
+// ---------------------------------------------------------------- SHEET ----
+// Solo antrenament as ONE modal: Discord allows at most five top-level components per modal, so a
+// sheet holds five questions, one Label each (question in the label + description, the answer
+// control inside the Label). The command IS the interaction, so the sheet opens without any click
+// — but a modal is static, so there is no ticking clock inside it: the time budget lives in the
+// title and the player's total time comes back with the result.
+
+const SHEET_MAX = 5;
+const SHEETS = new Map(); // modal customId -> the questions it asks
+
+/** Split a prompt so it fits a Label: head goes in the label (<=45), the rest in the description
+ *  (<=100). Breaks on a word boundary when there is one, so questions stay readable. */
+function splitPrompt(prompt, headMax = 41) {
+  const text = String(prompt || '').trim();
+  if (text.length <= headMax) return [text, 'alege răspunsul'];
+  let cut = text.lastIndexOf(' ', headMax);
+  if (cut < headMax * 0.6) cut = headMax;
+  const head = `${text.slice(0, cut).trim()}…`;
+  const tail = text.slice(cut).trim().slice(0, 100);
+  return [head.slice(0, 45), tail];
+}
+
+function sheetModal(questions, seconds) {
+  const modal = new ModalBuilder()
+    .setCustomId(`sheet|${Date.now()}|${Math.floor(Math.random() * 1e6)}`)
+    .setTitle(`Antrenament · ${questions.length} întrebări · ${seconds}s`);
+  questions.forEach((q, i) => {
+    const [head, tail] = splitPrompt(q.prompt);
+    const label = new LabelBuilder().setLabel(`${i + 1}) ${head}`).setDescription(tail);
+    if (q.mode === 'grila') {
+      label.setRadioGroupComponent(
+        new RadioGroupBuilder()
+          .setCustomId(`q${i}`)
+          .setRequired(true)
+          .addOptions(...q.options.map((o, idx) => ({ label: `${LABELS[idx]}) ${o.text}`.slice(0, 100), value: String(idx) })))
+      );
+    } else {
+      label.setTextInputComponent(
+        new TextInputBuilder()
+          .setCustomId(`q${i}`)
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(12)
+          .setPlaceholder('doar numărul, ex. 1517')
+      );
+    }
+    modal.addComponents(label);
+  });
+  return modal;
+}
+
+/** Open the sheet. Returns true when the modal was shown (the interaction is then answered). */
+async function startSheet(interaction, prisma, store) {
+  const qs = await pullMixed(prisma, SHEET_MAX, 0.6);
+  if (!qs.length) return false;
+  // Abandoned sheets (opened, never submitted) must not pile up.
+  const cutoff = Date.now() - 60 * 60 * 1000;
+  for (const [id, s] of SHEETS) if (s.startedAt < cutoff) SHEETS.delete(id);
+  const budgetMs = qs.reduce((sum, q) => sum + (q.mode === 'grila' ? R.TRAIN.grilaMs : R.TRAIN.rapideMs), 0);
+  const seconds = Math.round((budgetMs * 1.5) / 1000);
+  const modal = sheetModal(qs, seconds);
+  const customId = modal.toJSON().custom_id;
+  try {
+    await interaction.showModal(modal);
+  } catch (e) {
+    console.error(`foaia nu a putut fi deschisă (${e && e.message ? e.message : e}) — trec pe fluxul întrebare-cu-întrebare`);
+    return false;
+  }
+  SHEETS.set(customId, { questions: qs, startedAt: Date.now(), budgetMs: budgetMs * 1.5, playerId: interaction.user.id, userId: null, name: interaction.member?.displayName || interaction.user.username });
+  console.log(`foaie deschisă: ${qs.length} întrebări, buget ${seconds}s (${customId})`);
+  return true;
+}
+
+/** Grade a submitted sheet and report it privately: per question the answer, the truth, and the
+ *  total time. One submit cannot carry per-question times, so the session stores the average
+ *  (documented) instead of inventing a faster one. */
+async function submitSheet(interaction, store, prisma) {
+  const sheet = SHEETS.get(interaction.customId);
+  if (!sheet) return interaction.reply(err('Foaia a expirat — rulează /antrenament din nou.'));
+  SHEETS.delete(interaction.customId);
+  const elapsed = Date.now() - sheet.startedAt;
+  const overBudget = elapsed > sheet.budgetMs;
+  const perQuestion = Math.round(elapsed / sheet.questions.length);
+  const answeredAt = Date.now();
+  const answers = [];
+  const lines = [];
+  let correct = 0;
+
+  sheet.questions.forEach((q, i) => {
+    let isCorrect = false;
+    let selectedOptionId = null;
+    let submittedAnswer = null;
+    let shown = '—';
+    if (q.mode === 'grila') {
+      const value = interaction.fields.getRadioGroup(`q${i}`);
+      const idx = value == null ? -1 : Number(value);
+      const chosen = Number.isInteger(idx) && q.options[idx] ? q.options[idx] : null;
+      isCorrect = !!chosen && idx === q.correctIndex;
+      selectedOptionId = chosen ? chosen.id : null;
+      shown = chosen ? LABELS[idx] : 'fără răspuns';
+    } else {
+      const text = String(interaction.fields.getTextInputValue(`q${i}`) || '').trim();
+      const guess = Number(text);
+      submittedAnswer = Number.isFinite(guess) ? String(Math.trunc(guess)) : null;
+      isCorrect = Number.isFinite(guess) && R.rapideIsClose(guess, q.correctNumber);
+      shown = Number.isFinite(guess) ? String(Math.trunc(guess)) : 'fără răspuns';
+    }
+    if (isCorrect) correct++;
+    answers.push({ questionId: q.id, selectedOptionId, submittedAnswer, isCorrect, elapsedMilliseconds: perQuestion, answeredAt });
+    lines.push(`${i + 1}) ${isCorrect ? '✔' : '✘'} ${shown}${isCorrect ? '' : ` · corect: ${correctAnswerFor(q)}`}`);
+  });
+
+  const record = await resolveUser(prisma, { discordId: interaction.user.id, displayName: sheet.name });
+  if (!overBudget) {
+    try {
+      await store.finalizeGame({
+        playerId: record ? record.id : null,
+        mode: 'train',
+        startedAt: sheet.startedAt,
+        completedAt: answeredAt,
+        answers,
+      });
+    } catch (e) {
+      console.error(`foaia nu s-a putut salva: ${e && e.message ? e.message : e}`);
+    }
+  }
+
+  const card = new ContainerBuilder()
+    .setAccentColor(correct === sheet.questions.length ? 0x57f287 : 0x5865f2)
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(`## Foaie: ${correct}/${sheet.questions.length} corecte`))
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')))
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+      `⏱️ timpul tău: **${(elapsed / 1000).toFixed(1)}s** · buget ${Math.round(sheet.budgetMs / 1000)}s\n` +
+      `-# ${overBudget ? 'peste buget — sesiunea nu intră în PRC' : 'intră în PRC'}`
+    ));
+  console.log(`foaie trimisă: ${correct}/${sheet.questions.length} corecte în ${(elapsed / 1000).toFixed(1)}s${overBudget ? ' (peste buget)' : ''}`);
+  return interaction.reply({ flags: V2 | MessageFlags.Ephemeral, components: [card] });
+}
+
+function correctAnswerFor(q, labels = LABELS) {
+  return q.mode === 'grila' ? `${labels[q.correctIndex]}) ${q.options[q.correctIndex].text}` : String(q.correctNumber);
+}
+
 async function startTrain(client, ch, prisma, store, userId, userName, interaction) {
   const u = await resolveUser(prisma, { discordId: userId, displayName: userName });
   const qs = await pullMixed(prisma, R.TRAIN.questions, 0.6);
@@ -563,12 +710,17 @@ async function start({ token }) {
         // late and the reply fails with 10062. Log how late it was instead of guessing.
         const lateMs = Date.now() - interaction.createdTimestamp;
         if (lateMs > 1500) console.warn(`interaction primit cu ${lateMs}ms întârziere`);
-        // Antrenament is solo, so it gets a private window; the duel/royale replies stay public.
-        if (interaction.commandName === 'antrenament') await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        else await interaction.deferReply();
+        // Antrenament is solo, so it gets the sheet modal (falling back to the private per-question
+        // feed); the duel/royale replies stay public.
         const name = interaction.member?.displayName || interaction.user.username;
         const ch = interaction.channel;
-        if (interaction.commandName === 'antrenament') return void (await startTrain(client, ch, prisma, store, interaction.user.id, name, interaction));
+        if (interaction.commandName === 'antrenament') {
+          // The sheet modal IS the initial response, so nothing may be deferred before it (3s budget).
+          if (await startSheet(interaction, prisma, store)) return;
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+          return void (await startTrain(client, ch, prisma, store, interaction.user.id, name, interaction));
+        }
+        await interaction.deferReply();
         if (interaction.commandName === 'royale') return void (await startRoyale(client, ch, prisma, store, interaction.user.id, name, state));
         if (interaction.commandName === 'duel') return void (await startDuel(client, ch, interaction, prisma, store));
         return;
@@ -624,6 +776,9 @@ async function start({ token }) {
         const res = await g.game.answer(interaction.user.id, { index: Number(c) }, b);
         return interaction.reply(res.ok ? { content: 'Răspuns înregistrat.', ephemeral: true } : err(res.error));
       }
+      if (interaction.isModalSubmit() && interaction.customId.startsWith('sheet|')) {
+        return void (await submitSheet(interaction, store, prisma));
+      }
       if (interaction.isModalSubmit()) {
         const [a, b] = interaction.customId.split('|');
         const g = findGame(a);
@@ -663,6 +818,7 @@ async function start({ token }) {
           if (!payload) return; // not an answer — ignore it, never consume the round
           const res = await game.answer(msg.author.id, payload, game.currentToken);
           msg.delete().catch(() => {}); // needs Manage Messages; stays quiet without it
+          if (res.ok) console.log(`răspuns tastat acceptat: „${text}" token=${game.currentToken}`);
           if (!res.ok) {
             // In the solo private window the warning goes to that window, not the channel.
             if (game.notify) return void game.notify(`${msg.author}, ${res.error}`);
@@ -697,5 +853,5 @@ function ch_send(interaction, content) {
   return interaction.followUp({ content }).catch(() => {});
 }
 
-module.exports = { start, track, renderQuestion, answerModal, currentCardFor, makePrivateEventHandler, makeEventHandler };
+module.exports = { start, track, renderQuestion, answerModal, currentCardFor, makePrivateEventHandler, makeEventHandler, __sheet: { sheetModal, submitSheet, SHEETS, splitPrompt } };
 
