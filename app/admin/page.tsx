@@ -56,6 +56,10 @@ export default function AdminPage() {
     invalid: { line: number; reason: string }[];
   } | null>(null);
   const [impMsg, setImpMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [qCounts, setQCounts] = useState<{
+    active: { total: number; grila: number; rapide: number; other: number };
+    inactive: { total: number; grila: number; rapide: number; other: number };
+  } | null>(null);
 
   const load = useCallback(async () => {
     const meRes = await fetch("/api/auth/me");
@@ -83,6 +87,7 @@ export default function AdminPage() {
       if (res.ok) {
         const data = await res.json();
         setQuestions(data.questions ?? []);
+        if (data.counts) setQCounts(data.counts);
       }
     } catch {
       /* ignore */
@@ -499,7 +504,30 @@ export default function AdminPage() {
               <option value="published">Publicate</option>
               <option value="disabled">Dezactivate</option>
             </select>
+        </div>
+        {qCounts && (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[0.75rem] border-t border-[#7a4e2250] pt-2.5">
+            <span className="text-[#c8a070]">
+              ✅ Active:{" "}
+              <strong className="text-[#8ee08a] text-[0.85rem]">{qCounts.active.total}</strong>{" "}
+              <span className="text-[#a07848]">
+                — {qCounts.active.grila} grilă · {qCounts.active.rapide} rapidă
+                {qCounts.active.other ? ` · ${qCounts.active.other} altele` : ""}
+              </span>
+            </span>
+            <span className="text-[#c8a070]">
+              ⛔ Inactive:{" "}
+              <strong className="text-[#e0928a] text-[0.85rem]">{qCounts.inactive.total}</strong>{" "}
+              <span className="text-[#a07848]">
+                — {qCounts.inactive.grila} grilă · {qCounts.inactive.rapide} rapidă
+                {qCounts.inactive.other ? ` · ${qCounts.inactive.other} altele` : ""}
+              </span>
+            </span>
+            <span className="text-[#a07848]">
+              total {qCounts.active.total + qCounts.inactive.total}
+            </span>
           </div>
+        )}
         </div>
         <div className="flex flex-col max-h-[420px] overflow-y-auto">
           {questions.length === 0 ? (

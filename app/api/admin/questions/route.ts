@@ -40,7 +40,7 @@ export async function GET(req: Request) {
     where.id = { in: top.map((r) => r.questionId) };
   }
 
-  const [questions, reportCounts] = await Promise.all([
+  const [questions, reportCounts, shapeRows] = await Promise.all([
     prisma.question.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -54,7 +54,28 @@ export async function GET(req: Request) {
       },
     }),
     prisma.questionReport.groupBy({ by: ["questionId"], _count: { _all: true } }),
+    // Global shape counts for the header counter (independent of search/status).
+    // grilă = 4 options, rapidă = 1 option (same classification as the editor).
+    prisma.$queryRaw<{ published: boolean; opts: number; n: number }[]>`
+      SELECT q."isPublished" AS published,
+             (SELECT count(*) FROM "QuestionOption" o WHERE o."questionId" = q.id)::int AS opts,
+             count(*)::int AS n
+      FROM "Question" q
+      GROUP BY 1, 2`,
   ]);
+
+  const counts = {
+    active: { total: 0, grila: 0, rapide: 0, other: 0 },
+    inactive: { total: 0, grila: 0, rapide: 0, other: 0 },
+  };
+  for (const row of shapeRows) {
+    const bucket = row.published ? counts.active : counts.inactive;
+    const n = Number(row.n);
+    bucket.total += n;
+    if (Number(row.opts) === 4) bucket.grila += n;
+    else if (Number(row.opts) === 1) bucket.rapide += n;
+    else bucket.other += n;
+  }
   const reports = new Map(reportCounts.map((r) => [r.questionId, r._count._all]));
 
   const list = questions.map((q) => ({
@@ -68,5 +89,5 @@ export async function GET(req: Request) {
   }));
   if (status === "reported") list.sort((a, b) => b.reportCount - a.reportCount);
 
-  return NextResponse.json({ questions: list });
+  return NextResponse.json({ questions: list, counts });
 }
