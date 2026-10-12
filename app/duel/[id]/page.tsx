@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import Arena from "./Arena";
 
 type AnswerRow = { userId: string; isCorrect: boolean; elapsedMs: number; score: number | null; mine: boolean };
 type HistoryRow = {
@@ -31,6 +32,8 @@ type DuelState = {
   history: HistoryRow[];
   winnerId: string | null;
   draw: boolean;
+  pushLimit: number;
+  pushedOffId: string | null;
 };
 
 const CARD = "bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl";
@@ -187,6 +190,21 @@ export default function DuelMatch() {
     </div>
   );
 
+  const arena =
+    state.guest != null ? (
+      <Arena
+        duel={{
+          status: state.status,
+          role: state.role,
+          host: state.host,
+          guest: state.guest,
+          history: state.history,
+          pushLimit: state.pushLimit,
+          pushedOffId: state.pushedOffId,
+        }}
+      />
+    ) : null;
+
   // ---------- waiting for an opponent ----------
   if (state.status === "WAITING") {
     return (
@@ -232,6 +250,7 @@ export default function DuelMatch() {
         <div className={`${CARD} p-6 flex flex-col gap-4 text-center`}>
           <h2 className="font-cinzel text-[#f5c97a] text-[1.5rem]">{banner}</h2>
           {scoreboard}
+          {arena}
           <div className="flex gap-2.5 flex-wrap">
             <button onClick={() => (window.location.href = "/duel")} className={`${BTN_MAIN} flex-1 min-w-[140px]`}>
               ⚔️ Încă un meci
@@ -301,6 +320,8 @@ export default function DuelMatch() {
       </div>
 
       {scoreboard}
+
+      {arena}
 
       {chips.length > 0 && (
         <div className="flex flex-wrap gap-1.5 justify-center">

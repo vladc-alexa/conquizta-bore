@@ -16,6 +16,10 @@ export const DUEL_RAPIDE_MS = 10_000; // rapidă answer window
 export const DUEL_GRILA_ROUNDS = 6;
 export const DUEL_RAPIDE_ROUNDS = 4;
 export const DUEL_BASE_ROUNDS = DUEL_GRILA_ROUNDS + DUEL_RAPIDE_ROUNDS; // 10
+
+// Arena rule: every round win shoves the loser toward their cliff. A net margin
+// of this many round wins means they go over the edge and the match ends.
+export const DUEL_PUSH_LIMIT = 4;
 export const DUEL_WAITING_TTL_MS = 10 * 60_000; // an unjoined lobby dies after 10 min
 export const DUEL_ROUND_GRACE_MS = 1_500; // let an in-flight answer land after the clock hits 0
 
@@ -167,6 +171,12 @@ export async function resolveDuel(duelId: string): Promise<void> {
     const plan = duel.plan as PlanEntry[];
     const r = duel.currentRound;
 
+    // shove count reached: the loser goes off the cliff, match over
+    if (Math.abs(duel.hostScore - duel.guestScore) >= DUEL_PUSH_LIMIT) {
+      await finishDuel(duel.id);
+      return;
+    }
+
     // past the last planned round
     if (r >= plan.length) {
       if (duel.hostScore !== duel.guestScore) {
@@ -274,6 +284,8 @@ export type DuelState = {
   }[];
   winnerId: string | null;
   draw: boolean;
+  pushLimit: number;
+  pushedOffId: string | null;
 };
 
 export async function buildDuelState(duelId: string, viewerId: string): Promise<DuelState | null> {
@@ -342,6 +354,13 @@ export async function buildDuelState(duelId: string, viewerId: string): Promise<
           : null
         : null,
     draw: duel.status === "COMPLETED" && duel.hostScore === duel.guestScore,
+    pushLimit: DUEL_PUSH_LIMIT,
+    pushedOffId:
+      duel.status === "COMPLETED" && Math.abs(duel.hostScore - duel.guestScore) >= DUEL_PUSH_LIMIT
+        ? duel.hostScore > duel.guestScore
+          ? duel.guestId
+          : duel.hostId
+        : null,
   };
 }
 
