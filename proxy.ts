@@ -4,7 +4,7 @@ import { verifySession, SESSION_COOKIE } from "./lib/session";
 import { prisma } from "./lib/prisma";
 import { isSiteOff } from "./lib/siteOff";
 
-const PROTECTED_PREFIXES = ["/train", "/admin"];
+const PROTECTED_PREFIXES = ["/train", "/duel", "/admin"];
 
 // Themed "site off" page served to non-admins while maintenance mode is on.
 // No buttons, no links — the only way in is the secret /admin/login path.
@@ -68,5 +68,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/train/:path*", "/admin", "/admin/login", "/api/:path*"],
+  matcher: ["/", "/login", "/train/:path*", "/duel/:path*", "/admin", "/admin/login", "/api/:path*"],
 };
