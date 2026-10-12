@@ -52,3 +52,63 @@ h1 {
   margin-bottom: 20px;
   text-shadow: 0 2px 8px #000a;
 }
+
+/* ---- 1v1 arena ---------------------------------------------------------- */
+.dw-arena {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1774 / 887;
+  background: url("/duel/arena.webp") 0 0 / 100% 100% no-repeat;
+  border: 2px solid #7a4e22;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px #0009, inset 0 0 60px #0006;
+  user-select: none;
+}
+.dw-fighter {
+  position: absolute;
+  bottom: 20%;
+  background: none;
+  border: 0;
+  padding: 0;
+  transition: left 0.7s cubic-bezier(0.2, 0.8, 0.25, 1);
+  filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.5));
+  will-change: left;
+}
+.dw-sprite {
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-size: calc(100% * var(--n)) 100%;
+}
+.dw-sprite.dw-loop {
+  animation: dw-strip var(--sd, 900ms) steps(var(--st, 1)) infinite;
+}
+.dw-sprite.dw-once {
+  animation: dw-strip var(--sd, 520ms) steps(var(--st, 1)) 1 forwards;
+}
+@keyframes dw-strip {
+  from {
+    background-position-x: 0%;
+  }
+  to {
+    background-position-x: 100%;
+  }
+}
+.dw-fall {
+  animation: dw-fall 1.25s ease-in forwards;
+}
+@keyframes dw-fall {
+  to {
+    transform: translate(var(--fx, 150%), 45%) rotate(var(--rot, 18deg));
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dw-fighter {
+    transition: none;
+  }
+  .dw-fall {
+    animation-duration: 0.01s;
+  }
+}
