@@ -42,6 +42,20 @@ export default function AdminPage() {
   const [editOptions, setEditOptions] = useState<{ text: string; isCorrect: boolean }[]>([]);
   const [editBusy, setEditBusy] = useState(false);
   const [editMsg, setEditMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [impOpen, setImpOpen] = useState(false);
+  const [impText, setImpText] = useState("");
+  const [impBusy, setImpBusy] = useState(false);
+  const [impPreview, setImpPreview] = useState<{
+    total: number;
+    importable: number;
+    imported: number;
+    grila: number;
+    rapide: number;
+    duplicates: number;
+    invalidCount: number;
+    invalid: { line: number; reason: string }[];
+  } | null>(null);
+  const [impMsg, setImpMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
     const meRes = await fetch("/api/auth/me");
@@ -76,6 +90,61 @@ export default function AdminPage() {
       setQLoading(false);
     }
   }, [qSearch, qStatus]);
+
+  const openImport = () => {
+    setImpText("");
+    setImpPreview(null);
+    setImpMsg(null);
+    setImpOpen(true);
+  };
+
+  const onImportFile = async (file: File | null) => {
+    if (!file) return;
+    try {
+      setImpText(await file.text());
+      setImpPreview(null);
+      setImpMsg(null);
+    } catch {
+      setImpMsg({ ok: false, text: "Nu am putut citi fișierul." });
+    }
+  };
+
+  const runImport = async (dryRun: boolean) => {
+    setImpBusy(true);
+    setImpMsg(null);
+    if (dryRun) setImpPreview(null);
+    try {
+      const res = await fetch("/api/admin/questions/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csv: impText, dryRun }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setImpMsg({ ok: false, text: data.error || "Eroare la import." });
+        return;
+      }
+      setImpPreview(data);
+      if (dryRun) {
+        setImpMsg({
+          ok: true,
+          text: `Verificat: ${data.importable} de importat (${data.grila} grilă + ${data.rapide} rapidă), ${data.duplicates} duplicate, ${data.invalidCount} invalide.`,
+        });
+      } else {
+        setImpMsg({
+          ok: true,
+          text: `Gata! Importate ${data.imported} întrebări (${data.grila} grilă + ${data.rapide} rapidă).${data.duplicates ? ` ${data.duplicates} duplicate sărite.` : ""}`,
+        });
+        setImpText("");
+        setImpPreview(null);
+        loadQuestions();
+      }
+    } catch {
+      setImpMsg({ ok: false, text: "Eroare de rețea." });
+    } finally {
+      setImpBusy(false);
+    }
+  };
 
   const toggleQuestion = async (q: AdminQuestion) => {
     const res = await fetch(`/api/admin/questions/${q.id}/toggle`, { method: "POST" });
@@ -407,6 +476,13 @@ export default function AdminPage() {
             Întrebări {qLoading && <span className="text-[#a07848] text-[0.7rem]">(se încarcă…)</span>}
           </h3>
           <div className="flex gap-2">
+            <button
+              onClick={openImport}
+              className="text-[0.75rem] border-2 border-[#7a4e22] rounded-lg px-3 py-2 text-[#c8a070] hover:bg-[#3d2510] cursor-pointer whitespace-nowrap"
+              title="Importă întrebări din CSV (grilă sau rapidă)"
+            >
+              ⬆️ Importă
+            </button>
             <input
               value={qSearch}
               onChange={(e) => setQSearch(e.target.value)}
@@ -481,6 +557,89 @@ export default function AdminPage() {
           )}
         </div>
       </div>
+
+      {/* import-questions modal */}
+      {impOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">⬆️ Importă întrebări (CSV)</h3>
+              <button type="button" onClick={() => setImpOpen(false)} className="text-[#c8a070] hover:text-[#f5c97a] cursor-pointer">
+                ✕
+              </button>
+            </div>
+            <div className="text-[0.72rem] text-[#c8a070] leading-relaxed flex flex-col gap-0.5">
+              <div>
+                🎯 Grilă: <span className="font-mono text-[#e8d8b0]">întrebare;A;B;C;D;A</span> — ultima coloană = varianta corectă (A/B/C/D)
+              </div>
+              <div>
+                ⚡ Rapidă: <span className="font-mono text-[#e8d8b0]">întrebare;răspuns</span> — răspuns numeric
+              </div>
+              <div>
+                Separator <span className="font-mono">;</span> (merge și tab / virgulă). Se publică automat; duplicatele sunt sărite.
+              </div>
+            </div>
+            <input
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              onChange={(e) => onImportFile(e.target.files?.[0] ?? null)}
+              className="text-[0.75rem] text-[#c8a070] file:mr-3 file:bg-[#1a0e05] file:border-2 file:border-[#7a4e22] file:rounded-lg file:text-[#c8a070] file:px-3 file:py-1.5 file:cursor-pointer cursor-pointer"
+            />
+            <textarea
+              value={impText}
+              onChange={(e) => {
+                setImpText(e.target.value);
+                setImpPreview(null);
+              }}
+              rows={10}
+              placeholder={"Ce tehnica revolutionara de perspectiva...;Chiaroscuro;Sfumato;Tenebrism;Camaieu;B\nIn ce an a avut loc Marea Unire?;1918"}
+              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#e8d8b0] text-[0.78rem] p-2.5 outline-none focus:border-[#c87030] resize-y font-mono"
+            />
+            {impPreview && (
+              <div className="text-[0.75rem] text-[#e8d8b0] bg-[#1a0e05] border border-[#7a4e22] rounded-lg p-2.5 flex flex-col gap-1">
+                <div>
+                  De importat: <strong className="text-[#f5c97a]">{impPreview.importable}</strong> ({impPreview.grila} grilă +{" "}
+                  {impPreview.rapide} rapidă)
+                </div>
+                <div className="text-[#c8a070]">
+                  Duplicate sărite: {impPreview.duplicates} · Invalide: {impPreview.invalidCount} · Total linii: {impPreview.total}
+                </div>
+                {impPreview.invalid.length > 0 && (
+                  <div className="mt-1 flex flex-col gap-0.5 text-[0.68rem] text-red-400/90">
+                    {impPreview.invalid.map((iv, i) => (
+                      <div key={i}>
+                        linia {iv.line}: {iv.reason}
+                      </div>
+                    ))}
+                    {impPreview.invalidCount > impPreview.invalid.length && (
+                      <div>…și încă {impPreview.invalidCount - impPreview.invalid.length}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {impMsg && <div className={`text-[0.8rem] ${impMsg.ok ? "text-green-400" : "text-red-400"}`}>{impMsg.text}</div>}
+            <div className="flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => runImport(true)}
+                disabled={impBusy || !impText.trim()}
+                className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#c8a070] px-4 py-2 hover:bg-[#3d2510] disabled:opacity-50 cursor-pointer"
+              >
+                🔍 Verifică
+              </button>
+              <button
+                type="button"
+                onClick={() => runImport(false)}
+                disabled={impBusy || !impPreview || impPreview.importable === 0}
+                className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel px-5 py-2 hover:brightness-110 disabled:opacity-50 cursor-pointer"
+              >
+                {impBusy ? "Se importă…" : `⬆️ Importă${impPreview ? " " + impPreview.importable : ""}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* edit-question modal */}
       {editing && (
