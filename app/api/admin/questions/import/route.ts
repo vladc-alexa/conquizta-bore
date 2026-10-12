@@ -74,6 +74,10 @@ function parseCsv(csv: string): { rows: Row[]; invalid: Invalid[]; total: number
     if (n === nonEmpty[0].n && /^[îi]?ntrebare$/i.test((f[0] || "").replace(/^\uFEFF/, ""))) continue;
 
     const prompt = (f[0] || "").trim();
+    if (l.includes("\ufffd") || prompt.includes("\ufffd")) {
+      invalid.push({ line: n, reason: "caractere invalide (�) în locul diacriticelor" });
+      continue;
+    }
     if (!prompt) {
       invalid.push({ line: n, reason: "lipsește întrebarea" });
       continue;
@@ -115,15 +119,78 @@ function parseCsv(csv: string): { rows: Row[]; invalid: Invalid[]; total: number
   return { rows, invalid, total: nonEmpty.length };
 }
 
+// ---- decoding -----------------------------------------------------------
+// A Romanian CSV exported from Excel is usually Windows-1250 or ISO-8859-2,
+// NOT UTF-8. Decoding those bytes as UTF-8 with errors="replace" silently turns
+// every diacritic into U+FFFD, which is LOSSY and unrecoverable — that is how
+// the Sankt Petersburg batch got mangled. So: try strict UTF-8 first, fall back
+// to the legacy codecs, and refuse anything still containing a replacement char.
+const FALLBACK_ENCODINGS = ["windows-1250", "iso-8859-2"];
+
+// The legacy codecs only carry the old ce-dilla forms (ş ţ Ş Ţ); standard
+// Romanian uses the comma-below forms (ș ț Ș Ț). Normalise after decoding so
+// imported text matches the rest of the bank and searches line up.
+function normalizeRomanian(s: string): string {
+  return s
+    .replace(/\u015f/g, "\u0219")
+    .replace(/\u015e/g, "\u0218")
+    .replace(/\u0163/g, "\u021b")
+    .replace(/\u0162/g, "\u021a");
+}
+
+function decodeCsvBytes(bytes: Uint8Array, forced?: string) {
+  const tried = forced ? [forced] : ["utf-8", ...FALLBACK_ENCODINGS];
+  for (const enc of tried) {
+    try {
+      const text = new TextDecoder(enc, { fatal: enc === "utf-8" }).decode(bytes);
+      if (!text.includes("\ufffd")) return { text, encoding: enc, error: "" };
+    } catch {
+      /* not this codec — try the next one */
+    }
+  }
+  return {
+    text: "",
+    encoding: "",
+    error: `Nu am putut decoda fișierul (încercat: ${tried.join(", ")}). Salvează-l ca "CSV UTF-8" și reîncearcă.`,
+  };
+}
+
 export async function POST(req: Request) {
   const auth = await requireEditor();
   if (isError(auth)) return auth;
 
   const body = await req.json().catch(() => null);
-  const csv = typeof body?.csv === "string" ? body.csv : "";
+  const b64 = typeof body?.csvBase64 === "string" ? body.csvBase64 : "";
+  const rawCsv = typeof body?.csv === "string" ? body.csv : "";
+  const forced = typeof body?.encoding === "string" && body.encoding ? body.encoding : undefined;
   const dryRun = body?.dryRun === true;
+
+  // The file picker sends raw bytes (base64) so the browser can't destroy the
+  // encoding; pasted text arrives already decoded as a JS string.
+  let csv = rawCsv;
+  let encoding = "text";
+  if (b64) {
+    let bytes: Uint8Array;
+    try {
+      bytes = new Uint8Array(Buffer.from(b64, "base64"));
+    } catch {
+      return NextResponse.json({ error: "Fișier invalid (base64)." }, { status: 400 });
+    }
+    if (bytes.length > 5_000_000) return NextResponse.json({ error: "Fișier prea mare (max 5 MB)." }, { status: 413 });
+    const dec = decodeCsvBytes(bytes, forced);
+    if (dec.error) return NextResponse.json({ error: dec.error }, { status: 400 });
+    csv = dec.text;
+    encoding = dec.encoding;
+  }
   if (!csv.trim()) return NextResponse.json({ error: "Niciun conținut de importat." }, { status: 400 });
+  csv = normalizeRomanian(csv);
   if (csv.length > 5_000_000) return NextResponse.json({ error: "Fișier prea mare (max 5 MB)." }, { status: 413 });
+  if (csv.includes("\ufffd")) {
+    return NextResponse.json(
+      { error: "Textul conține caractere invalide (�) în locul diacriticelor. Importă fișierul (nu copia textul), ca să detectez codificarea automat." },
+      { status: 400 }
+    );
+  }
 
   const { rows, invalid, total } = parseCsv(csv);
 
@@ -185,5 +252,6 @@ export async function POST(req: Request) {
     duplicates,
     invalidCount: invalid.length,
     invalid: invalid.slice(0, 20),
+    encoding,
   });
 }

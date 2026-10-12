@@ -54,12 +54,15 @@ export default function AdminPage() {
     duplicates: number;
     invalidCount: number;
     invalid: { line: number; reason: string }[];
+    encoding?: string;
   } | null>(null);
   const [impMsg, setImpMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [qCounts, setQCounts] = useState<{
     active: { total: number; grila: number; rapide: number; other: number };
     inactive: { total: number; grila: number; rapide: number; other: number };
   } | null>(null);
+  const [impB64, setImpB64] = useState("");
+  const [impFileName, setImpFileName] = useState("");
 
   const load = useCallback(async () => {
     const meRes = await fetch("/api/auth/me");
@@ -98,6 +101,8 @@ export default function AdminPage() {
 
   const openImport = () => {
     setImpText("");
+    setImpB64("");
+    setImpFileName("");
     setImpPreview(null);
     setImpMsg(null);
     setImpOpen(true);
@@ -106,7 +111,15 @@ export default function AdminPage() {
   const onImportFile = async (file: File | null) => {
     if (!file) return;
     try {
-      setImpText(await file.text());
+      // read the RAW bytes: letting the browser decode as UTF-8 would turn a
+      // Windows-1250 / ISO-8859-2 file's diacritics into "�" before upload
+      const buf = await file.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      setImpB64(btoa(bin));
+      setImpFileName(file.name);
+      setImpText("");
       setImpPreview(null);
       setImpMsg(null);
     } catch {
@@ -122,7 +135,7 @@ export default function AdminPage() {
       const res = await fetch("/api/admin/questions/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csv: impText, dryRun }),
+        body: JSON.stringify({ csv: impText, csvBase64: impText.trim() ? "" : impB64, dryRun }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -617,12 +630,20 @@ export default function AdminPage() {
               value={impText}
               onChange={(e) => {
                 setImpText(e.target.value);
+                setImpB64("");
+                setImpFileName("");
                 setImpPreview(null);
               }}
               rows={10}
               placeholder={"Ce tehnica revolutionara de perspectiva...;Chiaroscuro;Sfumato;Tenebrism;Camaieu;B\nIn ce an a avut loc Marea Unire?;1918"}
               className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#e8d8b0] text-[0.78rem] p-2.5 outline-none focus:border-[#c87030] resize-y font-mono"
             />
+            {impFileName && (
+              <div className="text-[0.72rem] text-[#c8a070]">
+                📄 {impFileName} — codificare detectată automat la verificare
+                {impPreview?.encoding ? `: ${impPreview.encoding}` : ""}
+              </div>
+            )}
             {impPreview && (
               <div className="text-[0.75rem] text-[#e8d8b0] bg-[#1a0e05] border border-[#7a4e22] rounded-lg p-2.5 flex flex-col gap-1">
                 <div>
@@ -651,7 +672,7 @@ export default function AdminPage() {
               <button
                 type="button"
                 onClick={() => runImport(true)}
-                disabled={impBusy || !impText.trim()}
+                disabled={impBusy || (!impText.trim() && !impB64)}
                 className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#c8a070] px-4 py-2 hover:bg-[#3d2510] disabled:opacity-50 cursor-pointer"
               >
                 🔍 Verifică
