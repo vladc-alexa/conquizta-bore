@@ -471,6 +471,14 @@ export default function Dashboard() {
             <div className="text-[#3d2510] text-[0.8rem] mt-1 font-bold">VREI SA TI-O MASORI?</div>
           </a>
 
+          <a
+            href="/duel"
+            className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a70] rounded-2xl shadow-2xl text-center p-[1.15rem] hover:brightness-110 active:translate-y-px"
+          >
+            <div className="font-cinzel text-[#2a1608] text-[1rem] tracking-widest">⚔️ 1 la 1</div>
+            <div className="text-[#3d2510] text-[0.75rem] mt-1 font-bold">10 RUNDE · 6 GRILĂ + 4 RAPIDĂ</div>
+          </a>
+
           <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-[1.15rem] flex flex-col gap-2">
             <h3 className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-widest">😂 Gluma zilei</h3>
             <p className="text-[#e8d8b0] text-[0.9rem] leading-relaxed font-cinzel">„Tu! Tu esti gluma!”</p>

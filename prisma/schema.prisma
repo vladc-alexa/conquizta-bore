@@ -34,6 +34,58 @@ model User {
   questionStats   UserQuestionStat[]
   chatMessages    ChatMessage[]
   questionReports QuestionReport[]
+  duelsAsHost     Duel[]             @relation("DuelHost")
+  duelsAsGuest    Duel[]             @relation("DuelGuest")
+}
+
+enum DuelStatus {
+  WAITING
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+// A 1v1 match: 10 rounds (6 grila + 4 rapide). The question plan is frozen at
+// creation (shuffled grila options included) so both players see the same
+// question in the same order. Rounds resolve server-side; see lib/duel.ts.
+model Duel {
+  id             String         @id @default(uuid()) @db.Uuid
+  hostId         String         @db.Uuid
+  guestId        String?        @db.Uuid
+  status         DuelStatus     @default(WAITING)
+  hostScore      Int            @default(0)
+  guestScore     Int            @default(0)
+  currentRound   Int            @default(0)
+  roundStartedAt DateTime?
+  plan           Json
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  completedAt    DateTime?
+  host           User           @relation("DuelHost", fields: [hostId], references: [id], onDelete: Cascade)
+  guest          User?          @relation("DuelGuest", fields: [guestId], references: [id], onDelete: SetNull)
+  answers        DuelAnswer[]
+
+  @@index([hostId])
+  @@index([guestId])
+  @@index([status, createdAt])
+}
+
+model DuelAnswer {
+  id                  String   @id @default(uuid()) @db.Uuid
+  duelId              String   @db.Uuid
+  userId              String   @db.Uuid
+  round               Int
+  questionId          String   @db.Uuid
+  selectedOptionId    String?  @db.Uuid
+  submittedAnswer     String?
+  isCorrect           Boolean  @default(false)
+  score               Int?
+  elapsedMilliseconds Int
+  answeredAt          DateTime @default(now())
+  duel                Duel     @relation(fields: [duelId], references: [id], onDelete: Cascade)
+
+  @@unique([duelId, userId, round])
+  @@index([duelId])
 }
 
 model ChatMessage {
