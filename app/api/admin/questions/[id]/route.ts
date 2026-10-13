@@ -82,6 +82,9 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         isCorrect: o.isCorrect,
       })),
     }),
+    // Editing counts as "solved": clear the player reports so the question
+    // leaves the review queue and loses its "reported" badge.
+    prisma.questionReport.deleteMany({ where: { questionId: id } }),
   ]);
   return NextResponse.json({ ok: true });
 }
