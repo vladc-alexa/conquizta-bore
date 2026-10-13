@@ -4,30 +4,41 @@ import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
 import { DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
 
-export async function GET() {
-  const messages = await prisma.chatMessage.findMany({
-    orderBy: { createdAt: "desc" },
+export async function GET(req: Request) {
+  // ?since=<ISO> returns only messages newer than the cursor (ascending) — used by
+  // the dashboard's 5s poll so an idle client transfers ~0 bytes instead of re-reading
+  // the last 250 messages every time.
+  const sinceParam = new URL(req.url).searchParams.get("since");
+  const sinceDate = sinceParam ? new Date(sinceParam) : null;
+  const delta = !!sinceDate && !Number.isNaN(sinceDate.getTime());
+
+  const select = {
+    id: true,
+    authorName: true,
+    text: true,
+    createdAt: true,
+    userId: true,
+    user: { select: { nameColor: true, isMuted: true } },
+  } as const;
+
+  const raw = await prisma.chatMessage.findMany({
+    where: delta ? { createdAt: { gte: sinceDate! } } : {},
+    orderBy: { createdAt: delta ? "asc" : "desc" },
     take: 250,
-    select: {
-      id: true,
-      authorName: true,
-      text: true,
-      createdAt: true,
-      userId: true,
-      user: { select: { nameColor: true, isMuted: true } },
-    },
+    select,
   });
+  // full reads come newest-first; reverse to chronological. Deltas are already ascending.
+  const messages = delta ? raw : raw.reverse();
+
   return NextResponse.json({
-    messages: messages
-      .reverse()
-      .map((m) => ({
-        id: m.id,
-        authorName: m.authorName,
-        text: m.text,
-        createdAt: m.createdAt,
-        authorColor: m.user?.nameColor ?? DEFAULT_CHAT_COLOR,
-        muted: m.user?.isMuted ?? false,
-      })),
+    messages: messages.map((m) => ({
+      id: m.id,
+      authorName: m.authorName,
+      text: m.text,
+      createdAt: m.createdAt,
+      authorColor: m.user?.nameColor ?? DEFAULT_CHAT_COLOR,
+      muted: m.user?.isMuted ?? false,
+    })),
   });
 }
 

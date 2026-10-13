@@ -2,23 +2,20 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
-import { computeAllPrc } from "@/lib/prc";
+import { getLeaderboardSnapshot } from "@/lib/leaderboardCache";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/leaderboard — Clasamentul zilei, sortat după PRC.
+// The heavy work (computeAllPrc over the whole answer history) is cached for
+// ~60s and shared by all players; only the requester-specific row is derived here.
 export async function GET() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const session = await verifySession(token);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const prcByUser = await computeAllPrc(prisma);
-  const userIds = [...prcByUser.keys()];
-  const users = userIds.length
-    ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, displayName: true, hideScore: true } })
-    : [];
-  const nameById = new Map(users.map((u) => [u.id, u.displayName]));
-  const hiddenIds = new Set(users.filter((u) => u.hideScore).map((u) => u.id));
+  const { prcByUser, names: nameById, hidden: hiddenIds, computedAt } =
+    await getLeaderboardSnapshot(prisma);
 
   const rows = [...prcByUser.entries()]
     .filter(([id, p]) => p.total !== null && !hiddenIds.has(id))
@@ -40,5 +37,5 @@ export async function GET() {
     ? { id: session.sub, name: nameById.get(session.sub) ?? session.name, prc: mine.total, grila: mine.grila, rapide: mine.rapide, games: mine.games, hidden: hiddenIds.has(session.sub) }
     : null;
 
-  return NextResponse.json({ rows, myPos, me });
+  return NextResponse.json({ rows, myPos, me, computedAt });
 }

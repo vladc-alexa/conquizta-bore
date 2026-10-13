@@ -26,6 +26,7 @@ export default function Dashboard() {
   const [name, setName] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const lastChatAtRef = useRef<string | null>(null);
   const [chatInput, setChatInput] = useState("");
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [meRow, setMeRow] = useState<LeaderRow | null>(null);
@@ -61,12 +62,26 @@ export default function Dashboard() {
     }
   }, []);
 
-  const loadChat = useCallback(async () => {
+  // full=true loads the last 250 messages and replaces state; full=false asks the API
+  // only for messages newer than our cursor and appends those we don't already have.
+  const loadChat = useCallback(async (full = false) => {
     try {
-      const res = await fetch("/api/chat");
+      const since = !full ? lastChatAtRef.current : null;
+      const res = await fetch(since ? `/api/chat?since=${encodeURIComponent(since)}` : "/api/chat");
       if (!res.ok) return;
       const data = await res.json();
-      setMessages(data.messages ?? []);
+      const incoming: ChatMessage[] = data.messages ?? [];
+      if (since) {
+        setMessages((prev) => {
+          const seen = new Set(prev.map((m) => m.id));
+          const add = incoming.filter((m) => !seen.has(m.id));
+          return add.length ? [...prev, ...add] : prev;
+        });
+      } else {
+        setMessages(incoming);
+      }
+      const newest = incoming.length ? incoming[incoming.length - 1].createdAt : null;
+      if (newest) lastChatAtRef.current = newest;
     } catch {
       /* ignore */
     }
@@ -85,9 +100,14 @@ export default function Dashboard() {
         }
       })
       .catch(() => {});
-    loadChat();
+    loadChat(true);
     loadLeaderboard();
-    const chatTimer = setInterval(loadChat, 5000);
+    // 5s delta poll; a full resync every 30s so deletions/renames by others still land.
+    let tick = 0;
+    const chatTimer = setInterval(() => {
+      tick += 1;
+      loadChat(tick % 6 === 0);
+    }, 5000);
     return () => clearInterval(chatTimer);
   }, [loadChat, loadLeaderboard]);
 
@@ -107,7 +127,7 @@ export default function Dashboard() {
       });
       if (res.ok) {
         setChatInput("");
-        loadChat();
+        loadChat(true);
       }
     } finally {
       setSending(false);
@@ -117,7 +137,7 @@ export default function Dashboard() {
   const deleteMessage = async (id: string) => {
     try {
       const res = await fetch(`/api/admin/chat/${id}`, { method: "DELETE" });
-      if (res.ok) loadChat();
+      if (res.ok) loadChat(true);
     } catch {
       /* ignore */
     }
@@ -133,7 +153,7 @@ export default function Dashboard() {
       if (res.ok) {
         setMyColor(hex);
         setShowColors(false);
-        loadChat();
+        loadChat(true);
       }
     } catch {
       /* ignore */
@@ -158,7 +178,7 @@ export default function Dashboard() {
       setName(data.name);
       setNameMsg({ ok: true, text: "Numele a fost schimbat." });
       setShowName(false);
-      loadChat();
+      loadChat(true);
     } catch {
       setNameMsg({ ok: false, text: "Eroare de rețea." });
     } finally {
