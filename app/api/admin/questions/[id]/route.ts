@@ -1,6 +1,26 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isError, requireEditor } from "@/lib/admin";
+import { isError, requireAdmin, requireEditor } from "@/lib/admin";
+
+// DELETE /api/admin/questions/[id] — PERMANENT delete (admins only).
+// Irreversible: removes the question, its options, reports and per-question user
+// stats. Also clears SessionAnswer rows first, because that relation is
+// onDelete: Restrict and would otherwise block the delete.
+export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const auth = await requireAdmin();
+  if (isError(auth)) return auth;
+
+  const { id } = await ctx.params;
+  const question = await prisma.question.findUnique({ where: { id }, select: { id: true, prompt: true } });
+  if (!question) return NextResponse.json({ error: "Întrebarea nu există." }, { status: 404 });
+
+  await prisma.$transaction([
+    prisma.sessionAnswer.deleteMany({ where: { questionId: id } }),
+    prisma.duelAnswer.deleteMany({ where: { questionId: id } }),
+    prisma.question.delete({ where: { id } }),
+  ]);
+  return NextResponse.json({ ok: true, deleted: id });
+}
 
 // PUT /api/admin/questions/[id] { prompt, options: [{ text, isCorrect }] }
 // Edit a question (admins + editors): rewrite the prompt and the options.
