@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isError, requireEditor } from "@/lib/admin";
 
-// GET /api/admin/questions?search=&status=reported|published|disabled|all&limit=100
+// GET /api/admin/questions?search=&status=reported|published|disabled|all&limit=50&offset=0
 // Question browser (admins + editors): id, prompt, options, correct answer,
 // publish state, report count. Default status = "reported": the review queue,
 // populated only by player reports (reporting a question also unpublishes it).
+// Paged: returns `total` (rows matching the current filter) so the client can
+// infinite-scroll until it has them all. `counts` stay GLOBAL (header counter).
 export async function GET(req: Request) {
   const auth = await requireEditor();
   if (isError(auth)) return auth;
@@ -13,7 +15,8 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const search = url.searchParams.get("search")?.trim() || "";
   const status = url.searchParams.get("status") || "reported";
-  const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "100", 10) || 100, 1), 200);
+  const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "50", 10) || 50, 1), 200);
+  const offset = Math.max(parseInt(url.searchParams.get("offset") || "0", 10) || 0, 0);
 
   const where: Record<string, unknown> = {};
   if (search) {
@@ -27,23 +30,29 @@ export async function GET(req: Request) {
       const byId = await prisma.$queryRaw<{ id: string }[]>`
         SELECT id FROM "Question"
         WHERE replace(id::text, '-', '') LIKE ${idPattern + "%"}
-        LIMIT ${limit}`;
+        LIMIT 200`;
       if (byId.length) or.push({ id: { in: byId.map((r) => r.id) } });
     }
     where.OR = or;
   }
   if (status === "published") where.isPublished = true;
   if (status === "disabled") where.isPublished = false;
+
+  // status="reported": rank questions by report count, then page over that order.
+  let reportedIds: string[] | null = null;
   if (status === "reported") {
     const counts = await prisma.questionReport.groupBy({ by: ["questionId"], _count: { _all: true } });
-    const top = counts.sort((a, b) => b._count._all - a._count._all).slice(0, limit);
-    where.id = { in: top.map((r) => r.questionId) };
+    reportedIds = counts
+      .sort((a, b) => b._count._all - a._count._all)
+      .map((r) => r.questionId);
+    where.id = { in: reportedIds.slice(offset, offset + limit) };
   }
 
-  const [questions, reportCounts, shapeRows] = await Promise.all([
+  const [questions, reportCounts, total, shapeRows] = await Promise.all([
     prisma.question.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: reportedIds ? 0 : offset,
       take: limit,
       select: {
         id: true,
@@ -54,6 +63,7 @@ export async function GET(req: Request) {
       },
     }),
     prisma.questionReport.groupBy({ by: ["questionId"], _count: { _all: true } }),
+    reportedIds ? Promise.resolve(reportedIds.length) : prisma.question.count({ where }),
     // Global shape counts for the header counter (independent of search/status).
     // grilă = 4 options, rapidă = 1 option (same classification as the editor).
     prisma.$queryRaw<{ published: boolean; opts: number; n: number }[]>`
@@ -78,7 +88,7 @@ export async function GET(req: Request) {
   }
   const reports = new Map(reportCounts.map((r) => [r.questionId, r._count._all]));
 
-  const list = questions.map((q) => ({
+  let list = questions.map((q) => ({
     id: q.id,
     prompt: q.prompt,
     isPublished: q.isPublished,
@@ -87,7 +97,11 @@ export async function GET(req: Request) {
     options: q.options.map((o) => ({ id: o.id, text: o.text, isCorrect: o.isCorrect })),
     reportCount: reports.get(q.id) ?? 0,
   }));
-  if (status === "reported") list.sort((a, b) => b.reportCount - a.reportCount);
+  if (reportedIds) {
+    // restore the report-count ranking (the `in` filter loses it)
+    const rank = new Map(reportedIds.slice(offset, offset + limit).map((id, i) => [id, i]));
+    list.sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
+  }
 
-  return NextResponse.json({ questions: list, counts });
+  return NextResponse.json({ questions: list, counts, total, offset, limit });
 }

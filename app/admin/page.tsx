@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface AdminUser {
   id: string;
@@ -35,6 +35,10 @@ export default function AdminPage() {
   const [qSearch, setQSearch] = useState("");
   const [qStatus, setQStatus] = useState<"reported" | "all" | "published" | "disabled">("reported");
   const [qLoading, setQLoading] = useState(false);
+  const [qHasMore, setQHasMore] = useState(false);
+  const [qTotal, setQTotal] = useState(0);
+  const offsetRef = useRef(0);
+  const listRef = useRef<HTMLDivElement | null>(null);
   const [editing, setEditing] = useState<AdminQuestion | null>(null);
   const [editType, setEditType] = useState<"rapide" | "grila">("grila");
   const [editPrompt, setEditPrompt] = useState("");
@@ -81,23 +85,37 @@ export default function AdminPage() {
     }
   }, []);
 
-  const loadQuestions = useCallback(async (search = qSearch, status = qStatus) => {
-    setQLoading(true);
-    try {
-      const res = await fetch(
-        `/api/admin/questions?search=${encodeURIComponent(search)}&status=${status}&limit=100`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setQuestions(data.questions ?? []);
-        if (data.counts) setQCounts(data.counts);
+  const loadQuestions = useCallback(
+    async (reset: boolean) => {
+      const offset = reset ? 0 : offsetRef.current;
+      setQLoading(true);
+      try {
+        const res = await fetch(
+          `/api/admin/questions?search=${encodeURIComponent(qSearch)}&status=${qStatus}&limit=50&offset=${offset}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const list: AdminQuestion[] = data.questions ?? [];
+          setQuestions((prev) => (reset ? list : [...prev, ...list]));
+          offsetRef.current = offset + list.length;
+          setQTotal(typeof data.total === "number" ? data.total : 0);
+          setQHasMore(offset + list.length < (data.total ?? 0));
+          if (data.counts) setQCounts(data.counts);
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        setQLoading(false);
       }
-    } catch {
-      /* ignore */
-    } finally {
-      setQLoading(false);
-    }
-  }, [qSearch, qStatus]);
+    },
+    [qSearch, qStatus]
+  );
+
+  const onListScroll = () => {
+    const el = listRef.current;
+    if (!el || qLoading || !qHasMore) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) loadQuestions(false);
+  };
 
   const openImport = () => {
     setImpText("");
@@ -155,7 +173,7 @@ export default function AdminPage() {
         });
         setImpText("");
         setImpPreview(null);
-        loadQuestions();
+        loadQuestions(true);
       }
     } catch {
       setImpMsg({ ok: false, text: "Eroare de rețea." });
@@ -170,6 +188,22 @@ export default function AdminPage() {
       const data = await res.json();
       setQuestions((list) => list.map((x) => (x.id === q.id ? { ...x, isPublished: data.isPublished } : x)));
     }
+  };
+
+  const deleteQuestion = async (q: AdminQuestion) => {
+    const okDel = window.confirm(
+      `ȘTERGI DEFINITIV întrebarea?\n\n${q.prompt}\n\nAceastă acțiune nu poate fi anulată: se șterg întrebarea, variantele, raportările și statisticile ei.`
+    );
+    if (!okDel) return;
+    const res = await fetch(`/api/admin/questions/${q.id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      window.alert(data.error || "Eroare la ștergere.");
+      return;
+    }
+    setQuestions((list) => list.filter((x) => x.id !== q.id));
+    offsetRef.current = Math.max(0, offsetRef.current - 1);
+    setQTotal((n) => Math.max(0, n - 1));
   };
 
   const openEdit = (q: AdminQuestion) => {
@@ -221,7 +255,8 @@ export default function AdminPage() {
         return;
       }
       setEditing(null);
-      loadQuestions();
+      setEditMsg(null);
+      loadQuestions(true);
     } catch {
       setEditMsg({ ok: false, text: "Eroare de rețea." });
     } finally {
@@ -246,7 +281,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (canEdit) {
-      const t = setTimeout(() => loadQuestions(), 300);
+      const t = setTimeout(() => loadQuestions(true), 300);
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -352,7 +387,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto flex flex-col gap-5 py-6">
+    <div className="w-full max-w-5xl mx-auto flex flex-col gap-5 py-6">
       <div className="flex items-center justify-between">
         <h1 className="!mb-0 text-[1.3rem]">Admin — Jucători & Întrebări</h1>
         <a href="/" className="text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem]">← Înapoi</a>
@@ -542,7 +577,11 @@ export default function AdminPage() {
           </div>
         )}
         </div>
-        <div className="flex flex-col max-h-[420px] overflow-y-auto">
+        <div
+          ref={listRef}
+          onScroll={onListScroll}
+          className="flex flex-col min-h-[45vh] max-h-[72vh] overflow-y-auto rounded-lg"
+        >
           {questions.length === 0 ? (
             <div className="text-[#a07848] text-[0.8rem] text-center p-4">
               {qStatus === "reported"
@@ -550,51 +589,163 @@ export default function AdminPage() {
                 : "Nicio întrebare găsită."}
             </div>
           ) : (
-            questions.map((q) => (
-              <div
-                key={q.id}
-                className="grid grid-cols-[1fr_auto] gap-3 items-center text-[0.82rem] p-2 px-2.5 rounded odd:bg-white/5"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-[0.68rem] text-[#a07848]">ID {q.id.slice(0, 8)}</span>
-                    {q.reportCount > 0 && (
-                      <span className="text-[0.65rem] text-red-400 bg-red-900/30 border border-red-500/40 rounded px-1.5 py-0.5">
-                        ⚠ {q.reportCount} raportări
-                      </span>
-                    )}
-                    {q.isPublished ? (
-                      <span className="text-[0.65rem] text-green-400 border border-green-500/40 rounded px-1.5 py-0.5">publicată</span>
+            <>
+              {questions.map((q) =>
+                editing?.id === q.id ? (
+                  <form
+                    key={q.id}
+                    onSubmit={saveEdit}
+                    className="flex flex-col gap-2.5 p-3 border-b-2 border-[#c87030]/40 bg-white/5"
+                  >
+                    <div className="text-[0.68rem] font-mono text-[#a07848]">ID {q.id}</div>
+                    <textarea
+                      required
+                      maxLength={1000}
+                      rows={3}
+                      value={editPrompt}
+                      onChange={(e) => setEditPrompt(e.target.value)}
+                      className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#e8d8b0] p-2.5 outline-none focus:border-[#c87030] resize-y"
+                    />
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-1.5 text-[0.8rem] text-[#c8a070] cursor-pointer">
+                        <input
+                          type="radio"
+                          name={`qtype-${q.id}`}
+                          checked={editType === "rapide"}
+                          onChange={() => switchEditType("rapide")}
+                          className="accent-[#c87030] cursor-pointer"
+                        />
+                        ⚡ Rapide (răspuns numeric)
+                      </label>
+                      <label className="flex items-center gap-1.5 text-[0.8rem] text-[#c8a070] cursor-pointer">
+                        <input
+                          type="radio"
+                          name={`qtype-${q.id}`}
+                          checked={editType === "grila"}
+                          onChange={() => switchEditType("grila")}
+                          className="accent-[#c87030] cursor-pointer"
+                        />
+                        🎯 Grilă (4 variante)
+                      </label>
+                    </div>
+                    {editType === "rapide" ? (
+                      <div className="flex flex-col gap-1.5">
+                        <div className="text-[0.75rem] text-[#c8a070]">Răspunsul corect (număr între -500 și 10.000.000):</div>
+                        <input
+                          value={editAnswer}
+                          onChange={(e) => setEditAnswer(e.target.value.replace(/[^0-9-]/g, ""))}
+                          inputMode="numeric"
+                          placeholder="ex: 50"
+                          className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2 outline-none focus:border-[#c87030]"
+                        />
+                      </div>
                     ) : (
-                      <span className="text-[0.65rem] text-[#a07848] border border-[#7a4e22] rounded px-1.5 py-0.5">dezactivată</span>
+                      <>
+                        <div className="text-[0.75rem] text-[#c8a070]">Exact 4 variante — marchează-o pe cea corectă:</div>
+                        <div className="flex flex-col gap-1.5">
+                          {editOptions.map((o, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={`correct-option-${q.id}`}
+                                checked={o.isCorrect}
+                                onChange={() => setEditOptions((opts) => opts.map((x, j) => ({ ...x, isCorrect: j === i })))}
+                                title="Corectă"
+                                className="accent-[#c87030] cursor-pointer shrink-0"
+                              />
+                              <input
+                                value={o.text}
+                                onChange={(e) => setEditOptions((opts) => opts.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
+                                maxLength={500}
+                                placeholder={`Varianta ${i + 1}`}
+                                className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#e8d8b0] p-2 outline-none focus:border-[#c87030]"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </>
                     )}
+                    {editMsg && <div className={`text-[0.8rem] ${editMsg.ok ? "text-green-400" : "text-red-400"}`}>{editMsg.text}</div>}
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={editBusy}
+                        className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel px-5 py-2 hover:brightness-110 disabled:opacity-50 cursor-pointer"
+                      >
+                        {editBusy ? "Se salvează…" : "💾 Salvează"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditing(null);
+                          setEditMsg(null);
+                        }}
+                        className="border-2 border-[#7a4e22] rounded-lg text-[#c8a070] px-4 py-2 hover:bg-[#3d2510] cursor-pointer"
+                      >
+                        Anulează
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div key={q.id} className="grid grid-cols-[1fr_auto] gap-3 items-start text-[0.82rem] p-2.5 rounded odd:bg-white/5">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-[0.68rem] text-[#a07848]">ID {q.id.slice(0, 8)}</span>
+                        {q.reportCount > 0 && (
+                          <span className="text-[0.65rem] text-red-400 bg-red-900/30 border border-red-500/40 rounded px-1.5 py-0.5">
+                            ⚠ {q.reportCount} raportări
+                          </span>
+                        )}
+                        {q.isPublished ? (
+                          <span className="text-[0.65rem] text-green-400 border border-green-500/40 rounded px-1.5 py-0.5">publicată</span>
+                        ) : (
+                          <span className="text-[0.65rem] text-[#a07848] border border-[#7a4e22] rounded px-1.5 py-0.5">dezactivată</span>
+                        )}
+                      </div>
+                      <div className="text-[#e8d8b0] leading-snug mt-1">{q.prompt}</div>
+                      <div className="text-[0.72rem] text-[#c8a070] mt-0.5">
+                        Corect: <strong className="text-[#f5c97a]">{q.correctAnswer ?? "—"}</strong>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                      <button
+                        onClick={() => openEdit(q)}
+                        className="text-[0.72rem] border border-[#7a4e22] rounded-lg px-2.5 py-1.5 text-[#c8a070] hover:bg-[#3d2510] cursor-pointer"
+                        title="Editează întrebarea"
+                      >
+                        ✏️ Editează
+                      </button>
+                      <button
+                        onClick={() => toggleQuestion(q)}
+                        className={`text-[0.72rem] border rounded-lg px-2.5 py-1.5 cursor-pointer hover:brightness-110 ${
+                          q.isPublished
+                            ? "text-red-400/90 border-red-500/40 hover:bg-red-900/30"
+                            : "text-green-400 border-green-500/40 hover:bg-green-900/30"
+                        }`}
+                      >
+                        {q.isPublished ? "Dezactivează" : "Activează"}
+                      </button>
+                      {me?.isAdmin && (
+                        <button
+                          onClick={() => deleteQuestion(q)}
+                          className="text-[0.72rem] border border-red-500/40 rounded-lg px-2.5 py-1.5 text-red-400/90 hover:bg-red-900/40 cursor-pointer"
+                          title="Șterge definitiv (ireversibil)"
+                        >
+                          🗑 Șterge
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-[#e8d8b0] leading-snug mt-1">{q.prompt}</div>
-                  <div className="text-[0.72rem] text-[#c8a070] mt-0.5">
-                    Corect: <strong className="text-[#f5c97a]">{q.correctAnswer ?? "—"}</strong>
-                  </div>
-                </div>
-                <div className="self-center flex items-center gap-2">
-                  <button
-                    onClick={() => openEdit(q)}
-                    className="text-[0.72rem] border border-[#7a4e22] rounded-lg px-2.5 py-1.5 text-[#c8a070] hover:bg-[#3d2510] cursor-pointer"
-                    title="Editează întrebarea"
-                  >
-                    ✏️ Editează
-                  </button>
-                  <button
-                    onClick={() => toggleQuestion(q)}
-                    className={`text-[0.72rem] border rounded-lg px-2.5 py-1.5 cursor-pointer hover:brightness-110 ${
-                      q.isPublished
-                        ? "text-red-400/90 border-red-500/40 hover:bg-red-900/30"
-                        : "text-green-400 border-green-500/40 hover:bg-green-900/30"
-                    }`}
-                  >
-                    {q.isPublished ? "Dezactivează" : "Activează"}
-                  </button>
-                </div>
+                )
+              )}
+              <div className="text-center text-[#a07848] text-[0.72rem] p-3">
+                {qLoading
+                  ? "se încarcă…"
+                  : qHasMore
+                    ? `${questions.length}${qTotal ? " / " + qTotal : ""} — derulează pentru mai multe`
+                    : `— ${questions.length}${qTotal ? " din " + qTotal : ""} —`}
               </div>
-            ))
+            </>
           )}
         </div>
       </div>
@@ -690,102 +841,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* edit-question modal */}
-      {editing && (
-        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
-          <form
-            onSubmit={saveEdit}
-            className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 flex flex-col gap-3"
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">✏️ Editează întrebarea</h3>
-              <button type="button" onClick={() => setEditing(null)} className="text-[#c8a070] hover:text-[#f5c97a] cursor-pointer">
-                ✕
-              </button>
-            </div>
-            <div className="text-[0.68rem] font-mono text-[#a07848]">ID {editing.id}</div>
-            <textarea
-              required
-              maxLength={1000}
-              rows={3}
-              value={editPrompt}
-              onChange={(e) => setEditPrompt(e.target.value)}
-              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#e8d8b0] p-2.5 outline-none focus:border-[#c87030] resize-y"
-            />
-            <div className="flex gap-4">
-              <label className="flex items-center gap-1.5 text-[0.8rem] text-[#c8a070] cursor-pointer">
-                <input
-                  type="radio"
-                  name="qtype"
-                  checked={editType === "rapide"}
-                  onChange={() => switchEditType("rapide")}
-                  className="accent-[#c87030] cursor-pointer"
-                />
-                ⚡ Rapide (răspuns numeric)
-              </label>
-              <label className="flex items-center gap-1.5 text-[0.8rem] text-[#c8a070] cursor-pointer">
-                <input
-                  type="radio"
-                  name="qtype"
-                  checked={editType === "grila"}
-                  onChange={() => switchEditType("grila")}
-                  className="accent-[#c87030] cursor-pointer"
-                />
-                🎯 Grilă (4 variante)
-              </label>
-            </div>
-            {editType === "rapide" ? (
-              <div className="flex flex-col gap-1.5">
-                <div className="text-[0.75rem] text-[#c8a070]">
-                  Răspunsul corect (număr între -500 și 10.000.000):
-                </div>
-                <input
-                  value={editAnswer}
-                  onChange={(e) => setEditAnswer(e.target.value.replace(/[^0-9-]/g, ""))}
-                  inputMode="numeric"
-                  placeholder="ex: 50"
-                  className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2 outline-none focus:border-[#c87030]"
-                />
-              </div>
-            ) : (
-              <>
-                <div className="text-[0.75rem] text-[#c8a070]">Exact 4 variante — marchează-o pe cea corectă:</div>
-                <div className="flex flex-col gap-1.5">
-                  {editOptions.map((o, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="correct-option"
-                        checked={o.isCorrect}
-                        onChange={() => setEditOptions((opts) => opts.map((x, j) => ({ ...x, isCorrect: j === i })))}
-                        title="Corectă"
-                        className="accent-[#c87030] cursor-pointer shrink-0"
-                      />
-                      <input
-                        value={o.text}
-                        onChange={(e) => setEditOptions((opts) => opts.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
-                        maxLength={500}
-                        placeholder={`Varianta ${i + 1}`}
-                        className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#e8d8b0] p-2 outline-none focus:border-[#c87030]"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-            {editMsg && (
-              <div className={`text-[0.8rem] ${editMsg.ok ? "text-green-400" : "text-red-400"}`}>{editMsg.text}</div>
-            )}
-            <button
-              type="submit"
-              disabled={editBusy}
-              className="self-start bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel px-5 py-2 hover:brightness-110 disabled:opacity-50 cursor-pointer"
-            >
-              {editBusy ? "Se salvează…" : "Salvează"}
-            </button>
-          </form>
-        </div>
-      )}
     </div>
   );
 }
