@@ -95,7 +95,6 @@ export default function Arena({ duel }: { duel: ArenaDuel }) {
                   backgroundImage: `url(/duel/${f.cls}-${state}.png)`,
                   transform: f.mirror ? "scaleX(-1)" : undefined,
                   "--n": n,
-                  "--st": n - 1,
                   "--sd": `${DURATION[state]}ms`,
                 } as React.CSSProperties
               }

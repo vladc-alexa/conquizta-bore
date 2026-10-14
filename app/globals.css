@@ -82,10 +82,10 @@ h1 {
   background-size: calc(100% * var(--n)) 100%;
 }
 .dw-sprite.dw-loop {
-  animation: dw-strip var(--sd, 900ms) steps(var(--st, 1)) infinite;
+  animation: dw-strip var(--sd, 900ms) steps(var(--n, 2), jump-none) infinite;
 }
 .dw-sprite.dw-once {
-  animation: dw-strip var(--sd, 520ms) steps(var(--st, 1)) 1 forwards;
+  animation: dw-strip var(--sd, 520ms) steps(var(--n, 2), jump-none) 1 forwards;
 }
 @keyframes dw-strip {
   from {
