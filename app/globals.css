@@ -86,10 +86,24 @@ h1 {
   will-change: left, translate;
 }
 .dw-sprite {
+  position: relative;
   width: 100%;
   height: 100%;
   background-repeat: no-repeat;
   background-size: calc(100% * var(--n)) 100%;
+}
+/* pose classes (n = 1 per file): every pose is stacked and crossfaded, so a
+   switch never flashes an image that has not finished loading */
+.dw-pose {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  opacity: 0;
+  transition: opacity 90ms linear;
+}
+.dw-pose.dw-on {
+  opacity: 1;
 }
 .dw-sprite.dw-loop {
   animation: dw-strip var(--sd, 900ms) steps(var(--n, 2), jump-none) infinite;
