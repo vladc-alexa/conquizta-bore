@@ -10,8 +10,16 @@ import { useEffect, useRef, useState } from "react";
 // attack reads left -> right). The opponent takes the right seat, mirrored. When
 // you are the guest the whole backdrop is mirrored too, so both players see the
 // same scene from their own side.
+//
+// Fighters come in two flavours:
+//   strip classes (knight, roman) ship one animated strip per beat -- n frames
+//     played with CSS steps;
+//   pose classes (soldier) ship one file per pose instead -- the arena stacks
+//     every pose and crossfades between them, so a new pose never flashes an
+//     unloaded image, and poses can carry different body language per event.
 
-type Anim = "idle" | "attack" | "defend";
+type Beat = "idle" | "attack" | "defend" | "victory";
+type Pose = "idle" | "attack" | "overhead" | "hit" | "defend" | "victory" | "walk" | "dead";
 type Seat = "left" | "right";
 export type ArenaWarrior = { id: string; name: string; score: number };
 export type ArenaDuel = {
@@ -27,12 +35,61 @@ export type ArenaDuel = {
 // each player is drawn in one of these classes (stable per player id)
 const CLASSES = ["knight", "soldier", "roman"] as const;
 type Cls = (typeof CLASSES)[number];
-// sprite cell w/h must match the exported strips (per-class, identical for all states)
-const SPRITE: Record<Cls, { w: number; h: number }> = {
-  knight: { w: 270, h: 300 },
-  soldier: { w: 235, h: 300 },
-  roman: { w: 242, h: 300 },
+type PoseDef = { n: number; loop?: boolean };
+
+// sprite canvas per class. `off` nudges the box back so a class with a wider
+// canvas (pose classes pad the art to a roomy 470x300 cell) still stands on the
+// same spot the old strips did: half the extra box width, in arena-width %.
+const SPRITE: Record<
+  Cls,
+  { w: number; h: number; off: number; mode: "strip" | "poses"; poses: Partial<Record<Pose, PoseDef>> }
+> = {
+  knight: {
+    w: 270,
+    h: 300,
+    off: 0,
+    mode: "strip",
+    poses: { idle: { n: 4, loop: true }, attack: { n: 4 }, defend: { n: 3 } },
+  },
+  soldier: {
+    w: 470,
+    h: 300,
+    off: -6.3,
+    mode: "poses",
+    poses: {
+      idle: { n: 1 },
+      walk: { n: 1 },
+      attack: { n: 1 },
+      overhead: { n: 1 },
+      defend: { n: 1 },
+      hit: { n: 1 },
+      dead: { n: 1 },
+      victory: { n: 1 },
+    },
+  },
+  roman: {
+    w: 242,
+    h: 300,
+    off: 0,
+    mode: "strip",
+    poses: { idle: { n: 4, loop: true }, attack: { n: 4 }, defend: { n: 3 } },
+  },
 };
+
+// what the arena wants to show -> the poses that can play it, best first
+const WANT: Record<Beat, Pose[]> = {
+  idle: ["idle"],
+  attack: ["attack", "overhead"],
+  defend: ["hit", "defend"],
+  victory: ["victory", "attack"],
+};
+
+function resolvePose(cls: Cls, beat: Beat, overhead: boolean): Pose {
+  const p = SPRITE[cls].poses;
+  const list: Pose[] = beat === "attack" && overhead && p.overhead ? ["overhead", "attack"] : WANT[beat];
+  return list.find((x) => p[x]) ?? "idle";
+}
+
 // left seat = viewer (faces right as drawn); right seat = opponent (mirrored)
 const SEAT = {
   left: { base: 28, mirror: false, fx: "-150%", rot: "-20deg" },
@@ -50,16 +107,17 @@ const HEIGHT_PCT = 32; // warrior height, % of the arena height
 const HEIGHT = `${HEIGHT_PCT}%`;
 const ARENA_AR = 1774 / 887; // must match .dw-arena aspect-ratio
 const CLOSE = 12; // arena-width % each fighter steps in during a clash (contact)
-const FRAMES: Record<Anim, number> = { idle: 4, attack: 4, defend: 3 };
-const DURATION: Record<Anim, number> = { idle: 900, attack: 520, defend: 520 };
+const DURATION: Record<Beat, number> = { idle: 900, attack: 520, defend: 520, victory: 900 };
 const HOLD_MS = 700; // how long the attack/defend pose stays before idle
 const FALL_DELAY_MS = 550; // let the final hit land before the loser goes over
 
 export default function Arena({ duel }: { duel: ArenaDuel }) {
-  const [anim, setAnim] = useState<Record<Seat, Anim>>({ left: "idle", right: "idle" });
+  const [anim, setAnim] = useState<Record<Seat, Beat>>({ left: "idle", right: "idle" });
   const [fall, setFall] = useState<Record<Seat, boolean>>({ left: false, right: false });
   const [nonce, setNonce] = useState(0);
   const seen = useRef(duel.history.length);
+  const status = useRef(duel.status);
+  status.current = duel.status;
 
   // viewer owns the left seat; the other player takes the right seat
   const me = duel.role === "guest" ? "guest" : "host";
@@ -82,15 +140,20 @@ export default function Arena({ duel }: { duel: ArenaDuel }) {
     const meWon = (me === "host") === winnerIsHost;
     setAnim({ left: meWon ? "attack" : "defend", right: meWon ? "defend" : "attack" });
     setNonce((n) => n + 1);
-    const t = setTimeout(() => setAnim({ left: "idle", right: "idle" }), HOLD_MS);
+    const t = setTimeout(() => {
+      // the match may have ended in this very round: keep the win pose standing
+      if (status.current !== "COMPLETED") setAnim({ left: "idle", right: "idle" });
+    }, HOLD_MS);
     return () => clearTimeout(t);
   }, [duel.history, duel.host.id, duel.guest, me]);
 
-  // someone reached the edge -> over they go
+  // someone reached the edge -> the winner raises, then the loser goes over
   useEffect(() => {
     if (duel.status !== "COMPLETED" || !duel.pushedOffId) return;
+    const loserIsMine = duel.pushedOffId === mine?.id;
     const t = setTimeout(() => {
-      setFall({ left: duel.pushedOffId === mine?.id, right: duel.pushedOffId === foe?.id });
+      setAnim({ left: loserIsMine ? "defend" : "victory", right: loserIsMine ? "victory" : "defend" });
+      setFall({ left: loserIsMine, right: !loserIsMine });
     }, FALL_DELAY_MS);
     return () => clearTimeout(t);
   }, [duel.status, duel.pushedOffId, mine?.id, foe?.id]);
@@ -112,12 +175,15 @@ export default function Arena({ duel }: { duel: ArenaDuel }) {
         const f = SEAT[seat];
         const cls = classFor(player.id);
         const sp = SPRITE[cls];
-        const state = anim[seat];
-        const n = FRAMES[state];
+        const beat = anim[seat];
+        // odd rounds strike overhand, even rounds thrust: the clash does not repeat
+        const played = duel.host.score + (duel.guest?.score ?? 0);
+        const pose = resolvePose(cls, beat, played % 2 === 1);
+        const def = sp.poses[pose] ?? { n: 1 };
         // step in toward the opponent while clashing so the weapons meet;
         // `translate`% is relative to the fighter box, so convert arena-% -> box-%
         const boxWPct = HEIGHT_PCT * (1 / ARENA_AR) * (sp.w / sp.h);
-        const close = state === "attack" ? CLOSE : state === "defend" ? CLOSE * 0.5 : 0;
+        const close = beat === "attack" ? CLOSE : beat === "defend" ? CLOSE * 0.5 : 0;
         const tx = (close / boxWPct) * 100 * (seat === "left" ? 1 : -1);
         return (
           <div
@@ -125,7 +191,7 @@ export default function Arena({ duel }: { duel: ArenaDuel }) {
             className={`dw-fighter${fall[seat] ? " dw-fall" : ""}`}
             style={
               {
-                left: `${f.base + lead * STEP}%`,
+                left: `${f.base + sp.off + lead * STEP}%`,
                 translate: `${tx}% 0`,
                 height: HEIGHT,
                 aspectRatio: `${sp.w} / ${sp.h}`,
@@ -134,18 +200,34 @@ export default function Arena({ duel }: { duel: ArenaDuel }) {
               } as React.CSSProperties
             }
           >
-            <div
-              key={nonce}
-              className={`dw-sprite ${state === "idle" ? "dw-loop" : "dw-once"}`}
-              style={
-                {
-                  backgroundImage: `url(/duel/${cls}-${state}.webp)`,
-                  transform: f.mirror ? "scaleX(-1)" : undefined,
-                  "--n": n,
-                  "--sd": `${DURATION[state]}ms`,
-                } as React.CSSProperties
-              }
-            />
+            {sp.mode === "strip" ? (
+              <div
+                key={nonce}
+                className={`dw-sprite ${beat === "idle" ? "dw-loop" : "dw-once"}`}
+                style={
+                  {
+                    backgroundImage: `url(/duel/${cls}-${pose}.webp)`,
+                    transform: f.mirror ? "scaleX(-1)" : undefined,
+                    "--n": def.n,
+                    "--sd": `${DURATION[beat]}ms`,
+                  } as React.CSSProperties
+                }
+              />
+            ) : (
+              <div
+                className="dw-sprite"
+                style={f.mirror ? { transform: "scaleX(-1)" } : undefined}
+                aria-hidden
+              >
+                {(Object.keys(sp.poses) as Pose[]).map((p) => (
+                  <div
+                    key={p}
+                    className={`dw-pose${p === pose ? " dw-on" : ""}`}
+                    style={{ backgroundImage: `url(/duel/${cls}-${p}.webp)` }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         );
       })}
