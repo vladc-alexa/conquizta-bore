@@ -18,15 +18,30 @@ export type ArenaDuel = {
   pushedOffId: string | null;
 };
 
-// host = knight (left, faces right as drawn) · guest = WW1 soldier (right, mirrored)
-const FIGHTERS = {
-  host: { cls: "knight", w: 203, h: 227, base: 27, mirror: false, fx: "-150%", rot: "-20deg" },
-  guest: { cls: "soldier", w: 174, h: 174, base: 56, mirror: true, fx: "150%", rot: "20deg" },
+// each player is drawn in one of these classes (stable per player id)
+const CLASSES = ["knight", "soldier", "roman"] as const;
+type Cls = (typeof CLASSES)[number];
+// sprite cell w/h must match the exported strips (per-class, identical for all states)
+const SPRITE: Record<Cls, { w: number; h: number }> = {
+  knight: { w: 270, h: 300 },
+  soldier: { w: 235, h: 300 },
+  roman: { w: 242, h: 300 },
+};
+// host stands left, drawn facing right; guest is mirrored to face left
+const SIDE = {
+  host: { base: 28, mirror: false, fx: "-150%", rot: "-20deg" },
+  guest: { base: 58, mirror: true, fx: "150%", rot: "20deg" },
 } as const;
 
+function classFor(id: string): Cls {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) >>> 0;
+  return CLASSES[h % CLASSES.length];
+}
+
 const STEP = 7; // % of arena width shoved per round win
-const HEIGHT = "28%"; // warrior height, relative to the arena
-const FRAMES: Record<Anim, number> = { idle: 2, attack: 3, defend: 2 };
+const HEIGHT = "32%"; // warrior height, relative to the arena
+const FRAMES: Record<Anim, number> = { idle: 4, attack: 4, defend: 3 };
 const DURATION: Record<Anim, number> = { idle: 900, attack: 520, defend: 520 };
 const HOLD_MS = 700; // how long the attack/defend pose stays before idle
 const FALL_DELAY_MS = 550; // let the final hit land before the loser goes over
@@ -68,9 +83,11 @@ export default function Arena({ duel }: { duel: ArenaDuel }) {
   return (
     <div className="dw-arena" role="img" aria-label={`Arena 1 la 1: ${duel.host.name} ${duel.host.score} - ${duel.guest?.score ?? 0} ${duel.guest?.name ?? ""}`}>
       {(["host", "guest"] as const).map((side) => {
-        const f = FIGHTERS[side];
+        const f = SIDE[side];
         const player = side === "host" ? duel.host : duel.guest;
         if (!player) return null;
+        const cls = classFor(player.id);
+        const sp = SPRITE[cls];
         const state = anim[side];
         const n = FRAMES[state];
         return (
@@ -81,7 +98,7 @@ export default function Arena({ duel }: { duel: ArenaDuel }) {
               {
                 left: `${f.base + push * STEP}%`,
                 height: HEIGHT,
-                aspectRatio: `${f.w} / ${f.h}`,
+                aspectRatio: `${sp.w} / ${sp.h}`,
                 "--fx": f.fx,
                 "--rot": f.rot,
               } as React.CSSProperties
@@ -92,7 +109,7 @@ export default function Arena({ duel }: { duel: ArenaDuel }) {
               className={`dw-sprite ${state === "idle" ? "dw-loop" : "dw-once"}`}
               style={
                 {
-                  backgroundImage: `url(/duel/${f.cls}-${state}.png)`,
+                  backgroundImage: `url(/duel/${cls}-${state}.webp)`,
                   transform: f.mirror ? "scaleX(-1)" : undefined,
                   "--n": n,
                   "--sd": `${DURATION[state]}ms`,
