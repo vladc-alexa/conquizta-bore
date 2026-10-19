@@ -8,8 +8,10 @@ type AnswerRow = { userId: string; isCorrect: boolean; elapsedMs: number; score:
 type HistoryRow = {
   round: number;
   mode: "grila" | "rapide";
+  questionId: string;
   prompt: string;
   reveal: string;
+  options: { text: string; isCorrect: boolean }[] | null;
   winnerId: string | null;
   answers: AnswerRow[];
 };
@@ -53,6 +55,21 @@ export default function DuelMatch() {
   const [copied, setCopied] = useState(false);
   const lastRound = useRef<number | null>(null);
 
+  // ---- post-match review: report a question, or fix it in place (editors) ----
+  const [canEdit, setCanEdit] = useState(false);
+  const [reported, setReported] = useState<Set<string>>(new Set());
+  const [reportErr, setReportErr] = useState("");
+  // locally patched rounds after a successful inline edit, keyed by round number
+  const [patched, setPatched] = useState<
+    Record<number, { prompt: string; reveal: string; options: { text: string; isCorrect: boolean }[] | null }>
+  >({});
+  const [editRound, setEditRound] = useState<number | null>(null);
+  const [editPrompt, setEditPrompt] = useState("");
+  const [editOptions, setEditOptions] = useState<{ text: string; isCorrect: boolean }[]>([]);
+  const [editAnswer, setEditAnswer] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
+  const [editMsg, setEditMsg] = useState("");
+
   // Sit down (idempotent) then poll the match state.
   useEffect(() => {
     if (!id) return;
@@ -92,6 +109,14 @@ export default function DuelMatch() {
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 100);
     return () => clearInterval(t);
+  }, []);
+
+  // editors/admins get the "edit in place" button on every round
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setCanEdit(!!(d.isAdmin || d.canEditQuestions)))
+      .catch(() => {});
   }, []);
 
   // New round -> clear the previous answer's local UI.
@@ -153,6 +178,92 @@ export default function DuelMatch() {
       setTimeout(() => setCopied(false), 1500);
     } catch {
       /* ignore */
+    }
+  }
+
+  // Player flags a bad question straight from the post-match list. The API
+  // unpublishes it and drops it into the admin review queue.
+  async function reportQuestion(qid: string) {
+    if (reported.has(qid)) return;
+    setReportErr("");
+    try {
+      const r = await fetch(`/api/questions/${qid}/report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: "raportată din meci 1v1" }),
+      });
+      if (r.ok || r.status === 409) {
+        setReported((prev) => new Set(prev).add(qid));
+        return;
+      }
+      const d = await r.json().catch(() => ({}));
+      setReportErr(d.error || "Nu am putut raporta întrebarea.");
+    } catch {
+      setReportErr("Eroare de rețea.");
+    }
+  }
+
+  function openEdit(h: HistoryRow) {
+    const view = { ...h, ...(patched[h.round] ?? {}) };
+    setEditRound(h.round);
+    setEditPrompt(view.prompt);
+    setEditAnswer(view.reveal);
+    const opts = (view.options ?? []).map((o) => ({ text: o.text, isCorrect: o.isCorrect }));
+    while (opts.length > 0 && opts.length < 4) opts.push({ text: "", isCorrect: false });
+    setEditOptions(
+      opts.length === 4
+        ? opts
+        : [
+            { text: "", isCorrect: true },
+            { text: "", isCorrect: false },
+            { text: "", isCorrect: false },
+            { text: "", isCorrect: false },
+          ]
+    );
+    setEditMsg("");
+  }
+
+  function closeEdit() {
+    setEditRound(null);
+    setEditMsg("");
+  }
+
+  async function saveEdit(h: HistoryRow) {
+    setEditBusy(true);
+    setEditMsg("");
+    const isGrila = h.mode === "grila";
+    const body = isGrila
+      ? { prompt: editPrompt, options: editOptions }
+      : { prompt: editPrompt, options: [{ text: editAnswer.trim(), isCorrect: true }] };
+    try {
+      const r = await fetch(`/api/admin/questions/${h.questionId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setEditMsg(d.error || "Nu am putut salva.");
+        return;
+      }
+      const options = isGrila
+        ? editOptions.map((o) => ({ text: o.text.trim(), isCorrect: o.isCorrect }))
+        : null;
+      const reveal = isGrila
+        ? options?.find((o) => o.isCorrect)?.text ?? h.reveal
+        : editAnswer.trim();
+      setPatched((prev) => ({ ...prev, [h.round]: { prompt: editPrompt.trim(), reveal, options } }));
+      setReported((prev) => {
+        const next = new Set(prev);
+        next.delete(h.questionId); // editing clears the report server-side
+        return next;
+      });
+      setEditRound(null);
+      setEditMsg(""); // the "✓ actualizată" chip next to the button confirms the save
+    } catch {
+      setEditMsg("Eroare de rețea.");
+    } finally {
+      setEditBusy(false);
     }
   }
 
@@ -267,8 +378,11 @@ export default function DuelMatch() {
         {state.history.length > 0 && (
           <div className={`${CARD} p-5 flex flex-col gap-2`}>
             <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">📋 Runde</h3>
+            {reportErr && <div className="text-[0.72rem] text-red-400">{reportErr}</div>}
             {state.history.map((h) => {
+              const view = { ...h, ...(patched[h.round] ?? {}) };
               const w = h.winnerId === me.id ? "tu" : h.winnerId ? "adversarul" : "nimeni";
+              const isOpen = editRound === h.round;
               return (
                 <div key={h.round} className="bg-[#1a0e05] border border-[#7a4e2260] rounded-xl p-3 flex flex-col gap-1">
                   <div className="flex items-center justify-between gap-2 text-[0.72rem] text-[#a07848]">
@@ -279,9 +393,9 @@ export default function DuelMatch() {
                       {h.winnerId === me.id ? "✔ câștigată" : h.winnerId ? "✖ pierdută" : "– egal"}
                     </span>
                   </div>
-                  <div className="text-[0.88rem] text-[#e8d8b0] leading-snug">{h.prompt}</div>
+                  <div className="text-[0.88rem] text-[#e8d8b0] leading-snug">{view.prompt}</div>
                   <div className="text-[0.78rem] text-[#c8a070]">
-                    Corect: <strong className="text-[#f5c97a]">{h.reveal}</strong>
+                    Corect: <strong className="text-[#f5c97a]">{view.reveal}</strong>
                     {h.answers.map((a, i) => (
                       <span key={i} className={a.mine ? "text-[#f5c97a]" : "text-[#a07848]"}>
                         {" · "}
@@ -291,6 +405,96 @@ export default function DuelMatch() {
                     ))}
                     <span className="text-[#7a5a30]"> · câștigă: {w}</span>
                   </div>
+
+                  {/* report / fix in place — same card, never the admin page */}
+                  <div className="flex items-center justify-end gap-2 pt-0.5">
+                    {patched[h.round] && <span className="text-[0.68rem] text-green-400">✓ actualizată</span>}
+                    {canEdit && (
+                      <button
+                        onClick={() => (isOpen ? closeEdit() : openEdit(h))}
+                        className="text-[0.7rem] text-[#c8a070] border border-[#7a4e22] rounded px-2 py-0.5 hover:bg-[#3d2510] cursor-pointer"
+                        title="Editează întrebarea aici"
+                      >
+                        {isOpen ? "✕ Închide" : "✏️ Editează"}
+                      </button>
+                    )}
+                    {reported.has(h.questionId) ? (
+                      <span className="text-[0.7rem] text-[#c8a070]">Raportată ✓</span>
+                    ) : (
+                      <button
+                        onClick={() => void reportQuestion(h.questionId)}
+                        className="text-[0.7rem] text-red-400/90 border border-red-500/40 rounded px-2 py-0.5 hover:bg-red-900/30 cursor-pointer"
+                        title="Raportează întrebarea (iese din joc până e verificată)"
+                      >
+                        ⚠ Raportează
+                      </button>
+                    )}
+                  </div>
+
+                  {isOpen && (
+                    <div className="mt-1 border-t border-[#7a4e2260] pt-2 flex flex-col gap-2">
+                      <textarea
+                        value={editPrompt}
+                        onChange={(e) => setEditPrompt(e.target.value)}
+                        rows={3}
+                        className="w-full bg-[#2a1608] border border-[#7a4e22] rounded-lg p-2 text-[0.85rem] text-[#f0e0c0] outline-none focus:border-[#c87030]"
+                        placeholder="Textul întrebării"
+                      />
+                      {h.mode === "grila" ? (
+                        <div className="flex flex-col gap-1.5">
+                          {editOptions.map((o, i) => (
+                            <label key={i} className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={`correct-${h.round}`}
+                                checked={o.isCorrect}
+                                onChange={() =>
+                                  setEditOptions((prev) => prev.map((x, j) => ({ ...x, isCorrect: j === i })))
+                                }
+                                className="accent-[#c87030]"
+                                title="Varianta corectă"
+                              />
+                              <span className="text-[0.72rem] text-[#c87030] w-3">{String.fromCharCode(65 + i)}.</span>
+                              <input
+                                value={o.text}
+                                onChange={(e) =>
+                                  setEditOptions((prev) => prev.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))
+                                }
+                                className="flex-1 bg-[#2a1608] border border-[#7a4e22] rounded-lg p-1.5 text-[0.82rem] text-[#f0e0c0] outline-none focus:border-[#c87030]"
+                              />
+                            </label>
+                          ))}
+                          <span className="text-[0.66rem] text-[#7a5a30]">bifează varianta corectă</span>
+                        </div>
+                      ) : (
+                        <label className="flex items-center gap-2">
+                          <span className="text-[0.72rem] text-[#c8a070]">Răspuns:</span>
+                          <input
+                            value={editAnswer}
+                            onChange={(e) => setEditAnswer(e.target.value)}
+                            inputMode="numeric"
+                            className="w-32 bg-[#2a1608] border border-[#7a4e22] rounded-lg p-1.5 text-[0.82rem] text-[#f0e0c0] outline-none focus:border-[#c87030]"
+                          />
+                        </label>
+                      )}
+                      {editMsg && <div className="text-[0.72rem] text-red-400">{editMsg}</div>}
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={closeEdit}
+                          className="text-[0.72rem] text-[#c8a070] border border-[#7a4e22] rounded px-2.5 py-1 hover:bg-[#3d2510] cursor-pointer"
+                        >
+                          Anulează
+                        </button>
+                        <button
+                          onClick={() => void saveEdit(h)}
+                          disabled={editBusy}
+                          className="text-[0.72rem] text-[#f5e8c0] bg-gradient-to-br from-[#c87030] to-[#7a4010] border border-[#f5c97a60] rounded px-2.5 py-1 hover:brightness-110 disabled:opacity-50 cursor-pointer"
+                        >
+                          {editBusy ? "Se salvează…" : "Salvează"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
