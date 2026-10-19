@@ -8,11 +8,18 @@ const PROTECTED_PREFIXES = ["/train", "/duel", "/admin"];
 
 // Themed "site off" page served to non-admins while maintenance mode is on.
 // No buttons, no links — the only way in is the secret /admin/login path.
-const OFF_HTML = `<!doctype html><html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MAHALADOR — Site oprit</title></head>
-<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at top,#3b2a1a 0%,#1a0e05 100%);color:#f0e0c0;font-family:Georgia,'Times New Roman',serif;text-align:center">
+const GEM_SVG = `<svg viewBox="0 0 40 56" height="46" style="vertical-align:-9px;margin:0 2px" xmlns="http://www.w3.org/2000/svg">
+<path d="M20 2 L35 12.5 L35 38 L20 54 L5 38 L5 12.5 Z" fill="#7fa8a5" stroke="#d7e6e3" stroke-width="1.1" stroke-linejoin="round"/>
+<path d="M5 20 L35 20" stroke="#e8f4f2" stroke-width="0.9" opacity="0.75"/>
+<path d="M5 20 L20 54 L35 20" fill="none" stroke="#e8f4f2" stroke-width="0.7" opacity="0.5"/>
+<path d="M20 2 L20 20" stroke="#e8f4f2" stroke-width="0.7" opacity="0.55"/></svg>`;
+
+const OFF_HTML = `<!doctype html><html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ST0NE QUIZ — Site oprit</title></head>
+<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at top,#0b1a16 0%,#040a08 100%);color:#b9d3d0;font-family:'Jost',Futura,'Century Gothic',sans-serif;text-align:center">
 <div><div style="font-size:64px;line-height:1">⏻</div>
-<h1 style="color:#f5c97a;letter-spacing:3px;margin:18px 0 8px">MAHALADOR</h1>
-<p style="color:#c8a070;font-size:15px;margin:0">Site-ul este oprit temporar.</p>
+<div style="color:#dfe7e5;font-weight:300;font-size:38px;letter-spacing:8px;margin:18px 0 6px">ST${GEM_SVG}NE</div>
+<div style="color:#cfe0de;font-weight:300;font-size:15px;letter-spacing:12px;margin:0 0 22px;padding-left:12px">QUIZ</div>
+<p style="color:#8fb0ac;font-size:15px;margin:0">Site-ul este oprit temporar.</p>
 </div></body></html>`;
 
 export async function proxy(req: NextRequest) {

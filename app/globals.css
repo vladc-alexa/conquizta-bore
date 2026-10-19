@@ -2,12 +2,17 @@
 
 @theme {
   --font-cinzel: var(--font-cinzel);
+  --font-display: var(--font-display);
   --font-lato: var(--font-lato);
 }
 
 :root {
-  --background: radial-gradient(ellipse at top, #3b2a1a 0%, #1a0e05 100%);
-  --foreground: #f0e0c0;
+  /* ST0NE QUIZ: near-black green, gem-teal light */
+  --background: radial-gradient(ellipse at top, #0b1a16 0%, #040a08 100%);
+  --foreground: #b9d3d0;
+  --gem: #7fa8a5;
+  --gem-bright: #9ec6c1;
+  --stone-white: #dfe7e5;
 }
 
 body {
@@ -26,31 +31,67 @@ body {
 /* Themed scrollbars (chat + leaderboard) */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #7a4e22 #1a0e05;
+  scrollbar-color: #1e3a34 #050d0b;
 }
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 *::-webkit-scrollbar-track {
-  background: #1a0e05;
+  background: #050d0b;
 }
 *::-webkit-scrollbar-thumb {
-  background: #7a4e22;
+  background: #1e3a34;
   border-radius: 4px;
-  border: 1px solid #3d2510;
+  border: 1px solid #122420;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: #c87030;
+  background: #6f9c99;
 }
 
 h1 {
-  font-family: var(--font-cinzel), serif;
+  font-family: var(--font-display), var(--font-lato), sans-serif;
   font-size: 1.6rem;
-  letter-spacing: 3px;
-  color: #f5c97a;
+  font-weight: 300;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--stone-white);
   margin-bottom: 20px;
   text-shadow: 0 2px 8px #000a;
+}
+
+/* ---- brand wordmark: ST0NE (gem as the O) over QUIZ ---------------------- */
+.brand {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font-family: var(--font-display), var(--font-lato), sans-serif;
+  font-weight: 300;
+  color: var(--stone-white);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  text-shadow: 0 2px 10px #0009;
+}
+.brand-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.04em;
+  /* the trailing letter-spacing would push the wordmark right of centre */
+  padding-left: 0.18em;
+}
+.brand-gem {
+  height: 0.92em;
+  width: auto;
+  margin: 0 0.03em;
+  filter: drop-shadow(0 0 6px rgba(127, 168, 165, 0.45));
+}
+.brand-quiz {
+  margin-top: 0.2em;
+  padding-left: 0.45em;
+  font-size: 0.5em;
+  letter-spacing: 0.45em;
+  color: #cfe0de;
 }
 
 /* ---- 1v1 arena ---------------------------------------------------------- */
@@ -58,7 +99,7 @@ h1 {
   position: relative;
   width: 100%;
   aspect-ratio: 1774 / 887;
-  border: 2px solid #7a4e22;
+  border: 2px solid #1e3a34;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 10px 30px #0009;

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BLACK_CHAT_COLOR, BLACK_NAME_OUTLINE, CHAT_COLORS, DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
+import Brand from "@/components/Brand";
 
 interface ChatMessage {
   id: string;
@@ -247,12 +248,12 @@ export default function Dashboard() {
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 py-4">
       {/* Header */}
       <header className="flex items-center justify-between gap-3">
-        <h1 className="!mb-0 text-[1.3rem]">MAHALADOR</h1>
+        <Brand size={28} />
         <div className="flex items-center gap-3">
           {isAdmin && (
             <a
               href="/admin"
-              className="font-cinzel text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem] border border-[#7a4e22] rounded-lg px-3.5 py-2 bg-[#2a1608]"
+              className="font-cinzel text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.8rem] border border-[#1e3a34] rounded-lg px-3.5 py-2 bg-[#0c1a17]"
             >
               Admin
             </a>
@@ -264,7 +265,7 @@ export default function Dashboard() {
                 setNameMsg(null);
                 setNewName(name);
               }}
-              className="font-cinzel text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem] border border-[#7a4e22] rounded-lg px-3.5 py-2 bg-[#2a1608] cursor-pointer"
+              className="font-cinzel text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.8rem] border border-[#1e3a34] rounded-lg px-3.5 py-2 bg-[#0c1a17] cursor-pointer"
               title="Schimbă numele"
             >
               ✏️
@@ -278,22 +279,22 @@ export default function Dashboard() {
                 setCurPw("");
                 setNewPw("");
               }}
-              className="font-cinzel text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem] border border-[#7a4e22] rounded-lg px-3.5 py-2 bg-[#2a1608] cursor-pointer"
+              className="font-cinzel text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.8rem] border border-[#1e3a34] rounded-lg px-3.5 py-2 bg-[#0c1a17] cursor-pointer"
               title="Schimbă parola"
             >
               🔑
             </button>
           )}
           {name && (
-            <span className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-wider border border-[#7a4e22] rounded-lg px-3.5 py-2 bg-[#2a1608]">
+            <span className="font-cinzel text-[#9ec6c1] text-[0.85rem] tracking-wider border border-[#1e3a34] rounded-lg px-3.5 py-2 bg-[#0c1a17]">
               {name}
             </span>
           )}
           {isAdmin && (
             <button
               onClick={toggleSite}
-              className={`font-cinzel text-[0.8rem] border rounded-lg px-3.5 py-2 bg-[#2a1608] cursor-pointer ${
-                mySiteOff ? "text-green-400 border-green-500/50 hover:brightness-125" : "text-[#c8a070] border-[#7a4e22] hover:text-red-400"
+              className={`font-cinzel text-[0.8rem] border rounded-lg px-3.5 py-2 bg-[#0c1a17] cursor-pointer ${
+                mySiteOff ? "text-green-400 border-green-500/50 hover:brightness-125" : "text-[#8fb0ac] border-[#1e3a34] hover:text-red-400"
               }`}
               title={mySiteOff ? "Site oprit — pornește-l" : "Oprește site-ul (doar adminii îl mai văd)"}
             >
@@ -302,7 +303,7 @@ export default function Dashboard() {
           )}
           <button
             onClick={logout}
-            className="bg-gradient-to-br from-[#7a4010] to-[#3d2010] border-2 border-[#c88040a0] rounded-lg text-[#f5e8c0] text-[0.8rem] font-cinzel px-3.5 py-2 hover:brightness-125 cursor-pointer"
+            className="bg-gradient-to-br from-[#2c514c] to-[#101f1c] border-2 border-[#4d7a76a0] rounded-lg text-[#e2eeeb] text-[0.8rem] font-cinzel px-3.5 py-2 hover:brightness-125 cursor-pointer"
           >
             Ieșire
           </button>
@@ -311,11 +312,11 @@ export default function Dashboard() {
 
       <div className="flex flex-col lg:flex-row gap-4 items-start">
         {/* Left: Chat */}
-        <section className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full lg:w-[552px] shrink-0 flex flex-col h-[552px] lg:h-[calc(100vh-200px)] lg:min-h-[644px]">
-          <div className="flex items-center justify-between px-[1.15rem] py-[0.7rem] border-b border-[#7a4e2260] relative">
-            <h3 className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-widest">Chat general</h3>
+        <section className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full lg:w-[552px] shrink-0 flex flex-col h-[552px] lg:h-[calc(100vh-200px)] lg:min-h-[644px]">
+          <div className="flex items-center justify-between px-[1.15rem] py-[0.7rem] border-b border-[#1e3a3460] relative">
+            <h3 className="font-cinzel text-[#9ec6c1] text-[0.85rem] tracking-widest">Chat general</h3>
             <div className="flex items-center gap-2">
-              <span className="text-[#a07848] text-[0.7rem]">{messages.length} mesaje</span>
+              <span className="text-[#75938f] text-[0.7rem]">{messages.length} mesaje</span>
               {name && (
                 <button
                   onClick={() => setShowColors((v) => !v)}
@@ -327,8 +328,8 @@ export default function Dashboard() {
               )}
             </div>
             {showColors && (
-              <div className="absolute right-3 top-11 z-20 bg-[#2a1608] border-2 border-[#7a4e22] rounded-xl p-[0.7rem] flex flex-col gap-1.5 shadow-2xl">
-                <span className="text-[0.65rem] text-[#c8a070] uppercase tracking-wider">Culoarea numelui</span>
+              <div className="absolute right-3 top-11 z-20 bg-[#0c1a17] border-2 border-[#1e3a34] rounded-xl p-[0.7rem] flex flex-col gap-1.5 shadow-2xl">
+                <span className="text-[0.65rem] text-[#8fb0ac] uppercase tracking-wider">Culoarea numelui</span>
                 <div className="grid grid-cols-5 gap-1.5">
                   {CHAT_COLORS.map((c) => (
                     <button
@@ -336,7 +337,7 @@ export default function Dashboard() {
                       onClick={() => setColor(c.hex)}
                       title={c.name}
                       className={`w-8 h-8 rounded-full border-2 cursor-pointer hover:scale-110 transition-transform ${
-                        myColor === c.hex ? "border-[#f5c97a] scale-110" : "border-[#7a4e22]"
+                        myColor === c.hex ? "border-[#9ec6c1] scale-110" : "border-[#1e3a34]"
                       }`}
                       style={{
                         backgroundColor: c.hex,
@@ -350,7 +351,7 @@ export default function Dashboard() {
           </div>
           <div className="flex-1 overflow-y-auto p-3.5 flex flex-col gap-1.5">
             {messages.length === 0 ? (
-              <div className="text-[#a07848] text-[0.75rem] text-center p-4">Niciun mesaj încă. Spune salut!</div>
+              <div className="text-[#75938f] text-[0.75rem] text-center p-4">Niciun mesaj încă. Spune salut!</div>
             ) : (
               messages.map((m) => (
                 <div key={m.id} className="text-[0.9rem] leading-snug flex items-start gap-1 group">
@@ -365,14 +366,14 @@ export default function Dashboard() {
                     }}
                   >
                     {m.authorName}
-                    {m.muted && <span className="text-[#a07848] text-[0.65rem] ml-1" title="mutat">🔇</span>}
+                    {m.muted && <span className="text-[#75938f] text-[0.65rem] ml-1" title="mutat">🔇</span>}
                     {": "}
                   </span>
-                  <span className="text-[#e8d8b0] flex-1">{m.text}</span>
+                  <span className="text-[#cbdcda] flex-1">{m.text}</span>
                   {isAdmin && (
                     <button
                       onClick={() => deleteMessage(m.id)}
-                      className="text-[#a07848] opacity-0 group-hover:opacity-100 hover:text-red-400 text-[0.7rem] cursor-pointer"
+                      className="text-[#75938f] opacity-0 group-hover:opacity-100 hover:text-red-400 text-[0.7rem] cursor-pointer"
                       title="Șterge mesajul"
                     >
                       ✕
@@ -383,19 +384,19 @@ export default function Dashboard() {
             )}
             <div ref={chatEndRef} />
           </div>
-          <div className="p-[0.7rem] border-t border-[#7a4e2260] flex gap-2">
+          <div className="p-[0.7rem] border-t border-[#1e3a3460] flex gap-2">
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               placeholder="Mesaj…"
               maxLength={500}
-              className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[0.85rem] p-[0.6rem] outline-none focus:border-[#c87030]"
+              className="flex-1 bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] text-[0.85rem] p-[0.6rem] outline-none focus:border-[#6f9c99]"
             />
             <button
               onClick={sendMessage}
               disabled={sending || !chatInput.trim()}
-              className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] px-3.5 hover:brightness-110 disabled:opacity-40 cursor-pointer"
+              className="bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c160] rounded-lg text-[#e2eeeb] px-3.5 hover:brightness-110 disabled:opacity-40 cursor-pointer"
               title="Trimite"
             >
               ➤
@@ -404,9 +405,9 @@ export default function Dashboard() {
         </section>
 
         {/* Center: Leaderboard */}
-        <section className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full flex-1 p-[1.15rem] flex flex-col gap-2.5">
+        <section className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full flex-1 p-[1.15rem] flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
-            <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">👑 Clasamentul zilei</h3>
+            <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">👑 Clasamentul zilei</h3>
             <div className="flex items-center gap-2">
               {name && (
                 <button
@@ -414,7 +415,7 @@ export default function Dashboard() {
                   className={`text-[0.7rem] border rounded-lg px-2 py-1 cursor-pointer hover:brightness-110 ${
                     myScoreHidden
                       ? "text-[#b57edc] border-purple-500/40 bg-purple-900/20"
-                      : "text-[#c8a070] border-[#7a4e22] hover:bg-[#3d2510]"
+                      : "text-[#8fb0ac] border-[#1e3a34] hover:bg-[#122420]"
                   }`}
                   title={myScoreHidden ? "Scorul tău e ascuns public — arată-l" : "Ascunde scorul tău de pe clasamentul public"}
                 >
@@ -423,7 +424,7 @@ export default function Dashboard() {
               )}
               <button
                 onClick={loadLeaderboard}
-                className="text-[#c8a070] hover:text-[#f5c97a] text-[0.75rem] cursor-pointer"
+                className="text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.75rem] cursor-pointer"
                 title="Reîmprospătează"
               >
                 ⟳
@@ -431,7 +432,7 @@ export default function Dashboard() {
             </div>
           </div>
           {rows.length === 0 ? (
-            <div className="text-[#a07848] text-[0.8rem] text-center p-6">Niciun jucător cu PRC încă. Antrenează-te!</div>
+            <div className="text-[#75938f] text-[0.8rem] text-center p-6">Niciun jucător cu PRC încă. Antrenează-te!</div>
           ) : (
             <div className="flex flex-col">
               {rows.map((r, i) => (
@@ -439,39 +440,39 @@ export default function Dashboard() {
                   key={r.id + i}
                   className="grid grid-cols-[24px_1fr_auto] gap-2 text-[0.82rem] p-1.5 px-2 rounded items-center odd:bg-white/5"
                 >
-                  <span className="text-[#a07848] text-[0.75rem]">{i + 1}</span>
+                  <span className="text-[#75938f] text-[0.75rem]">{i + 1}</span>
                   <span className="min-w-0">
-                    <span className="font-cinzel truncate block text-[#e8d8b0]">{r.name}</span>
-                    <span className="text-[0.65rem] text-[#a07848] block">
+                    <span className="font-cinzel truncate block text-[#cbdcda]">{r.name}</span>
+                    <span className="text-[0.65rem] text-[#75938f] block">
                       {r.grila !== null && <>grilă {r.grila}</>}
                       {r.grila !== null && r.rapide !== null && " · "}
                       {r.rapide !== null && <>rapide {r.rapide}</>}
                     </span>
                   </span>
-                  <span className="font-cinzel text-[#f5c97a] font-bold text-[1rem]">
+                  <span className="font-cinzel text-[#9ec6c1] font-bold text-[1rem]">
                     {r.prc != null ? r.prc.toLocaleString("ro-RO") : "—"}
                   </span>
                 </div>
               ))}
               {meRow && !rows.some((r) => r.id === meRow.id) && (
                 <>
-                  <div className="border-t border-[#7a4e2260] my-1" />
-                  <div className="grid grid-cols-[24px_1fr_auto] gap-2 text-[0.82rem] p-1.5 px-2 rounded items-center bg-[#c8703026] border border-[#c87030a0]">
-                    <span className="text-[#a07848] text-[0.75rem]">{rows.length + 1}</span>
+                  <div className="border-t border-[#1e3a3460] my-1" />
+                  <div className="grid grid-cols-[24px_1fr_auto] gap-2 text-[0.82rem] p-1.5 px-2 rounded items-center bg-[#5d8b8826] border border-[#5d8b88a0]">
+                    <span className="text-[#75938f] text-[0.75rem]">{rows.length + 1}</span>
                     <span className="min-w-0">
-                      <span className="font-cinzel truncate block text-[#f5c97a]">
+                      <span className="font-cinzel truncate block text-[#9ec6c1]">
                         {meRow.name} (tu)
                         {meRow.hidden && (
                           <span className="text-[0.65rem] text-[#b57edc] ml-1.5" title="Scorul tău e ascuns public">🔒</span>
                         )}
                       </span>
-                      <span className="text-[0.65rem] text-[#a07848] block">
+                      <span className="text-[0.65rem] text-[#75938f] block">
                         {meRow.grila !== null && <>grilă {meRow.grila}</>}
                         {meRow.grila !== null && meRow.rapide !== null && " · "}
                         {meRow.rapide !== null && <>rapide {meRow.rapide}</>}
                       </span>
                     </span>
-                    <span className="font-cinzel text-[#f5c97a] font-bold text-[1rem]">
+                    <span className="font-cinzel text-[#9ec6c1] font-bold text-[1rem]">
                       {meRow.prc != null ? meRow.prc.toLocaleString("ro-RO") : "—"}
                     </span>
                   </div>
@@ -485,23 +486,23 @@ export default function Dashboard() {
         <section className="w-full lg:w-[300px] shrink-0 flex flex-col gap-4">
           <a
             href="/train"
-            className="bg-gradient-to-br from-[#f5c97a] to-[#c87030] border-2 border-[#f5c97a80] rounded-2xl shadow-2xl text-center p-[1.45rem] hover:brightness-110 active:translate-y-px"
+            className="bg-gradient-to-br from-[#9ec6c1] to-[#6f9c99] border-2 border-[#9ec6c180] rounded-2xl shadow-2xl text-center p-[1.45rem] hover:brightness-110 active:translate-y-px"
           >
-            <div className="font-cinzel text-[#2a1608] text-[1.1rem] tracking-widest">🏋️ Train</div>
-            <div className="text-[#3d2510] text-[0.8rem] mt-1 font-bold">VREI SA TI-O MASORI?</div>
+            <div className="font-cinzel text-[#0c1a17] text-[1.1rem] tracking-widest">🏋️ Train</div>
+            <div className="text-[#122420] text-[0.8rem] mt-1 font-bold">VREI SA TI-O MASORI?</div>
           </a>
 
           <a
             href="/duel"
-            className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a70] rounded-2xl shadow-2xl text-center p-[1.15rem] hover:brightness-110 active:translate-y-px"
+            className="bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c170] rounded-2xl shadow-2xl text-center p-[1.15rem] hover:brightness-110 active:translate-y-px"
           >
-            <div className="font-cinzel text-[#2a1608] text-[1rem] tracking-widest">⚔️ 1 la 1</div>
-            <div className="text-[#3d2510] text-[0.75rem] mt-1 font-bold">10 RUNDE · 6 GRILĂ + 4 RAPIDĂ</div>
+            <div className="font-cinzel text-[#0c1a17] text-[1rem] tracking-widest">⚔️ 1 la 1</div>
+            <div className="text-[#122420] text-[0.75rem] mt-1 font-bold">10 RUNDE · 6 GRILĂ + 4 RAPIDĂ</div>
           </a>
 
-          <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-[1.15rem] flex flex-col gap-2">
-            <h3 className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-widest">😂 Gluma zilei</h3>
-            <p className="text-[#e8d8b0] text-[0.9rem] leading-relaxed font-cinzel">„Tu! Tu esti gluma!”</p>
+          <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-[1.15rem] flex flex-col gap-2">
+            <h3 className="font-cinzel text-[#9ec6c1] text-[0.85rem] tracking-widest">😂 Gluma zilei</h3>
+            <p className="text-[#cbdcda] text-[0.9rem] leading-relaxed font-cinzel">„Tu! Tu esti gluma!”</p>
           </div>
         </section>
       </div>
@@ -511,11 +512,11 @@ export default function Dashboard() {
         <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
           <form
             onSubmit={changePassword}
-            className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-md p-[1.75rem] flex flex-col gap-3"
+            className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full max-w-md p-[1.75rem] flex flex-col gap-3"
           >
             <div className="flex items-center justify-between">
-              <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">🔑 Schimbă parola</h3>
-              <button type="button" onClick={() => setShowPw(false)} className="text-[#c8a070] hover:text-[#f5c97a] cursor-pointer">
+              <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">🔑 Schimbă parola</h3>
+              <button type="button" onClick={() => setShowPw(false)} className="text-[#8fb0ac] hover:text-[#9ec6c1] cursor-pointer">
                 ✕
               </button>
             </div>
@@ -526,7 +527,7 @@ export default function Dashboard() {
               onChange={(e) => setCurPw(e.target.value)}
               placeholder="Parola actuală"
               autoComplete="current-password"
-              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-[0.7rem] outline-none focus:border-[#c87030]"
+              className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] p-[0.7rem] outline-none focus:border-[#6f9c99]"
             />
             <input
               type="password"
@@ -536,7 +537,7 @@ export default function Dashboard() {
               onChange={(e) => setNewPw(e.target.value)}
               placeholder="Parola nouă (min 4)"
               autoComplete="new-password"
-              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-[0.7rem] outline-none focus:border-[#c87030]"
+              className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] p-[0.7rem] outline-none focus:border-[#6f9c99]"
             />
             {pwMsg && (
               <div className={`text-[0.8rem] ${pwMsg.ok ? "text-green-400" : "text-red-400"}`}>{pwMsg.text}</div>
@@ -544,7 +545,7 @@ export default function Dashboard() {
             <button
               type="submit"
               disabled={pwBusy}
-              className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-[0.7rem] hover:brightness-110 disabled:opacity-50 cursor-pointer"
+              className="bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c160] rounded-lg text-[#e2eeeb] font-cinzel p-[0.7rem] hover:brightness-110 disabled:opacity-50 cursor-pointer"
             >
               {pwBusy ? "Se salvează…" : "Salvează"}
             </button>
@@ -557,11 +558,11 @@ export default function Dashboard() {
         <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
           <form
             onSubmit={rename}
-            className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-3"
+            className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-3"
           >
             <div className="flex items-center justify-between">
-              <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">✏️ Schimbă numele</h3>
-              <button type="button" onClick={() => setShowName(false)} className="text-[#c8a070] hover:text-[#f5c97a] cursor-pointer">
+              <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">✏️ Schimbă numele</h3>
+              <button type="button" onClick={() => setShowName(false)} className="text-[#8fb0ac] hover:text-[#9ec6c1] cursor-pointer">
                 ✕
               </button>
             </div>
@@ -572,7 +573,7 @@ export default function Dashboard() {
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Nume nou (max 32)"
               autoComplete="off"
-              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-[0.7rem] outline-none focus:border-[#c87030]"
+              className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] p-[0.7rem] outline-none focus:border-[#6f9c99]"
             />
             {nameMsg && (
               <div className={`text-[0.8rem] ${nameMsg.ok ? "text-green-400" : "text-red-400"}`}>{nameMsg.text}</div>
@@ -580,7 +581,7 @@ export default function Dashboard() {
             <button
               type="submit"
               disabled={nameBusy || !newName.trim()}
-              className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-[0.7rem] hover:brightness-110 disabled:opacity-50 cursor-pointer"
+              className="bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c160] rounded-lg text-[#e2eeeb] font-cinzel p-[0.7rem] hover:brightness-110 disabled:opacity-50 cursor-pointer"
             >
               {nameBusy ? "Se salvează…" : "Salvează"}
             </button>

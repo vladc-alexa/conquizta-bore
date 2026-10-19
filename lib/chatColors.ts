@@ -14,10 +14,10 @@ export const CHAT_COLORS: { name: string; hex: string }[] = [
   { name: "Mov", hex: "#af7ac5" },
   { name: "Roz", hex: "#f1948a" },
   { name: "Turcoaz", hex: "#48c9b0" },
-  { name: "Alb", hex: "#f0e0c0" },
+  { name: "Alb", hex: "#dfe7e5" },
   { name: "Negru", hex: BLACK_CHAT_COLOR },
 ];
 
 export const ALLOWED_CHAT_COLORS = new Set(CHAT_COLORS.map((c) => c.hex));
 
-export const DEFAULT_CHAT_COLOR = "#c87030";
+export const DEFAULT_CHAT_COLOR = "#7fa8a5";

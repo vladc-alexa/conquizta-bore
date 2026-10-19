@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Brand from "@/components/Brand";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -35,12 +36,14 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-[80vh] w-full">
       <form
         onSubmit={submit}
-        className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-[380px] p-7 flex flex-col gap-4"
+        className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full max-w-[380px] p-7 flex flex-col gap-4"
       >
-        <h1 className="text-center !mb-1">MAHALADOR</h1>
-        <p className="text-center text-[0.85rem] text-[#c8a070] -mt-2">Autentificare</p>
+        <div className="flex justify-center">
+          <Brand size={30} />
+        </div>
+        <p className="text-center text-[0.85rem] text-[#8fb0ac] -mt-2">Autentificare</p>
 
-        <label className="flex flex-col gap-1.5 text-[0.8rem] text-[#c8a070]">
+        <label className="flex flex-col gap-1.5 text-[0.8rem] text-[#8fb0ac]">
           Email
           <input
             type="email"
@@ -49,11 +52,11 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="tu@exemplu.ro"
             autoComplete="email"
-            className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2.5 outline-none focus:border-[#c87030]"
+            className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] p-2.5 outline-none focus:border-[#6f9c99]"
           />
         </label>
 
-        <label className="flex flex-col gap-1.5 text-[0.8rem] text-[#c8a070]">
+        <label className="flex flex-col gap-1.5 text-[0.8rem] text-[#8fb0ac]">
           Parolă
           <input
             type="password"
@@ -62,7 +65,7 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             autoComplete="current-password"
-            className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2.5 outline-none focus:border-[#c87030]"
+            className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] p-2.5 outline-none focus:border-[#6f9c99]"
           />
         </label>
 
@@ -75,7 +78,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-110 active:translate-y-px disabled:opacity-50 cursor-pointer"
+          className="bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c160] rounded-lg text-[#e2eeeb] font-cinzel p-3 hover:brightness-110 active:translate-y-px disabled:opacity-50 cursor-pointer"
         >
           {loading ? "Se autentifică…" : "Intră"}
         </button>
