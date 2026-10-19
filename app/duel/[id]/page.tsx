@@ -38,9 +38,9 @@ type DuelState = {
   pushedOffId: string | null;
 };
 
-const CARD = "bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl";
+const CARD = "bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl";
 const BTN_MAIN =
-  "bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-110 cursor-pointer";
+  "bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c160] rounded-lg text-[#e2eeeb] font-cinzel p-3 hover:brightness-110 cursor-pointer";
 
 export default function DuelMatch() {
   const params = useParams<{ id: string }>();
@@ -271,8 +271,8 @@ export default function DuelMatch() {
   if (err && !state) {
     return (
       <div className={`${CARD} w-full max-w-[560px] mx-auto p-7 text-center flex flex-col gap-4`}>
-        <h2 className="font-cinzel text-[#f5c97a] text-[1.2rem]">⚔️ 1 la 1</h2>
-        <p className="text-[#e8d8b0] text-[0.95rem]">{err}</p>
+        <h2 className="font-cinzel text-[#9ec6c1] text-[1.2rem]">⚔️ 1 la 1</h2>
+        <p className="text-[#cbdcda] text-[0.95rem]">{err}</p>
         <button onClick={() => (window.location.href = "/duel")} className={BTN_MAIN}>
           ← Înapoi la lobby
         </button>
@@ -282,21 +282,21 @@ export default function DuelMatch() {
   if (!state || !me) {
     return (
       <div className={`${CARD} w-full max-w-[560px] mx-auto p-7 text-center`}>
-        <p className="text-[#a07848] text-[0.9rem]">Se încarcă meciul…</p>
+        <p className="text-[#75938f] text-[0.9rem]">Se încarcă meciul…</p>
       </div>
     );
   }
 
   const scoreboard = (
     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center">
-      <div className="bg-[#1a0e05] border-2 border-[#c87030] rounded-xl p-2.5">
-        <div className="text-[0.7rem] text-[#a07848] truncate">Tu · {me.name}</div>
-        <div className="font-cinzel text-[#f5c97a] text-[1.4rem]">{me.score}</div>
+      <div className="bg-[#050d0b] border-2 border-[#6f9c99] rounded-xl p-2.5">
+        <div className="text-[0.7rem] text-[#75938f] truncate">Tu · {me.name}</div>
+        <div className="font-cinzel text-[#9ec6c1] text-[1.4rem]">{me.score}</div>
       </div>
-      <div className="font-cinzel text-[#7a4e22] text-[0.9rem]">VS</div>
-      <div className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-xl p-2.5">
-        <div className="text-[0.7rem] text-[#a07848] truncate">{opp ? opp.name : "…"}</div>
-        <div className="font-cinzel text-[#e8d8b0] text-[1.4rem]">{opp ? opp.score : 0}</div>
+      <div className="font-cinzel text-[#1e3a34] text-[0.9rem]">VS</div>
+      <div className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-xl p-2.5">
+        <div className="text-[0.7rem] text-[#75938f] truncate">{opp ? opp.name : "…"}</div>
+        <div className="font-cinzel text-[#cbdcda] text-[1.4rem]">{opp ? opp.score : 0}</div>
       </div>
     </div>
   );
@@ -320,11 +320,11 @@ export default function DuelMatch() {
   if (state.status === "WAITING") {
     return (
       <div className={`${CARD} w-full max-w-[520px] mx-auto p-7 flex flex-col gap-4 text-center`}>
-        <h2 className="font-cinzel text-[#f5c97a] text-[1.3rem] tracking-widest">⏳ Aștept adversarul</h2>
-        <p className="text-[#e8d8b0] text-[0.9rem] leading-relaxed">
+        <h2 className="font-cinzel text-[#9ec6c1] text-[1.3rem] tracking-widest">⏳ Aștept adversarul</h2>
+        <p className="text-[#cbdcda] text-[0.9rem] leading-relaxed">
           Trimite-i linkul (sau codul) prietenului tău ca să înceapă meciul.
         </p>
-        <div className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-xl p-3 font-mono text-[0.8rem] text-[#c8a070] break-all">
+        <div className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-xl p-3 font-mono text-[0.8rem] text-[#8fb0ac] break-all">
           {id}
         </div>
         <div className="flex gap-2.5">
@@ -333,7 +333,7 @@ export default function DuelMatch() {
           </button>
           <button
             onClick={abandon}
-            className="flex-1 bg-gradient-to-br from-[#3d2010] to-[#2a1608] border-2 border-[#7a4e22] rounded-lg text-[#c8a070] font-cinzel p-3 hover:brightness-125 cursor-pointer"
+            className="flex-1 bg-gradient-to-br from-[#101f1c] to-[#0c1a17] border-2 border-[#1e3a34] rounded-lg text-[#8fb0ac] font-cinzel p-3 hover:brightness-125 cursor-pointer"
           >
             Anulează
           </button>
@@ -359,7 +359,7 @@ export default function DuelMatch() {
     return (
       <div className="w-full max-w-[620px] mx-auto flex flex-col gap-4">
         <div className={`${CARD} p-6 flex flex-col gap-4 text-center`}>
-          <h2 className="font-cinzel text-[#f5c97a] text-[1.5rem]">{banner}</h2>
+          <h2 className="font-cinzel text-[#9ec6c1] text-[1.5rem]">{banner}</h2>
           {scoreboard}
           {arena}
           <div className="flex gap-2.5 flex-wrap">
@@ -368,7 +368,7 @@ export default function DuelMatch() {
             </button>
             <button
               onClick={() => (window.location.href = "/")}
-              className="flex-1 min-w-[140px] bg-gradient-to-br from-[#7a4010] to-[#3d2010] border-2 border-[#c88040a0] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-125 cursor-pointer"
+              className="flex-1 min-w-[140px] bg-gradient-to-br from-[#2c514c] to-[#101f1c] border-2 border-[#4d7a76a0] rounded-lg text-[#e2eeeb] font-cinzel p-3 hover:brightness-125 cursor-pointer"
             >
               ← Înapoi
             </button>
@@ -377,33 +377,33 @@ export default function DuelMatch() {
 
         {state.history.length > 0 && (
           <div className={`${CARD} p-5 flex flex-col gap-2`}>
-            <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">📋 Runde</h3>
+            <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">📋 Runde</h3>
             {reportErr && <div className="text-[0.72rem] text-red-400">{reportErr}</div>}
             {state.history.map((h) => {
               const view = { ...h, ...(patched[h.round] ?? {}) };
               const w = h.winnerId === me.id ? "tu" : h.winnerId ? "adversarul" : "nimeni";
               const isOpen = editRound === h.round;
               return (
-                <div key={h.round} className="bg-[#1a0e05] border border-[#7a4e2260] rounded-xl p-3 flex flex-col gap-1">
-                  <div className="flex items-center justify-between gap-2 text-[0.72rem] text-[#a07848]">
+                <div key={h.round} className="bg-[#050d0b] border border-[#1e3a3460] rounded-xl p-3 flex flex-col gap-1">
+                  <div className="flex items-center justify-between gap-2 text-[0.72rem] text-[#75938f]">
                     <span>
                       #{h.round + 1} · {h.mode === "rapide" ? "Rapidă" : "Grilă"}
                     </span>
-                    <span className={h.winnerId === me.id ? "text-green-400" : h.winnerId ? "text-red-400" : "text-[#a07848]"}>
+                    <span className={h.winnerId === me.id ? "text-green-400" : h.winnerId ? "text-red-400" : "text-[#75938f]"}>
                       {h.winnerId === me.id ? "✔ câștigată" : h.winnerId ? "✖ pierdută" : "– egal"}
                     </span>
                   </div>
-                  <div className="text-[0.88rem] text-[#e8d8b0] leading-snug">{view.prompt}</div>
-                  <div className="text-[0.78rem] text-[#c8a070]">
-                    Corect: <strong className="text-[#f5c97a]">{view.reveal}</strong>
+                  <div className="text-[0.88rem] text-[#cbdcda] leading-snug">{view.prompt}</div>
+                  <div className="text-[0.78rem] text-[#8fb0ac]">
+                    Corect: <strong className="text-[#9ec6c1]">{view.reveal}</strong>
                     {h.answers.map((a, i) => (
-                      <span key={i} className={a.mine ? "text-[#f5c97a]" : "text-[#a07848]"}>
+                      <span key={i} className={a.mine ? "text-[#9ec6c1]" : "text-[#75938f]"}>
                         {" · "}
                         {a.mine ? "tu" : "adv"} {a.isCorrect ? "✔" : "✖"} {(a.elapsedMs / 1000).toFixed(1)}s
                         {a.score != null ? ` (${a.score}p)` : ""}
                       </span>
                     ))}
-                    <span className="text-[#7a5a30]"> · câștigă: {w}</span>
+                    <span className="text-[#25443f]"> · câștigă: {w}</span>
                   </div>
 
                   {/* report / fix in place — same card, never the admin page */}
@@ -412,14 +412,14 @@ export default function DuelMatch() {
                     {canEdit && (
                       <button
                         onClick={() => (isOpen ? closeEdit() : openEdit(h))}
-                        className="text-[0.7rem] text-[#c8a070] border border-[#7a4e22] rounded px-2 py-0.5 hover:bg-[#3d2510] cursor-pointer"
+                        className="text-[0.7rem] text-[#8fb0ac] border border-[#1e3a34] rounded px-2 py-0.5 hover:bg-[#122420] cursor-pointer"
                         title="Editează întrebarea aici"
                       >
                         {isOpen ? "✕ Închide" : "✏️ Editează"}
                       </button>
                     )}
                     {reported.has(h.questionId) ? (
-                      <span className="text-[0.7rem] text-[#c8a070]">Raportată ✓</span>
+                      <span className="text-[0.7rem] text-[#8fb0ac]">Raportată ✓</span>
                     ) : (
                       <button
                         onClick={() => void reportQuestion(h.questionId)}
@@ -432,12 +432,12 @@ export default function DuelMatch() {
                   </div>
 
                   {isOpen && (
-                    <div className="mt-1 border-t border-[#7a4e2260] pt-2 flex flex-col gap-2">
+                    <div className="mt-1 border-t border-[#1e3a3460] pt-2 flex flex-col gap-2">
                       <textarea
                         value={editPrompt}
                         onChange={(e) => setEditPrompt(e.target.value)}
                         rows={3}
-                        className="w-full bg-[#2a1608] border border-[#7a4e22] rounded-lg p-2 text-[0.85rem] text-[#f0e0c0] outline-none focus:border-[#c87030]"
+                        className="w-full bg-[#0c1a17] border border-[#1e3a34] rounded-lg p-2 text-[0.85rem] text-[#d3e3e1] outline-none focus:border-[#6f9c99]"
                         placeholder="Textul întrebării"
                       />
                       {h.mode === "grila" ? (
@@ -451,29 +451,29 @@ export default function DuelMatch() {
                                 onChange={() =>
                                   setEditOptions((prev) => prev.map((x, j) => ({ ...x, isCorrect: j === i })))
                                 }
-                                className="accent-[#c87030]"
+                                className="accent-[#6f9c99]"
                                 title="Varianta corectă"
                               />
-                              <span className="text-[0.72rem] text-[#c87030] w-3">{String.fromCharCode(65 + i)}.</span>
+                              <span className="text-[0.72rem] text-[#6f9c99] w-3">{String.fromCharCode(65 + i)}.</span>
                               <input
                                 value={o.text}
                                 onChange={(e) =>
                                   setEditOptions((prev) => prev.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))
                                 }
-                                className="flex-1 bg-[#2a1608] border border-[#7a4e22] rounded-lg p-1.5 text-[0.82rem] text-[#f0e0c0] outline-none focus:border-[#c87030]"
+                                className="flex-1 bg-[#0c1a17] border border-[#1e3a34] rounded-lg p-1.5 text-[0.82rem] text-[#d3e3e1] outline-none focus:border-[#6f9c99]"
                               />
                             </label>
                           ))}
-                          <span className="text-[0.66rem] text-[#7a5a30]">bifează varianta corectă</span>
+                          <span className="text-[0.66rem] text-[#25443f]">bifează varianta corectă</span>
                         </div>
                       ) : (
                         <label className="flex items-center gap-2">
-                          <span className="text-[0.72rem] text-[#c8a070]">Răspuns:</span>
+                          <span className="text-[0.72rem] text-[#8fb0ac]">Răspuns:</span>
                           <input
                             value={editAnswer}
                             onChange={(e) => setEditAnswer(e.target.value)}
                             inputMode="numeric"
-                            className="w-32 bg-[#2a1608] border border-[#7a4e22] rounded-lg p-1.5 text-[0.82rem] text-[#f0e0c0] outline-none focus:border-[#c87030]"
+                            className="w-32 bg-[#0c1a17] border border-[#1e3a34] rounded-lg p-1.5 text-[0.82rem] text-[#d3e3e1] outline-none focus:border-[#6f9c99]"
                           />
                         </label>
                       )}
@@ -481,14 +481,14 @@ export default function DuelMatch() {
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={closeEdit}
-                          className="text-[0.72rem] text-[#c8a070] border border-[#7a4e22] rounded px-2.5 py-1 hover:bg-[#3d2510] cursor-pointer"
+                          className="text-[0.72rem] text-[#8fb0ac] border border-[#1e3a34] rounded px-2.5 py-1 hover:bg-[#122420] cursor-pointer"
                         >
                           Anulează
                         </button>
                         <button
                           onClick={() => void saveEdit(h)}
                           disabled={editBusy}
-                          className="text-[0.72rem] text-[#f5e8c0] bg-gradient-to-br from-[#c87030] to-[#7a4010] border border-[#f5c97a60] rounded px-2.5 py-1 hover:brightness-110 disabled:opacity-50 cursor-pointer"
+                          className="text-[0.72rem] text-[#e2eeeb] bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border border-[#9ec6c160] rounded px-2.5 py-1 hover:brightness-110 disabled:opacity-50 cursor-pointer"
                         >
                           {editBusy ? "Se salvează…" : "Salvează"}
                         </button>
@@ -514,11 +514,11 @@ export default function DuelMatch() {
       <div className="flex items-center justify-between">
         <button
           onClick={abandon}
-          className="text-[#c8a070] hover:text-[#f5c97a] text-[0.85rem] font-cinzel border border-[#7a4e22] rounded-lg px-3 py-1.5 bg-[#2a1608] cursor-pointer"
+          className="text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.85rem] font-cinzel border border-[#1e3a34] rounded-lg px-3 py-1.5 bg-[#0c1a17] cursor-pointer"
         >
           🚪 Abandonează
         </button>
-        <span className="text-[0.7rem] text-[#a07848]">
+        <span className="text-[0.7rem] text-[#75938f]">
           Runda {state.round + 1} / {state.totalRounds} · {isGrila ? "Grilă" : "Rapidă"}
         </span>
       </div>
@@ -538,7 +538,7 @@ export default function DuelMatch() {
                   ? "border-green-500/50 text-green-400 bg-green-900/20"
                   : h.winnerId
                     ? "border-red-500/50 text-red-400 bg-red-900/20"
-                    : "border-[#7a4e22] text-[#a07848] bg-[#1a0e05]"
+                    : "border-[#1e3a34] text-[#75938f] bg-[#050d0b]"
               }`}
             >
               #{h.round + 1} {h.mode === "rapide" ? "R" : "G"}
@@ -551,14 +551,14 @@ export default function DuelMatch() {
         <div className="flex items-center gap-3">
           <div
             className={`w-[52px] h-[52px] rounded-full border-2 flex items-center justify-center font-cinzel text-[1.1rem] shrink-0 ${
-              timeLeft != null && timeLeft <= 3 ? "border-red-500 text-red-400" : "border-[#f5c97a] text-[#f5c97a]"
+              timeLeft != null && timeLeft <= 3 ? "border-red-500 text-red-400" : "border-[#9ec6c1] text-[#9ec6c1]"
             }`}
           >
             {timeLeft != null ? Math.ceil(timeLeft) : "–"}
           </div>
-          <div className="flex-1 h-2 bg-[#1a0e05] rounded overflow-hidden border border-[#7a4e2240]">
+          <div className="flex-1 h-2 bg-[#050d0b] rounded overflow-hidden border border-[#1e3a3440]">
             <div
-              className={`h-full transition-all duration-100 ${timeLeft != null && timeLeft <= 3 ? "bg-red-500" : "bg-gradient-to-r from-[#c87030] to-[#f5c97a]"}`}
+              className={`h-full transition-all duration-100 ${timeLeft != null && timeLeft <= 3 ? "bg-red-500" : "bg-gradient-to-r from-[#6f9c99] to-[#9ec6c1]"}`}
               style={{ width: `${pct}%` }}
             ></div>
           </div>
@@ -567,7 +567,7 @@ export default function DuelMatch() {
         <p className="font-cinzel text-[1.05rem] leading-relaxed min-h-[60px]">{state.prompt}</p>
 
         {!isGrila && state.responseType && (
-          <div className="self-start text-[0.7rem] text-[#2a1608] bg-[#c87030]/90 rounded-full px-2.5 py-1 font-bold tracking-wide">
+          <div className="self-start text-[0.7rem] text-[#0c1a17] bg-[#6f9c99]/90 rounded-full px-2.5 py-1 font-bold tracking-wide">
             Răspuns: {state.responseType}
           </div>
         )}
@@ -576,11 +576,11 @@ export default function DuelMatch() {
           <div className="grid grid-cols-1 gap-2.5">
             {(state.options ?? []).map((opt, i) => {
               const isSel = selected === opt.id;
-              let cls = "bg-[#1a0e05] border-2 border-[#7a4e22] hover:border-[#c87030] hover:bg-[#2a1608]";
-              if (isSel && flash === "ok") cls = "bg-green-900/30 border-green-500/60 text-[#f5e8c0]";
-              else if (isSel && flash === "bad") cls = "bg-red-900/30 border-red-500/60 text-[#f5e8c0]";
-              else if (isSel) cls = "bg-[#2a1608] border-[#c87030] text-[#f5e8c0]";
-              else if (sent) cls = "bg-[#1a0e05] border-[#4a3a20] opacity-60";
+              let cls = "bg-[#050d0b] border-2 border-[#1e3a34] hover:border-[#6f9c99] hover:bg-[#0c1a17]";
+              if (isSel && flash === "ok") cls = "bg-green-900/30 border-green-500/60 text-[#e2eeeb]";
+              else if (isSel && flash === "bad") cls = "bg-red-900/30 border-red-500/60 text-[#e2eeeb]";
+              else if (isSel) cls = "bg-[#0c1a17] border-[#6f9c99] text-[#e2eeeb]";
+              else if (sent) cls = "bg-[#050d0b] border-[#16302b] opacity-60";
               return (
                 <button
                   key={opt.id}
@@ -591,7 +591,7 @@ export default function DuelMatch() {
                   }}
                   className={`${cls} rounded-xl text-left p-3.5 text-[0.95rem] cursor-pointer disabled:cursor-default transition-all`}
                 >
-                  <span className="font-cinzel text-[#c87030] mr-2">{String.fromCharCode(65 + i)}.</span>
+                  <span className="font-cinzel text-[#6f9c99] mr-2">{String.fromCharCode(65 + i)}.</span>
                   {opt.text}
                 </button>
               );
@@ -606,7 +606,7 @@ export default function DuelMatch() {
               disabled={!canAnswer}
               inputMode="numeric"
               placeholder={state.responseType === "an" ? "ex: 1989" : "număr"}
-              className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-xl p-3.5 text-[1rem] text-[#f0e0c0] placeholder-[#7a5a30] focus:border-[#c87030] outline-none disabled:opacity-60"
+              className="flex-1 bg-[#050d0b] border-2 border-[#1e3a34] rounded-xl p-3.5 text-[1rem] text-[#d3e3e1] placeholder-[#25443f] focus:border-[#6f9c99] outline-none disabled:opacity-60"
             />
             <button
               onClick={() => void send({ answer: typed.trim() })}
@@ -620,16 +620,16 @@ export default function DuelMatch() {
 
         <div className="text-center text-[0.8rem] min-h-[18px]">
           {sent ? (
-            <span className="text-[#c8a070]">
+            <span className="text-[#8fb0ac]">
               {flash === "ok" ? "✔ Răspuns corect — " : flash === "bad" ? "✖ Răspuns greșit — " : ""}
               {state.opponentAnswered ? "se încheie runda…" : "aștept adversarul…"}
             </span>
           ) : timeLeft === 0 ? (
             <span className="text-red-400">⏱ Timpul a expirat</span>
           ) : state.opponentAnswered ? (
-            <span className="text-[#a07848]">adversarul a răspuns — grăbește-te!</span>
+            <span className="text-[#75938f]">adversarul a răspuns — grăbește-te!</span>
           ) : (
-            <span className="text-[#7a5a30]">răspunde înainte să expire timpul</span>
+            <span className="text-[#25443f]">răspunde înainte să expire timpul</span>
           )}
         </div>
       </div>

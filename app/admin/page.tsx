@@ -373,15 +373,15 @@ export default function AdminPage() {
   };
 
   if (me === null) {
-    return <div className="text-center font-cinzel text-[#f5c97a] py-16">Se încarcă…</div>;
+    return <div className="text-center font-cinzel text-[#9ec6c1] py-16">Se încarcă…</div>;
   }
 
   if (!me.isAdmin && !me.canEditQuestions) {
     return (
       <div className="text-center py-16">
         <div className="text-[2rem]">🚫</div>
-        <div className="font-cinzel text-[#f5c97a] text-[1.2rem] mt-2">Acces interzis</div>
-        <div className="text-[#c8a070] text-[0.85rem] mt-1">Doar administratorii și editorii pot vedea această pagină.</div>
+        <div className="font-cinzel text-[#9ec6c1] text-[1.2rem] mt-2">Acces interzis</div>
+        <div className="text-[#8fb0ac] text-[0.85rem] mt-1">Doar administratorii și editorii pot vedea această pagină.</div>
       </div>
     );
   }
@@ -390,16 +390,16 @@ export default function AdminPage() {
     <div className="w-full max-w-5xl mx-auto flex flex-col gap-5 py-6">
       <div className="flex items-center justify-between">
         <h1 className="!mb-0 text-[1.3rem]">Admin — Jucători & Întrebări</h1>
-        <a href="/" className="text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem]">← Înapoi</a>
+        <a href="/" className="text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.8rem]">← Înapoi</a>
       </div>
 
       {me.isAdmin && (
         <>
       <form
         onSubmit={create}
-        className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-5 flex flex-col gap-3"
+        className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-5 flex flex-col gap-3"
       >
-        <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">Adaugă jucător</h3>
+        <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">Adaugă jucător</h3>
         <div className="grid sm:grid-cols-3 gap-2.5">
           <input
             required
@@ -407,14 +407,14 @@ export default function AdminPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Nume jucător (max 32)"
-            className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2.5 outline-none focus:border-[#c87030]"
+            className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] p-2.5 outline-none focus:border-[#6f9c99]"
           />
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email (opțional)"
-            className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2.5 outline-none focus:border-[#c87030]"
+            className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] p-2.5 outline-none focus:border-[#6f9c99]"
           />
           <input
             required
@@ -423,7 +423,7 @@ export default function AdminPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Parolă (min 4)"
-            className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2.5 outline-none focus:border-[#c87030]"
+            className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] p-2.5 outline-none focus:border-[#6f9c99]"
           />
         </div>
         {error && <div className="text-red-400 text-[0.8rem]">{error}</div>}
@@ -431,14 +431,14 @@ export default function AdminPage() {
         <button
           type="submit"
           disabled={busy}
-          className="self-start bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel px-5 py-2.5 hover:brightness-110 disabled:opacity-50 cursor-pointer"
+          className="self-start bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c160] rounded-lg text-[#e2eeeb] font-cinzel px-5 py-2.5 hover:brightness-110 disabled:opacity-50 cursor-pointer"
         >
           {busy ? "Se adaugă…" : "+ Adaugă"}
         </button>
       </form>
 
-      <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-5 flex flex-col gap-2">
-        <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">Jucători ({users.length})</h3>
+      <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-5 flex flex-col gap-2">
+        <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">Jucători ({users.length})</h3>
         <div className="flex flex-col">
           {users.map((u) => (
             <div
@@ -446,9 +446,9 @@ export default function AdminPage() {
               className="grid grid-cols-[1fr_auto_auto] gap-3 items-center text-[0.85rem] p-2 px-2.5 rounded odd:bg-white/5"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <span className="font-cinzel text-[#f5c97a] truncate">{u.displayName}</span>
+                <span className="font-cinzel text-[#9ec6c1] truncate">{u.displayName}</span>
                 {u.isAdmin && (
-                  <span className="text-[0.65rem] text-[#2a1608] bg-[#f5c97a] rounded px-1.5 py-0.5 font-bold">ADMIN</span>
+                  <span className="text-[0.65rem] text-[#0c1a17] bg-[#9ec6c1] rounded px-1.5 py-0.5 font-bold">ADMIN</span>
                 )}
                 {u.isMuted && (
                   <span className="text-[0.65rem] text-red-400 bg-red-900/30 border border-red-500/40 rounded px-1.5 py-0.5">🔇 MUTAT</span>
@@ -457,15 +457,15 @@ export default function AdminPage() {
                   <span className="text-[0.65rem] text-[#b57edc] bg-purple-900/30 border border-purple-500/40 rounded px-1.5 py-0.5">🔒 SCOR ASCUNS</span>
                 )}
                 {u.canEditQuestions && (
-                  <span className="text-[0.65rem] text-[#f5c97a] bg-amber-900/30 border border-amber-500/40 rounded px-1.5 py-0.5">✏️ EDITOR</span>
+                  <span className="text-[0.65rem] text-[#9ec6c1] bg-amber-900/30 border border-amber-500/40 rounded px-1.5 py-0.5">✏️ EDITOR</span>
                 )}
               </div>
-              <span className="text-[#c8a070] text-[0.75rem]">{u.email || "—"}</span>
+              <span className="text-[#8fb0ac] text-[0.75rem]">{u.email || "—"}</span>
               <div className="flex items-center gap-2">
-                <span className="text-[#a07848] text-[0.7rem]">{new Date(u.createdAt).toLocaleDateString("ro-RO")}</span>
+                <span className="text-[#75938f] text-[0.7rem]">{new Date(u.createdAt).toLocaleDateString("ro-RO")}</span>
                 <button
                   onClick={() => renameUser(u)}
-                  className="text-[#c8a070] hover:text-[#f5c97a] text-[0.8rem] cursor-pointer"
+                  className="text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.8rem] cursor-pointer"
                   title="Redenumește"
                 >
                   ✏️
@@ -476,8 +476,8 @@ export default function AdminPage() {
                       onClick={() => toggleEditor(u)}
                       className={`text-[0.7rem] border rounded px-1.5 py-0.5 cursor-pointer hover:brightness-110 ${
                         u.canEditQuestions
-                          ? "text-[#f5c97a] border-amber-500/40 hover:bg-amber-900/30"
-                          : "text-[#c8a070] border-[#7a4e22] hover:bg-[#3d2510]"
+                          ? "text-[#9ec6c1] border-amber-500/40 hover:bg-amber-900/30"
+                          : "text-[#8fb0ac] border-[#1e3a34] hover:bg-[#122420]"
                       }`}
                       title={u.canEditQuestions ? "Revocă dreptul de editare" : "Dă drept de editare a întrebărilor"}
                     >
@@ -488,7 +488,7 @@ export default function AdminPage() {
                       className={`text-[0.7rem] border rounded px-1.5 py-0.5 cursor-pointer hover:brightness-110 ${
                         u.hideScore
                           ? "text-[#b57edc] border-purple-500/40 hover:bg-purple-900/30"
-                          : "text-[#c8a070] border-[#7a4e22] hover:bg-[#3d2510]"
+                          : "text-[#8fb0ac] border-[#1e3a34] hover:bg-[#122420]"
                       }`}
                       title={u.hideScore ? "Arată scorul public" : "Ascunde scorul public"}
                     >
@@ -499,7 +499,7 @@ export default function AdminPage() {
                       className={`text-[0.7rem] border rounded px-1.5 py-0.5 cursor-pointer hover:brightness-110 ${
                         u.isMuted
                           ? "text-green-400 border-green-500/40 hover:bg-green-900/30"
-                          : "text-[#c8a070] border-[#7a4e22] hover:bg-[#3d2510]"
+                          : "text-[#8fb0ac] border-[#1e3a34] hover:bg-[#122420]"
                       }`}
                       title={u.isMuted ? "Dezmută" : "Mută"}
                     >
@@ -523,15 +523,15 @@ export default function AdminPage() {
       )}
 
       {/* questions browser */}
-      <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-5 flex flex-col gap-3">
+      <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-5 flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">
-            Întrebări {qLoading && <span className="text-[#a07848] text-[0.7rem]">(se încarcă…)</span>}
+          <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">
+            Întrebări {qLoading && <span className="text-[#75938f] text-[0.7rem]">(se încarcă…)</span>}
           </h3>
           <div className="flex gap-2">
             <button
               onClick={openImport}
-              className="text-[0.75rem] border-2 border-[#7a4e22] rounded-lg px-3 py-2 text-[#c8a070] hover:bg-[#3d2510] cursor-pointer whitespace-nowrap"
+              className="text-[0.75rem] border-2 border-[#1e3a34] rounded-lg px-3 py-2 text-[#8fb0ac] hover:bg-[#122420] cursor-pointer whitespace-nowrap"
               title="Importă întrebări din CSV (grilă sau rapidă)"
             >
               ⬆️ Importă
@@ -540,12 +540,12 @@ export default function AdminPage() {
               value={qSearch}
               onChange={(e) => setQSearch(e.target.value)}
               placeholder="Caută în întrebări…"
-              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[0.8rem] p-2 w-52 outline-none focus:border-[#c87030]"
+              className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] text-[0.8rem] p-2 w-52 outline-none focus:border-[#6f9c99]"
             />
             <select
               value={qStatus}
               onChange={(e) => setQStatus(e.target.value as typeof qStatus)}
-              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[0.8rem] p-2 outline-none cursor-pointer"
+              className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] text-[0.8rem] p-2 outline-none cursor-pointer"
             >
               <option value="reported">Raportate</option>
               <option value="all">Toate</option>
@@ -554,24 +554,24 @@ export default function AdminPage() {
             </select>
         </div>
         {qCounts && (
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[0.75rem] border-t border-[#7a4e2250] pt-2.5">
-            <span className="text-[#c8a070]">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[0.75rem] border-t border-[#1e3a3450] pt-2.5">
+            <span className="text-[#8fb0ac]">
               ✅ Active:{" "}
               <strong className="text-[#8ee08a] text-[0.85rem]">{qCounts.active.total}</strong>{" "}
-              <span className="text-[#a07848]">
+              <span className="text-[#75938f]">
                 — {qCounts.active.grila} grilă · {qCounts.active.rapide} rapidă
                 {qCounts.active.other ? ` · ${qCounts.active.other} altele` : ""}
               </span>
             </span>
-            <span className="text-[#c8a070]">
+            <span className="text-[#8fb0ac]">
               ⛔ Inactive:{" "}
               <strong className="text-[#e0928a] text-[0.85rem]">{qCounts.inactive.total}</strong>{" "}
-              <span className="text-[#a07848]">
+              <span className="text-[#75938f]">
                 — {qCounts.inactive.grila} grilă · {qCounts.inactive.rapide} rapidă
                 {qCounts.inactive.other ? ` · ${qCounts.inactive.other} altele` : ""}
               </span>
             </span>
-            <span className="text-[#a07848]">
+            <span className="text-[#75938f]">
               total {qCounts.active.total + qCounts.inactive.total}
             </span>
           </div>
@@ -583,7 +583,7 @@ export default function AdminPage() {
           className="flex flex-col min-h-[45vh] max-h-[72vh] overflow-y-auto rounded-lg"
         >
           {questions.length === 0 ? (
-            <div className="text-[#a07848] text-[0.8rem] text-center p-4">
+            <div className="text-[#75938f] text-[0.8rem] text-center p-4">
               {qStatus === "reported"
                 ? "Nicio întrebare raportată — apar aici doar întrebările raportate de jucători."
                 : "Nicio întrebare găsită."}
@@ -595,53 +595,53 @@ export default function AdminPage() {
                   <form
                     key={q.id}
                     onSubmit={saveEdit}
-                    className="flex flex-col gap-2.5 p-3 border-b-2 border-[#c87030]/40 bg-white/5"
+                    className="flex flex-col gap-2.5 p-3 border-b-2 border-[#6f9c99]/40 bg-white/5"
                   >
-                    <div className="text-[0.68rem] font-mono text-[#a07848]">ID {q.id}</div>
+                    <div className="text-[0.68rem] font-mono text-[#75938f]">ID {q.id}</div>
                     <textarea
                       required
                       maxLength={1000}
                       rows={3}
                       value={editPrompt}
                       onChange={(e) => setEditPrompt(e.target.value)}
-                      className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#e8d8b0] p-2.5 outline-none focus:border-[#c87030] resize-y"
+                      className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#cbdcda] p-2.5 outline-none focus:border-[#6f9c99] resize-y"
                     />
                     <div className="flex gap-4">
-                      <label className="flex items-center gap-1.5 text-[0.8rem] text-[#c8a070] cursor-pointer">
+                      <label className="flex items-center gap-1.5 text-[0.8rem] text-[#8fb0ac] cursor-pointer">
                         <input
                           type="radio"
                           name={`qtype-${q.id}`}
                           checked={editType === "rapide"}
                           onChange={() => switchEditType("rapide")}
-                          className="accent-[#c87030] cursor-pointer"
+                          className="accent-[#6f9c99] cursor-pointer"
                         />
                         ⚡ Rapide (răspuns numeric)
                       </label>
-                      <label className="flex items-center gap-1.5 text-[0.8rem] text-[#c8a070] cursor-pointer">
+                      <label className="flex items-center gap-1.5 text-[0.8rem] text-[#8fb0ac] cursor-pointer">
                         <input
                           type="radio"
                           name={`qtype-${q.id}`}
                           checked={editType === "grila"}
                           onChange={() => switchEditType("grila")}
-                          className="accent-[#c87030] cursor-pointer"
+                          className="accent-[#6f9c99] cursor-pointer"
                         />
                         🎯 Grilă (4 variante)
                       </label>
                     </div>
                     {editType === "rapide" ? (
                       <div className="flex flex-col gap-1.5">
-                        <div className="text-[0.75rem] text-[#c8a070]">Răspunsul corect (număr între -500 și 10.000.000):</div>
+                        <div className="text-[0.75rem] text-[#8fb0ac]">Răspunsul corect (număr între -500 și 10.000.000):</div>
                         <input
                           value={editAnswer}
                           onChange={(e) => setEditAnswer(e.target.value.replace(/[^0-9-]/g, ""))}
                           inputMode="numeric"
                           placeholder="ex: 50"
-                          className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2 outline-none focus:border-[#c87030]"
+                          className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] p-2 outline-none focus:border-[#6f9c99]"
                         />
                       </div>
                     ) : (
                       <>
-                        <div className="text-[0.75rem] text-[#c8a070]">Exact 4 variante — marchează-o pe cea corectă:</div>
+                        <div className="text-[0.75rem] text-[#8fb0ac]">Exact 4 variante — marchează-o pe cea corectă:</div>
                         <div className="flex flex-col gap-1.5">
                           {editOptions.map((o, i) => (
                             <div key={i} className="flex items-center gap-2">
@@ -651,14 +651,14 @@ export default function AdminPage() {
                                 checked={o.isCorrect}
                                 onChange={() => setEditOptions((opts) => opts.map((x, j) => ({ ...x, isCorrect: j === i })))}
                                 title="Corectă"
-                                className="accent-[#c87030] cursor-pointer shrink-0"
+                                className="accent-[#6f9c99] cursor-pointer shrink-0"
                               />
                               <input
                                 value={o.text}
                                 onChange={(e) => setEditOptions((opts) => opts.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
                                 maxLength={500}
                                 placeholder={`Varianta ${i + 1}`}
-                                className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#e8d8b0] p-2 outline-none focus:border-[#c87030]"
+                                className="flex-1 bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#cbdcda] p-2 outline-none focus:border-[#6f9c99]"
                               />
                             </div>
                           ))}
@@ -670,7 +670,7 @@ export default function AdminPage() {
                       <button
                         type="submit"
                         disabled={editBusy}
-                        className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel px-5 py-2 hover:brightness-110 disabled:opacity-50 cursor-pointer"
+                        className="bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c160] rounded-lg text-[#e2eeeb] font-cinzel px-5 py-2 hover:brightness-110 disabled:opacity-50 cursor-pointer"
                       >
                         {editBusy ? "Se salvează…" : "💾 Salvează"}
                       </button>
@@ -680,7 +680,7 @@ export default function AdminPage() {
                           setEditing(null);
                           setEditMsg(null);
                         }}
-                        className="border-2 border-[#7a4e22] rounded-lg text-[#c8a070] px-4 py-2 hover:bg-[#3d2510] cursor-pointer"
+                        className="border-2 border-[#1e3a34] rounded-lg text-[#8fb0ac] px-4 py-2 hover:bg-[#122420] cursor-pointer"
                       >
                         Anulează
                       </button>
@@ -690,7 +690,7 @@ export default function AdminPage() {
                   <div key={q.id} className="grid grid-cols-[1fr_auto] gap-3 items-start text-[0.82rem] p-2.5 rounded odd:bg-white/5">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-[0.68rem] text-[#a07848]">ID {q.id.slice(0, 8)}</span>
+                        <span className="font-mono text-[0.68rem] text-[#75938f]">ID {q.id.slice(0, 8)}</span>
                         {q.reportCount > 0 && (
                           <span className="text-[0.65rem] text-red-400 bg-red-900/30 border border-red-500/40 rounded px-1.5 py-0.5">
                             ⚠ {q.reportCount} raportări
@@ -699,18 +699,18 @@ export default function AdminPage() {
                         {q.isPublished ? (
                           <span className="text-[0.65rem] text-green-400 border border-green-500/40 rounded px-1.5 py-0.5">publicată</span>
                         ) : (
-                          <span className="text-[0.65rem] text-[#a07848] border border-[#7a4e22] rounded px-1.5 py-0.5">dezactivată</span>
+                          <span className="text-[0.65rem] text-[#75938f] border border-[#1e3a34] rounded px-1.5 py-0.5">dezactivată</span>
                         )}
                       </div>
-                      <div className="text-[#e8d8b0] leading-snug mt-1">{q.prompt}</div>
-                      <div className="text-[0.72rem] text-[#c8a070] mt-0.5">
-                        Corect: <strong className="text-[#f5c97a]">{q.correctAnswer ?? "—"}</strong>
+                      <div className="text-[#cbdcda] leading-snug mt-1">{q.prompt}</div>
+                      <div className="text-[0.72rem] text-[#8fb0ac] mt-0.5">
+                        Corect: <strong className="text-[#9ec6c1]">{q.correctAnswer ?? "—"}</strong>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                       <button
                         onClick={() => openEdit(q)}
-                        className="text-[0.72rem] border border-[#7a4e22] rounded-lg px-2.5 py-1.5 text-[#c8a070] hover:bg-[#3d2510] cursor-pointer"
+                        className="text-[0.72rem] border border-[#1e3a34] rounded-lg px-2.5 py-1.5 text-[#8fb0ac] hover:bg-[#122420] cursor-pointer"
                         title="Editează întrebarea"
                       >
                         ✏️ Editează
@@ -738,7 +738,7 @@ export default function AdminPage() {
                   </div>
                 )
               )}
-              <div className="text-center text-[#a07848] text-[0.72rem] p-3">
+              <div className="text-center text-[#75938f] text-[0.72rem] p-3">
                 {qLoading
                   ? "se încarcă…"
                   : qHasMore
@@ -753,19 +753,19 @@ export default function AdminPage() {
       {/* import-questions modal */}
       {impOpen && (
         <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 flex flex-col gap-3">
+          <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">⬆️ Importă întrebări (CSV)</h3>
-              <button type="button" onClick={() => setImpOpen(false)} className="text-[#c8a070] hover:text-[#f5c97a] cursor-pointer">
+              <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">⬆️ Importă întrebări (CSV)</h3>
+              <button type="button" onClick={() => setImpOpen(false)} className="text-[#8fb0ac] hover:text-[#9ec6c1] cursor-pointer">
                 ✕
               </button>
             </div>
-            <div className="text-[0.72rem] text-[#c8a070] leading-relaxed flex flex-col gap-0.5">
+            <div className="text-[0.72rem] text-[#8fb0ac] leading-relaxed flex flex-col gap-0.5">
               <div>
-                🎯 Grilă: <span className="font-mono text-[#e8d8b0]">întrebare;A;B;C;D;A</span> — ultima coloană = varianta corectă (A/B/C/D)
+                🎯 Grilă: <span className="font-mono text-[#cbdcda]">întrebare;A;B;C;D;A</span> — ultima coloană = varianta corectă (A/B/C/D)
               </div>
               <div>
-                ⚡ Rapidă: <span className="font-mono text-[#e8d8b0]">întrebare;răspuns</span> — răspuns numeric
+                ⚡ Rapidă: <span className="font-mono text-[#cbdcda]">întrebare;răspuns</span> — răspuns numeric
               </div>
               <div>
                 Separator <span className="font-mono">;</span> (merge și tab / virgulă). Se publică automat; duplicatele sunt sărite.
@@ -775,7 +775,7 @@ export default function AdminPage() {
               type="file"
               accept=".csv,text/csv,text/plain"
               onChange={(e) => onImportFile(e.target.files?.[0] ?? null)}
-              className="text-[0.75rem] text-[#c8a070] file:mr-3 file:bg-[#1a0e05] file:border-2 file:border-[#7a4e22] file:rounded-lg file:text-[#c8a070] file:px-3 file:py-1.5 file:cursor-pointer cursor-pointer"
+              className="text-[0.75rem] text-[#8fb0ac] file:mr-3 file:bg-[#050d0b] file:border-2 file:border-[#1e3a34] file:rounded-lg file:text-[#8fb0ac] file:px-3 file:py-1.5 file:cursor-pointer cursor-pointer"
             />
             <textarea
               value={impText}
@@ -787,21 +787,21 @@ export default function AdminPage() {
               }}
               rows={10}
               placeholder={"Ce tehnica revolutionara de perspectiva...;Chiaroscuro;Sfumato;Tenebrism;Camaieu;B\nIn ce an a avut loc Marea Unire?;1918"}
-              className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#e8d8b0] text-[0.78rem] p-2.5 outline-none focus:border-[#c87030] resize-y font-mono"
+              className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#cbdcda] text-[0.78rem] p-2.5 outline-none focus:border-[#6f9c99] resize-y font-mono"
             />
             {impFileName && (
-              <div className="text-[0.72rem] text-[#c8a070]">
+              <div className="text-[0.72rem] text-[#8fb0ac]">
                 📄 {impFileName} — codificare detectată automat la verificare
                 {impPreview?.encoding ? `: ${impPreview.encoding}` : ""}
               </div>
             )}
             {impPreview && (
-              <div className="text-[0.75rem] text-[#e8d8b0] bg-[#1a0e05] border border-[#7a4e22] rounded-lg p-2.5 flex flex-col gap-1">
+              <div className="text-[0.75rem] text-[#cbdcda] bg-[#050d0b] border border-[#1e3a34] rounded-lg p-2.5 flex flex-col gap-1">
                 <div>
-                  De importat: <strong className="text-[#f5c97a]">{impPreview.importable}</strong> ({impPreview.grila} grilă +{" "}
+                  De importat: <strong className="text-[#9ec6c1]">{impPreview.importable}</strong> ({impPreview.grila} grilă +{" "}
                   {impPreview.rapide} rapidă)
                 </div>
-                <div className="text-[#c8a070]">
+                <div className="text-[#8fb0ac]">
                   Duplicate sărite: {impPreview.duplicates} · Invalide: {impPreview.invalidCount} · Total linii: {impPreview.total}
                 </div>
                 {impPreview.invalid.length > 0 && (
@@ -824,7 +824,7 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => runImport(true)}
                 disabled={impBusy || (!impText.trim() && !impB64)}
-                className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#c8a070] px-4 py-2 hover:bg-[#3d2510] disabled:opacity-50 cursor-pointer"
+                className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#8fb0ac] px-4 py-2 hover:bg-[#122420] disabled:opacity-50 cursor-pointer"
               >
                 🔍 Verifică
               </button>
@@ -832,7 +832,7 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => runImport(false)}
                 disabled={impBusy || !impPreview || impPreview.importable === 0}
-                className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel px-5 py-2 hover:brightness-110 disabled:opacity-50 cursor-pointer"
+                className="bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c160] rounded-lg text-[#e2eeeb] font-cinzel px-5 py-2 hover:brightness-110 disabled:opacity-50 cursor-pointer"
               >
                 {impBusy ? "Se importă…" : `⬆️ Importă${impPreview ? " " + impPreview.importable : ""}`}
               </button>

@@ -301,19 +301,19 @@ export default function TrainPage() {
         <div className="grid sm:grid-cols-2 gap-4">
           <button
             onClick={() => startGame("rapide")}
-            className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-6 flex flex-col gap-2 text-left hover:border-[#c87030] hover:brightness-110 cursor-pointer transition-all"
+            className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-6 flex flex-col gap-2 text-left hover:border-[#6f9c99] hover:brightness-110 cursor-pointer transition-all"
           >
             <span className="text-[2rem]">⚡</span>
-            <span className="font-cinzel text-[#f5c97a] text-[1.1rem] tracking-wider">Train Întrebări Rapide</span>
-            <span className="text-[#c8a070] text-[0.8rem]">Scrie răspunsul numeric (poate fi negativ). {TIMER_SECONDS}s / întrebare.</span>
+            <span className="font-cinzel text-[#9ec6c1] text-[1.1rem] tracking-wider">Train Întrebări Rapide</span>
+            <span className="text-[#8fb0ac] text-[0.8rem]">Scrie răspunsul numeric (poate fi negativ). {TIMER_SECONDS}s / întrebare.</span>
           </button>
           <button
             onClick={() => startGame("grila")}
-            className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-6 flex flex-col gap-2 text-left hover:border-[#c87030] hover:brightness-110 cursor-pointer transition-all"
+            className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-6 flex flex-col gap-2 text-left hover:border-[#6f9c99] hover:brightness-110 cursor-pointer transition-all"
           >
             <span className="text-[2rem]">🎯</span>
-            <span className="font-cinzel text-[#f5c97a] text-[1.1rem] tracking-wider">Train Întrebări Grilă</span>
-            <span className="text-[#c8a070] text-[0.8rem]">Alege una din cele 4 variante. {TIMER_SECONDS}s / întrebare.</span>
+            <span className="font-cinzel text-[#9ec6c1] text-[1.1rem] tracking-wider">Train Întrebări Grilă</span>
+            <span className="text-[#8fb0ac] text-[0.8rem]">Alege una din cele 4 variante. {TIMER_SECONDS}s / întrebare.</span>
           </button>
         </div>
       </div>
@@ -321,7 +321,7 @@ export default function TrainPage() {
   }
 
   if (phase === "loading") {
-    return <div className="text-center font-cinzel text-[#f5c97a] py-16">Se încarcă întrebările…</div>;
+    return <div className="text-center font-cinzel text-[#9ec6c1] py-16">Se încarcă întrebările…</div>;
   }
 
   if (phase === "finished") {
@@ -329,35 +329,35 @@ export default function TrainPage() {
     const accuracy = total ? Math.round((correct / total) * 100) : 0;
     return (
       <>
-      <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-[520px] mx-auto p-7 flex flex-col gap-4 text-center">
-        <h2 className="font-cinzel text-[#f5c97a] text-[1.4rem]">🏆 Terminat!</h2>
-        <div className="text-[0.95rem] leading-[1.9] text-[#d0c090]">
-          Corecte: <strong className="text-[#f5c97a]">{correct} / {total}</strong> ({accuracy}%)<br />
+      <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full max-w-[520px] mx-auto p-7 flex flex-col gap-4 text-center">
+        <h2 className="font-cinzel text-[#9ec6c1] text-[1.4rem]">🏆 Terminat!</h2>
+        <div className="text-[0.95rem] leading-[1.9] text-[#c2d4d2]">
+          Corecte: <strong className="text-[#9ec6c1]">{correct} / {total}</strong> ({accuracy}%)<br />
           Greșite: <strong>{wrong}</strong><br />
           Timp expirat: <strong>{timeouts}</strong>
         </div>
         <div className="flex gap-2.5 flex-wrap">
           <button
             onClick={() => startGame(mode)}
-            className="flex-1 min-w-[130px] bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-110 cursor-pointer"
+            className="flex-1 min-w-[130px] bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c160] rounded-lg text-[#e2eeeb] font-cinzel p-3 hover:brightness-110 cursor-pointer"
           >
             Încă o dată
           </button>
           <button
             onClick={() => setShowReview(true)}
-            className="flex-1 min-w-[130px] bg-gradient-to-br from-[#7a4010] to-[#3d2010] border-2 border-[#c88040a0] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-125 cursor-pointer"
+            className="flex-1 min-w-[130px] bg-gradient-to-br from-[#2c514c] to-[#101f1c] border-2 border-[#4d7a76a0] rounded-lg text-[#e2eeeb] font-cinzel p-3 hover:brightness-125 cursor-pointer"
           >
             Recenzie ({review.length})
           </button>
           <button
             onClick={() => setMode(null)}
-            className="flex-1 min-w-[130px] bg-gradient-to-br from-[#3d2010] to-[#2a1608] border-2 border-[#7a4e22] rounded-lg text-[#c8a070] font-cinzel p-3 hover:brightness-125 cursor-pointer"
+            className="flex-1 min-w-[130px] bg-gradient-to-br from-[#101f1c] to-[#0c1a17] border-2 border-[#1e3a34] rounded-lg text-[#8fb0ac] font-cinzel p-3 hover:brightness-125 cursor-pointer"
           >
             Schimbă modul
           </button>
           <button
             onClick={() => (window.location.href = "/")}
-            className="flex-1 min-w-[130px] bg-gradient-to-br from-[#7a4010] to-[#3d2010] border-2 border-[#c88040a0] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-125 cursor-pointer"
+            className="flex-1 min-w-[130px] bg-gradient-to-br from-[#2c514c] to-[#101f1c] border-2 border-[#4d7a76a0] rounded-lg text-[#e2eeeb] font-cinzel p-3 hover:brightness-125 cursor-pointer"
           >
             ← Înapoi
           </button>
@@ -367,16 +367,16 @@ export default function TrainPage() {
       {/* review modal */}
       {showReview && (
         <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#7a4e2260]">
-              <h3 className="font-cinzel text-[#f5c97a] text-[0.95rem] tracking-widest">📋 Recenzia sesiunii</h3>
-              <button onClick={() => setShowReview(false)} className="text-[#c8a070] hover:text-[#f5c97a] cursor-pointer text-[1.1rem]" title="Închide">
+          <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#1e3a3460]">
+              <h3 className="font-cinzel text-[#9ec6c1] text-[0.95rem] tracking-widest">📋 Recenzia sesiunii</h3>
+              <button onClick={() => setShowReview(false)} className="text-[#8fb0ac] hover:text-[#9ec6c1] cursor-pointer text-[1.1rem]" title="Închide">
                 ✕
               </button>
             </div>
             <div className="overflow-y-auto p-4 flex flex-col gap-2">
               {review.length === 0 && (
-                <div className="text-[#a07848] text-[0.8rem] text-center p-4">Nicio întrebare înregistrată.</div>
+                <div className="text-[#75938f] text-[0.8rem] text-center p-4">Nicio întrebare înregistrată.</div>
               )}
               {review.map((r, i) => (
                 <div
@@ -384,18 +384,18 @@ export default function TrainPage() {
                   className={`rounded-xl border-2 p-3 flex flex-col gap-1.5 ${r.isCorrect ? "bg-green-900/15 border-green-500/30" : "bg-red-900/15 border-red-500/30"}`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[0.75rem] text-[#a07848]">
-                      #{i + 1} · <span className="font-mono text-[#c8a070]">ID {r.id.slice(0, 8)}</span>
+                    <span className="text-[0.75rem] text-[#75938f]">
+                      #{i + 1} · <span className="font-mono text-[#8fb0ac]">ID {r.id.slice(0, 8)}</span>
                     </span>
                     <span className="text-[0.85rem]">{r.isCorrect ? "✔" : r.timeout ? "⏱" : "✖"}</span>
                   </div>
-                  <div className="text-[0.9rem] text-[#e8d8b0] leading-snug">{r.prompt}</div>
+                  <div className="text-[0.9rem] text-[#cbdcda] leading-snug">{r.prompt}</div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.8rem]">
                     <span className={r.isCorrect ? "text-green-400" : "text-red-400"}>
                       Ai răspuns: <strong>{r.myAnswer}</strong>
                     </span>
                     {!r.isCorrect && (
-                      <span className="text-[#f5c97a]">
+                      <span className="text-[#9ec6c1]">
                         Corect: <strong>{r.correctAnswer}</strong>
                       </span>
                     )}
@@ -405,14 +405,14 @@ export default function TrainPage() {
                           href={`/admin?search=${r.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[0.7rem] text-[#c8a070] border border-[#7a4e22] rounded px-2 py-0.5 hover:bg-[#3d2510]"
+                          className="text-[0.7rem] text-[#8fb0ac] border border-[#1e3a34] rounded px-2 py-0.5 hover:bg-[#122420]"
                           title="Editează întrebarea (se deschide în filă nouă)"
                         >
                           ✏️ Editează
                         </a>
                       )}
                       {reported.has(r.id) ? (
-                        <span className="text-[#c8a070] text-[0.7rem]">Raportată ✓</span>
+                        <span className="text-[#8fb0ac] text-[0.7rem]">Raportată ✓</span>
                       ) : (
                         <button
                           onClick={() => reportQuestion(r.id)}
@@ -443,35 +443,35 @@ export default function TrainPage() {
       <div className="flex items-center justify-between">
         <button
           onClick={backToLobby}
-          className="text-[#c8a070] hover:text-[#f5c97a] text-[0.85rem] font-cinzel border border-[#7a4e22] rounded-lg px-3 py-1.5 bg-[#2a1608] cursor-pointer"
+          className="text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.85rem] font-cinzel border border-[#1e3a34] rounded-lg px-3 py-1.5 bg-[#0c1a17] cursor-pointer"
         >
           ← Înapoi
         </button>
-        <span className="text-[0.7rem] text-[#a07848]">{mode === "rapide" ? "Întrebări rapide" : "Întrebări grilă"}</span>
+        <span className="text-[0.7rem] text-[#75938f]">{mode === "rapide" ? "Întrebări rapide" : "Întrebări grilă"}</span>
       </div>
 
       {/* progress + timer */}
-      <div className="flex items-center gap-3 text-[0.8rem] text-[#c8a070]">
+      <div className="flex items-center gap-3 text-[0.8rem] text-[#8fb0ac]">
         <span className="min-w-[70px]">Întrebarea {idx + 1} / {questions.length}</span>
-        <div className="flex-1 h-1.5 bg-[#1a0e05] rounded-[3px] overflow-hidden border border-[#7a4e2240]">
-          <div className="h-full bg-gradient-to-r from-[#c87030] to-[#f5c97a] transition-all duration-100" style={{ width: `${((idx + (feedback ? 1 : 0)) / questions.length) * 100}%` }}></div>
+        <div className="flex-1 h-1.5 bg-[#050d0b] rounded-[3px] overflow-hidden border border-[#1e3a3440]">
+          <div className="h-full bg-gradient-to-r from-[#6f9c99] to-[#9ec6c1] transition-all duration-100" style={{ width: `${((idx + (feedback ? 1 : 0)) / questions.length) * 100}%` }}></div>
         </div>
-        <span className="text-[#f5c97a] font-bold">{correct}✓ {wrong}✗</span>
+        <span className="text-[#9ec6c1] font-bold">{correct}✓ {wrong}✗</span>
       </div>
 
       {/* question card */}
-      <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-7 flex flex-col gap-5">
+      <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-7 flex flex-col gap-5">
         <div className="flex items-center gap-3">
           <div
             className={`w-[52px] h-[52px] rounded-full border-2 flex items-center justify-center font-cinzel text-[1.1rem] shrink-0 ${
-              timeLeft <= 3 && !feedback ? "border-red-500 text-red-400" : "border-[#f5c97a] text-[#f5c97a]"
+              timeLeft <= 3 && !feedback ? "border-red-500 text-red-400" : "border-[#9ec6c1] text-[#9ec6c1]"
             }`}
           >
             {Math.ceil(timeLeft)}
           </div>
-          <div className="flex-1 h-2 bg-[#1a0e05] rounded overflow-hidden border border-[#7a4e2240]">
+          <div className="flex-1 h-2 bg-[#050d0b] rounded overflow-hidden border border-[#1e3a3440]">
             <div
-              className={`h-full transition-all duration-100 ${timeLeft <= 3 ? "bg-red-500" : "bg-gradient-to-r from-[#c87030] to-[#f5c97a]"}`}
+              className={`h-full transition-all duration-100 ${timeLeft <= 3 ? "bg-red-500" : "bg-gradient-to-r from-[#6f9c99] to-[#9ec6c1]"}`}
               style={{ width: `${pct}%` }}
             ></div>
           </div>
@@ -480,7 +480,7 @@ export default function TrainPage() {
         <p className="font-cinzel text-[1.05rem] leading-relaxed min-h-[60px]">{q?.prompt}</p>
 
         {!isGrila && (q as RapideQuestion).responseType && (
-          <div className="self-start text-[0.7rem] text-[#2a1608] bg-[#c87030]/90 rounded-full px-2.5 py-1 font-bold tracking-wide">
+          <div className="self-start text-[0.7rem] text-[#0c1a17] bg-[#6f9c99]/90 rounded-full px-2.5 py-1 font-bold tracking-wide">
             Răspuns: {(q as RapideQuestion).responseType}
           </div>
         )}
@@ -488,13 +488,13 @@ export default function TrainPage() {
         {isGrila ? (
           <div className="grid grid-cols-1 gap-2.5">
             {(q as GrilaQuestion).options.map((opt, i) => {
-              let cls = "bg-[#1a0e05] border-2 border-[#7a4e22] hover:border-[#c87030] hover:bg-[#2a1608]";
+              let cls = "bg-[#050d0b] border-2 border-[#1e3a34] hover:border-[#6f9c99] hover:bg-[#0c1a17]";
               if (feedback) {
                 const isCorrectOpt = i === (q as GrilaQuestion).correctIndex;
                 const isSelected = i === selectedOption;
-                if (isCorrectOpt) cls = "bg-green-900/30 border-green-500/60 text-[#f5e8c0]";
-                else if (isSelected) cls = "bg-red-900/30 border-red-500/60 text-[#f5e8c0]";
-                else cls = "bg-[#1a0e05] border-[#4a3a20] opacity-60";
+                if (isCorrectOpt) cls = "bg-green-900/30 border-green-500/60 text-[#e2eeeb]";
+                else if (isSelected) cls = "bg-red-900/30 border-red-500/60 text-[#e2eeeb]";
+                else cls = "bg-[#050d0b] border-[#16302b] opacity-60";
               }
               return (
                 <button
@@ -506,7 +506,7 @@ export default function TrainPage() {
                   }}
                   className={`${cls} rounded-xl text-left p-3.5 text-[0.95rem] cursor-pointer disabled:cursor-default transition-all`}
                 >
-                  <span className="font-cinzel text-[#c87030] mr-2">{String.fromCharCode(65 + i)}.</span>
+                  <span className="font-cinzel text-[#6f9c99] mr-2">{String.fromCharCode(65 + i)}.</span>
                   {opt.text}
                 </button>
               );
@@ -531,12 +531,12 @@ export default function TrainPage() {
               }}
               disabled={!!feedback}
               placeholder="Răspuns numeric…"
-              className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[1.3rem] text-center p-2.5 outline-none focus:border-[#c87030] disabled:opacity-50"
+              className="flex-1 bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] text-[1.3rem] text-center p-2.5 outline-none focus:border-[#6f9c99] disabled:opacity-50"
             />
             <button
               onClick={() => handleAnswer(parseInt(inputValue, 10) === (q as RapideQuestion).answer, { answer: inputValue })}
               disabled={!!feedback || inputValue === ""}
-              className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel px-4 hover:brightness-110 disabled:opacity-40 cursor-pointer"
+              className="bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c160] rounded-lg text-[#e2eeeb] font-cinzel px-4 hover:brightness-110 disabled:opacity-40 cursor-pointer"
             >
               OK
             </button>
@@ -569,10 +569,10 @@ export default function TrainPage() {
                 {feedback.state === "correct" ? "Corect!" : feedback.state === "wrong" ? "Greșit!" : "Timp expirat!"}
               </div>
             ) : null}
-            <div className="text-[0.85rem] text-[#d0b888]">
-              Răspuns corect: <strong className="text-[#f5c97a]">{feedback.reveal}</strong>
+            <div className="text-[0.85rem] text-[#c2d4d2]">
+              Răspuns corect: <strong className="text-[#9ec6c1]">{feedback.reveal}</strong>
               {feedback.elapsed != null && (
-                <span className="ml-3">Timp: <strong className="text-[#f5c97a]">{(feedback.elapsed / 1000).toFixed(3).replace(".", ",")}s</strong></span>
+                <span className="ml-3">Timp: <strong className="text-[#9ec6c1]">{(feedback.elapsed / 1000).toFixed(3).replace(".", ",")}s</strong></span>
               )}
             </div>
           </div>

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Cinzel, Lato } from "next/font/google";
+import { Jost, Lato } from "next/font/google";
 import "./globals.css";
 
-const cinzel = Cinzel({
-  variable: "--font-cinzel",
+const display = Jost({
+  variable: "--font-display",
   subsets: ["latin"],
+  weight: ["300", "400", "500"],
 });
 
 const lato = Lato({
@@ -14,8 +15,15 @@ const lato = Lato({
 });
 
 export const metadata: Metadata = {
-  title: "MAHALADOR",
-  description: "Antrenament de cultură generală",
+  title: "ST0NE QUIZ",
+  description: "Cultură generală. Antrenament, dueluri 1v1 și lideri.",
+  applicationName: "ST0NE QUIZ",
+  openGraph: {
+    title: "ST0NE QUIZ",
+    description: "Cultură generală. Antrenament, dueluri 1v1 și lideri.",
+    siteName: "ST0NE QUIZ",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -25,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ro">
-      <body className={`${cinzel.variable} ${lato.variable} antialiased`}>
+      <body className={`${display.variable} ${lato.variable} antialiased`}>
         {children}
       </body>
     </html>
