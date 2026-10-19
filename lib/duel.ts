@@ -277,8 +277,12 @@ export type DuelState = {
   history: {
     round: number;
     mode: "grila" | "rapide";
+    /** id of the question behind the round — lets players report it / editors fix it */
+    questionId: string;
     prompt: string;
     reveal: string;
+    /** grilă variants with the correct flag (editors need it to prefill the inline editor) */
+    options: { text: string; isCorrect: boolean }[] | null;
     winnerId: string | null;
     answers: { userId: string; isCorrect: boolean; elapsedMs: number; score: number | null; mine: boolean }[];
   }[];
@@ -300,18 +304,44 @@ export async function buildDuelState(duelId: string, viewerId: string): Promise<
 
   const totalRounds = Math.max(DUEL_BASE_ROUNDS, plan.length);
   const open = duel.status === "IN_PROGRESS" && duel.currentRound < plan.length;
+  // Once the match is over the round list doubles as a review screen: editors fix
+  // a question right there, so read the live text back instead of the plan
+  // snapshot (otherwise the fix would only be visible to the player who made it).
+  const live = open
+    ? new Map<string, { prompt: string; options: { text: string; isCorrect: boolean }[] }>()
+    : new Map(
+        (
+          await prisma.question.findMany({
+            where: { id: { in: plan.slice(0, duel.currentRound).map((e) => e.questionId) } },
+            select: {
+              id: true,
+              prompt: true,
+              options: { select: { text: true, isCorrect: true }, orderBy: { position: "asc" } },
+            },
+          })
+        ).map((q) => [q.id, { prompt: q.prompt, options: q.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })) }]),
+      );
 
   const history = plan.slice(0, duel.currentRound).map((entry, i) => {
     const mine = answers.filter((a) => a.round === i);
-    const reveal =
-      entry.mode === "grila"
+    const now = live.get(entry.questionId);
+    const options = entry.mode === "grila" ? (now?.options.length ? now.options : null) : null;
+    const reveal = options
+      ? options.find((o) => o.isCorrect)?.text ?? ""
+      : entry.mode === "grila"
         ? entry.options.find((o) => o.id === entry.correctOptionId)?.text ?? ""
         : String(entry.answer);
     return {
       round: i,
       mode: entry.mode,
-      prompt: entry.prompt,
+      questionId: entry.questionId,
+      prompt: now?.prompt ?? entry.prompt,
       reveal,
+      options:
+        options ??
+        (entry.mode === "grila"
+          ? entry.options.map((o) => ({ text: o.text, isCorrect: o.id === entry.correctOptionId }))
+          : null),
       winnerId: decideRound(entry, mine),
       answers: mine
         .map((a) => ({
