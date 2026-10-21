@@ -253,7 +253,7 @@ export default function TowerGamePage() {
             </div>
           )}
 
-          {/* reveal + rock throw: also visible during the 10s breather */}
+          {/* reveal + rock throw: also visible during the breather */}
           {(state.reveal != null || (state.canThrow && !myRock)) && state.phase !== "lobby" && state.phase !== "done" && (
             <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl p-3 flex flex-col gap-2">
               {state.reveal != null && (

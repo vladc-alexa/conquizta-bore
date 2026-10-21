@@ -81,9 +81,10 @@ export default function Tower({
     window.setTimeout(() => {
       flying.current = false;
       setThrowingId(null);
-    }, 1500);
+    }, 1800);
     const t0 = performance.now();
-    const DUR = 640;
+    const DUR = 640; // flight
+    const FACE_MS = 1700; // how long the grimace stays up
     const step = (now: number) => {
       const p = Math.min(1, (now - t0) / DUR);
       setRock({
@@ -94,10 +95,12 @@ export default function Tower({
       });
       if (p < 1) return;
       setRock((r) => ({ ...r, on: false }));
-      setThrowingId(null);
+      // the thrower keeps his tongue out for the whole grimace window, the
+      // victim starts his angry face the moment the rock lands
+      window.setTimeout(() => setThrowingId(null), FACE_MS - DUR);
       setHitId(target.id);
       flying.current = false;
-      window.setTimeout(() => setHitId(null), 900);
+      window.setTimeout(() => setHitId(null), FACE_MS);
     };
     const timer = window.setInterval(() => step(performance.now()), 40);
     window.setTimeout(() => window.clearInterval(timer), DUR + 200);

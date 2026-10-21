@@ -28,7 +28,7 @@ export const TOWER_ROUND_MS = 15_000;
 export const TOWER_ROUND_GRACE_MS = 1_500;
 /** Breather between rounds: the next question opens this long after the round
  *  settles, so players can read what happened before the clock restarts. */
-export const TOWER_INTERMISSION_MS = 10_000;
+export const TOWER_INTERMISSION_MS = 5_000;
 export const RUNGS_PER_ROUND = 4;
 /** Visual height of the tower in rungs — the winner climbs all of them. */
 export const TOWER_HEIGHT = 36;
