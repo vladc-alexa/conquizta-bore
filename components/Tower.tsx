@@ -33,11 +33,11 @@ const STEP_MS = 1400;
 
 export default function Tower({
   players,
-  answers = [],
+  rocks = [],
 }: {
   players: TowerStatePlayer[];
-  /** this round's answers, fastest first — drives the cosmetic rock throw */
-  answers?: { playerId: string; ms: number }[];
+  /** rocks thrown this round (server-owned) — replayed as an animation */
+  rocks?: { throwerId: string; targetId: string; at: number }[];
 }) {
   const ordered = [...players].sort((a, b) => a.seat - b.seat);
 
@@ -47,26 +47,24 @@ export default function Tower({
   const prevRungs = useRef<Record<string, number>>({});
   const [walking, setWalking] = useState<Record<string, boolean>>({});
 
-  // --- cosmetic rock throw -------------------------------------------------
-  // Purely visual: the fastest answer of the round lobs a rock at whoever is
-  // last on the wall. No score, no rung, no stun — the server never hears of it.
+  // --- rocks thrown by real players ---------------------------------------
+  // The server keeps the hits (two on the same climber cost a rung); the board
+  // only replays the flight: thrower → target, then a flinch.
   const [hitId, setHitId] = useState<string | null>(null);
   const [throwingId, setThrowingId] = useState<string | null>(null);
   const [rock, setRock] = useState({ x: 0, y: 0, spin: 0, on: false });
-  const lastThrow = useRef("");
+  const seenRocks = useRef<string>("");
   const flying = useRef(false);
 
   useEffect(() => {
-    const fastest = answers[0];
-    if (!fastest) return;
-    const key = `${fastest.playerId}:${fastest.ms}`;
-    if (lastThrow.current === key || flying.current) return;
-    const thrower = players.find((p) => p.id === fastest.playerId);
-    if (!thrower || thrower.eliminated) return;
-    const live = players.filter((p) => !p.eliminated && p.id !== thrower.id);
-    if (!live.length) return;
-    const target = live.reduce((a, b) => (b.rungs < a.rungs ? b : a));
-    lastThrow.current = key;
+    const latest = rocks[rocks.length - 1];
+    if (!latest) return;
+    const key = `${latest.at}:${latest.throwerId}:${latest.targetId}`;
+    if (seenRocks.current === key || flying.current) return;
+    const thrower = players.find((p) => p.id === latest.throwerId);
+    const target = players.find((p) => p.id === latest.targetId);
+    if (!thrower || !target) return;
+    seenRocks.current = key;
     flying.current = true;
 
     const xOf = (p: TowerStatePlayer) => (LADDER_X[p.seat % 8] ?? 0.5) * 100;
@@ -94,21 +92,19 @@ export default function Tower({
         spin: p * 720,
         on: true,
       });
-      if (p < 1) {
-        requestAnimationFrame(step);
-        return;
-      }
+      if (p < 1) return;
       setRock((r) => ({ ...r, on: false }));
       setThrowingId(null);
       setHitId(target.id);
       flying.current = false;
       window.setTimeout(() => setHitId(null), 900);
     };
-    requestAnimationFrame(step);
+    const timer = window.setInterval(() => step(performance.now()), 40);
+    window.setTimeout(() => window.clearInterval(timer), DUR + 200);
     // players/answers are polled every 1.5s; the throw keys off the answer row
     // itself, so a re-render mid-flight must not restart it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [answers]);
+  }, [rocks]);
 
 
   useEffect(() => {
@@ -134,17 +130,11 @@ export default function Tower({
     return () => window.clearTimeout(t);
   }, [players]);
 
-  const liveOrder = [...players].filter((p) => !p.eliminated).sort((a, b) => a.rungs - b.rungs);
-  const lastPlaceId = liveOrder[0]?.id ?? null;
-  const secondFastest = answers[1]?.playerId ?? null;
-
-  /** Which painted face a climber wears right now (all cosmetic). */
+  /** Which painted face a climber wears right now. */
   const expressionFor = (p: TowerStatePlayer): "calm" | "tongue" | "frown" | "yawn" | "throw" => {
-    if (hitId === p.id) return "frown";
-    if (throwingId === p.id) return "throw";
+    if (throwingId === p.id) return "tongue"; // tongue out while he lobs the rock
+    if (hitId === p.id) return "frown"; // grimace when the rock lands
     if (p.eliminated) return "frown";
-    if (secondFastest === p.id) return "tongue";
-    if (lastPlaceId === p.id) return "yawn";
     return "calm";
   };
 

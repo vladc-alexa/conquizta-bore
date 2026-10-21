@@ -40,6 +40,8 @@ export default function TowerGamePage() {
   const [picked, setPicked] = useState<string | null>(null);
   const [typed, setTyped] = useState(""); // rapidă round: the typed guess
   const [feedback, setFeedback] = useState<{ correct: boolean; rungs: number; ms: number } | null>(null);
+  const [myRock, setMyRock] = useState(false); // threw this round
+  const [rockErr, setRockErr] = useState("");
   const [now, setNow] = useState(Date.now());
   const roundRef = useRef<number>(-1);
 
@@ -62,6 +64,8 @@ export default function TowerGamePage() {
         setPicked(null);
         setTyped("");
         setFeedback(null);
+        setMyRock(false);
+        setRockErr("");
       }
     } catch {
       /* keep the last state */
@@ -122,6 +126,23 @@ export default function TowerGamePage() {
     } catch {
       setErr("Eroare de rețea.");
       return false;
+    }
+  }
+
+  async function throwRock(targetId: string) {
+    setRockErr("");
+    try {
+      const r = await fetch(`/api/tower/${id}/rock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) setRockErr(d.error || "Nu am putut arunca piatra.");
+      else setMyRock(true);
+      await load();
+    } catch {
+      setRockErr("Eroare de rețea.");
     }
   }
 
@@ -192,7 +213,7 @@ export default function TowerGamePage() {
       {/* the board gets every pixel the side panel doesn't need: it used to be
           capped by max-w-6xl (≈700px even on a 1920 screen) */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(310px,340px)] gap-4 items-start">
-        <Tower players={state.players} answers={state.roundAnswers} />
+        <Tower players={state.players} rocks={state.rocks} />
 
         <div className="flex flex-col gap-3">
           {/* ---- lobby ---- */}
@@ -301,6 +322,36 @@ export default function TowerGamePage() {
                   );
                 })}
               </div>
+              {state.reveal != null && (
+                <div className="text-[0.8rem] text-[#8fd9a8]">
+                  Răspuns corect: <span className="font-cinzel">{state.reveal}</span>
+                </div>
+              )}
+              {state.myAnswered && !myRock && state.phase === "climb" && (
+                <div className="flex flex-col gap-1.5 border-t border-[#1e3a34] pt-2">
+                  <div className="text-[0.68rem] text-[#75938f] uppercase tracking-wider">
+                    🪨 Aruncă o piatră — o dată pe rundă
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {state.players
+                      .filter((p) => !p.eliminated && !p.mine)
+                      .map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => throwRock(p.id)}
+                          className="rounded-lg border border-[#1e3a34] px-2 py-1 text-[0.72rem] text-[#cbdcda] hover:border-[#9ec6c1] hover:text-[#e6f2ef]"
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                  </div>
+                  <div className="text-[0.66rem] text-[#5f7a76]">
+                    2 pietre pe același urcător într-o rundă = coboară o treaptă
+                  </div>
+                  {rockErr && <div className="text-[0.7rem] text-[#c98b6b]">{rockErr}</div>}
+                </div>
+              )}
+              {myRock && <div className="text-[0.72rem] text-[#75938f]">🪨 Piatra a plecat.</div>}
               {feedback ? (
                 <div className={`text-[0.8rem] ${feedback.correct ? "text-[#8fd9a8]" : "text-[#c98b6b]"}`}>
                   {feedback.correct ? `Corect · +${feedback.rungs} trepte` : "Greșit · ai stat pe loc"}

@@ -117,6 +117,7 @@ model TowerGame {
   host           User         @relation("TowerHost", fields: [hostId], references: [id], onDelete: Cascade)
   players        TowerPlayer[]
   answers        TowerAnswer[]
+  rocks          TowerRock[]
 
   @@index([status, createdAt])
   @@index([hostId])
@@ -266,4 +267,17 @@ model UserQuestionStat {
 
   @@id([userId, questionId])
   @@index([questionId])
+}
+
+model TowerRock {
+  id        String    @id @default(uuid()) @db.Uuid
+  gameId    String    @db.Uuid
+  round     Int
+  throwerId String    @db.Uuid
+  targetId  String    @db.Uuid
+  createdAt DateTime  @default(now())
+  game      TowerGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, round, throwerId])
+  @@index([gameId, round, targetId])
 }

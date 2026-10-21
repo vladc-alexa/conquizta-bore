@@ -28,7 +28,7 @@ export const TOWER_ROUND_MS = 15_000;
 export const TOWER_ROUND_GRACE_MS = 1_500;
 /** Breather between rounds: the next question opens this long after the round
  *  settles, so players can read what happened before the clock restarts. */
-export const TOWER_INTERMISSION_MS = 4_000;
+export const TOWER_INTERMISSION_MS = 10_000;
 export const RUNGS_PER_ROUND = 4;
 /** Visual height of the tower in rungs — the winner climbs all of them. */
 export const TOWER_HEIGHT = 36;
@@ -287,6 +287,10 @@ export type TowerState = {
   startsInMs: number;
   windowMs: number;
   myAnswered: boolean;
+  /** the correct answer of the current round — only for players who answered */
+  reveal: string | null;
+  /** every rock thrown this round, oldest first (drives the animation) */
+  rocks: { throwerId: string; targetId: string; at: number }[];
   /** this round's answers, fastest first — feeds the cosmetic rock throw */
   roundAnswers: { playerId: string; ms: number }[];
   answeredCount: number;
@@ -310,6 +314,10 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
   if (!game) return null;
   const plan = game.plan as TowerEntry[];
   const answers = await prisma.towerAnswer.findMany({ where: { gameId }, orderBy: { round: "asc" } });
+  const rocks = await prisma.towerRock.findMany({
+    where: { gameId, round: game.currentRound },
+    orderBy: { createdAt: "asc" },
+  });
   const players = [...game.players].sort((a, b) => a.seat - b.seat);
   const mine = players.find((p) => p.userId === viewerId) ?? null;
   const live = players.filter((p) => !p.eliminated);
@@ -400,6 +408,17 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
       .filter((a) => a.round === game.currentRound)
       .map((a) => ({ playerId: a.playerId, ms: a.elapsedMilliseconds }))
       .sort((a, b) => a.ms - b.ms),
+    reveal:
+      entry && mine && answers.some((a) => a.round === game.currentRound && a.playerId === mine.id)
+        ? entry.mode === "rapide"
+          ? String(entry.answer)
+          : (entry.options.find((o) => o.id === entry.correctOptionId)?.text ?? null)
+        : null,
+    rocks: rocks.map((r) => ({
+      throwerId: r.throwerId,
+      targetId: r.targetId,
+      at: r.createdAt.getTime(),
+    })),
     answeredCount: answers.filter((a) => a.round === game.currentRound).length,
     liveCount: live.length,
     eliminatedId: players.find((p) => p.eliminated)?.id ?? null,

@@ -41,6 +41,8 @@ const seed: TowerStatePlayer[] = NAMES.map((name, seat) => ({
 
 export default function TowerPreview() {
   const [players, setPlayers] = useState<TowerStatePlayer[]>(seed);
+  // dev harness: push a fake rock to exercise the throw animation + faces
+  const [rocks, setRocks] = useState<{ throwerId: string; targetId: string; at: number }[]>([]);
 
   useEffect(() => {
     let turn = 0;
@@ -56,11 +58,18 @@ export default function TowerPreview() {
 
   return (
     <div className="w-full max-w-[1700px] px-3">
+      <button
+        type="button"
+        onClick={() => setRocks([{ throwerId: "seat-0", targetId: "seat-3", at: Date.now() }])}
+        className="mb-2 rounded-lg border-2 border-[#1e3a34] px-3 py-1 text-[0.72rem] text-[#9ec6c1]"
+      >
+        test: aruncă piatra (seat 0 → seat 3)
+      </button>
       <h1 className="mb-2 font-cinzel text-sm tracking-widest text-[#9ec6c1]">
         TURNUL · PREVIEW ARTĂ (fără DB) — un urcător primește trepte la fiecare 3s
       </h1>
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(310px,340px)] gap-4 items-start">
-        <Tower players={players} />
+        <Tower players={players} rocks={rocks} />
         <div className="rounded-2xl border-2 border-[#1e3a34] bg-[#0c1a17] p-4 text-[0.8rem] text-[#75938f]">
           panou lateral (întrebare + scară) — placeholder în preview
         </div>
