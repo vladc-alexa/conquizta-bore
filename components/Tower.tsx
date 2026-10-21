@@ -81,8 +81,10 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
       {ordered.map((p) => {
         const seat = p.seat % 8;
         const xPct = LADDER_X[seat] ?? 0.5;
-        const climbed = Math.min(1, Math.max(0, p.rungs / SUMMIT_RUNGS));
-        // 0 rungs = ladder foot (bottom of the board), 36 rungs = wall top
+        // 0 rungs = ladder foot (bottom of the board), 36 rungs = wall top.
+        // A fallen climber drops all the way to the ground (transition-all slides
+        // them down instead of leaving them stuck on the wall edge).
+        const climbed = p.eliminated ? 0 : Math.min(1, Math.max(0, p.rungs / SUMMIT_RUNGS));
         const bottomPct = CLIMB_GROUND + climbed * (CLIMB_TOP - CLIMB_GROUND);
         const sprite = CLIMBER_SPRITES[seat] ?? null;
         const color = SEAT_COLORS[seat];

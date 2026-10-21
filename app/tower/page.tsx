@@ -8,7 +8,7 @@ const RULES = [
   ["8 jucători, runde până la vârf", "Locurile libere sunt luate de boți — poți urca și singur."],
   ["Fiecare răspuns are punctaj", "Corect și rapid = până la 100 de puncte; greșit = 0."],
   ["Cine punctează mai mult urcă mai mult", "Punctajul rundei devine trepte: cel mai bun urcă 4, restul proporțional."],
-  ["Din runda 2 cade ultimul", "La finalul fiecărei runde, jucătorul cu cel mai mic total se prăbușește de pe scară."],
+  ["După runda 7 cade ultimul", "Toți urcă împreună până aproape de vârf; de la runda 7, la finalul fiecărei runde cel cu cel mai mic total se prăbușește."],
   ["Cine ajunge primul sus câștigă", "Nu sunt runde fixe: turnul are 36 de trepte și meciul ține până le urcă cineva."],
 ];
 

@@ -17,8 +17,10 @@ export const TOWER_PLAYERS = 8;
 /** Questions frozen into the plan at start — a ceiling, not a target: the game
  *  ends on the summit, long before this in practice (≈11 rounds at 4 rungs). */
 export const TOWER_PLAN_SIZE = 40;
-/** 0-based round index from which the lowest climber falls — every round. */
-export const TOWER_CUT_FROM_ROUND = 1; // after round 2
+// Cuts start late: the whole field climbs together until the tower is in sight,
+// then the lowest climber falls after EVERY round (0-based round index). Real
+// pace is ~2.5-3 rungs/round, so round 7 leaves 4-5 rivals alive for the summit.
+export const TOWER_CUT_FROM_ROUND = 6; // first fall after round 7
 export const TOWER_ROUND_MS = 15_000;
 export const TOWER_ROUND_GRACE_MS = 1_500;
 export const RUNGS_PER_ROUND = 4;
