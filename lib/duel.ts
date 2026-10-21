@@ -17,9 +17,10 @@ export const DUEL_GRILA_ROUNDS = 6;
 export const DUEL_RAPIDE_ROUNDS = 4;
 export const DUEL_BASE_ROUNDS = DUEL_GRILA_ROUNDS + DUEL_RAPIDE_ROUNDS; // 10
 
-// Arena rule: every round win shoves the loser toward their cliff. A net margin
-// of this many round wins means they go over the edge and the match ends.
-export const DUEL_PUSH_LIMIT = 4;
+// Arena rule: every round win shoves the loser toward their cliff. Three round
+// wins IN A ROW (not a net margin — a loss or a draw resets the run) sends the
+// opponent over the edge and ends the match.
+export const DUEL_STREAK_TO_WIN = 3;
 export const DUEL_WAITING_TTL_MS = 10 * 60_000; // an unjoined lobby dies after 10 min
 export const DUEL_ROUND_GRACE_MS = 1_500; // let an in-flight answer land after the clock hits 0
 
@@ -50,7 +51,9 @@ export function roundWindowMs(mode: "grila" | "rapide"): number {
 }
 
 // ---- question picking (same filters as /api/questions) ------------------
-async function fetchGrilaPool(limit: number) {
+/** Published grilă questions (4 options, exactly one correct), shuffled order.
+ *  Exported so other games (the tower) reuse the exact same pool filters. */
+export async function fetchGrilaPool(limit: number) {
   const ids = await prisma.$queryRaw<{ id: string }[]>`
     SELECT q.id FROM "Question" q
     WHERE q."isPublished" = true
@@ -163,6 +166,24 @@ export function decideRound(entry: PlanEntry, answers: AnswerRow[]): string | nu
   return leaders[0].userId;
 }
 
+/** Length of the trailing run of consecutive wins by `playerId`. */
+export function trailingStreak(winners: (string | null)[], playerId: string): number {
+  let n = 0;
+  for (let i = winners.length - 1; i >= 0; i--) {
+    if (winners[i] !== playerId) break;
+    n++;
+  }
+  return n;
+}
+
+async function roundWinnerOf(duelId: string, round: number, entry: PlanEntry): Promise<string | null> {
+  const rows = await prisma.duelAnswer.findMany({
+    where: { duelId, round },
+    select: { userId: true, isCorrect: true, score: true, elapsedMilliseconds: true },
+  });
+  return decideRound(entry, rows);
+}
+
 // ---- resolution (lazy, called on every state poll) ----------------------
 export async function resolveDuel(duelId: string): Promise<void> {
   for (let guard = 0; guard < 30; guard++) {
@@ -170,12 +191,6 @@ export async function resolveDuel(duelId: string): Promise<void> {
     if (!duel || duel.status !== "IN_PROGRESS") return;
     const plan = duel.plan as PlanEntry[];
     const r = duel.currentRound;
-
-    // shove count reached: the loser goes off the cliff, match over
-    if (Math.abs(duel.hostScore - duel.guestScore) >= DUEL_PUSH_LIMIT) {
-      await finishDuel(duel.id);
-      return;
-    }
 
     // past the last planned round
     if (r >= plan.length) {
@@ -216,6 +231,16 @@ export async function resolveDuel(duelId: string): Promise<void> {
       },
     });
     if (res.count === 0) return;
+
+    // win condition: three round wins in a row (a loss or a draw resets the run)
+    const tail: (string | null)[] = [];
+    for (let i = Math.max(0, r - (DUEL_STREAK_TO_WIN - 1)); i <= r; i++) {
+      tail.push(await roundWinnerOf(duelId, i, plan[i]));
+    }
+    if (tail.length === DUEL_STREAK_TO_WIN && tail.every((w) => w !== null && w === tail[0])) {
+      await finishDuel(duelId);
+      return;
+    }
   }
 }
 
@@ -267,6 +292,8 @@ export type DuelState = {
   round: number;
   totalRounds: number;
   mode: "grila" | "rapide" | null;
+  /** id of the question the current round serves (null between rounds) */
+  questionId: string | null;
   prompt: string | null;
   options: { id: string; text: string }[] | null;
   responseType: string | null;
@@ -288,7 +315,10 @@ export type DuelState = {
   }[];
   winnerId: string | null;
   draw: boolean;
-  pushLimit: number;
+  /** round wins in a row needed to knock the opponent off the cliff */
+  streakToWin: number;
+  /** current consecutive-win run for each side (resets on a loss or a draw) */
+  streaks: { host: number; guest: number };
   pushedOffId: string | null;
 };
 
@@ -355,6 +385,12 @@ export async function buildDuelState(duelId: string, viewerId: string): Promise<
     };
   });
 
+  const winners = history.map((h) => h.winnerId);
+  const streaks = {
+    host: trailingStreak(winners, duel.hostId),
+    guest: duel.guestId ? trailingStreak(winners, duel.guestId) : 0,
+  };
+
   const entry = open ? plan[duel.currentRound] : null;
   const roundAnswers = open ? answers.filter((a) => a.round === duel.currentRound) : [];
 
@@ -367,6 +403,7 @@ export async function buildDuelState(duelId: string, viewerId: string): Promise<
     round: duel.currentRound,
     totalRounds,
     mode: entry?.mode ?? null,
+    questionId: entry?.questionId ?? null,
     prompt: entry?.prompt ?? null,
     options: entry?.mode === "grila" ? entry.options : null,
     responseType: entry?.mode === "rapide" ? entry.responseType : null,
@@ -384,13 +421,14 @@ export async function buildDuelState(duelId: string, viewerId: string): Promise<
           : null
         : null,
     draw: duel.status === "COMPLETED" && duel.hostScore === duel.guestScore,
-    pushLimit: DUEL_PUSH_LIMIT,
+    streakToWin: DUEL_STREAK_TO_WIN,
+    streaks,
     pushedOffId:
-      duel.status === "COMPLETED" && Math.abs(duel.hostScore - duel.guestScore) >= DUEL_PUSH_LIMIT
-        ? duel.hostScore > duel.guestScore
-          ? duel.guestId
-          : duel.hostId
-        : null,
+      duel.status === "COMPLETED" && streaks.host >= DUEL_STREAK_TO_WIN
+        ? duel.guestId
+        : duel.status === "COMPLETED" && streaks.guest >= DUEL_STREAK_TO_WIN
+          ? duel.hostId
+          : null,
   };
 }
 

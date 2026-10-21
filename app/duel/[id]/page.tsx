@@ -34,7 +34,8 @@ type DuelState = {
   history: HistoryRow[];
   winnerId: string | null;
   draw: boolean;
-  pushLimit: number;
+  streakToWin: number;
+  streaks: { host: number; guest: number };
   pushedOffId: string | null;
 };
 
@@ -299,7 +300,8 @@ export default function DuelMatch() {
           host: state.host,
           guest: state.guest,
           history: state.history,
-          pushLimit: state.pushLimit,
+          streakToWin: state.streakToWin,
+          streaks: state.streaks,
           pushedOffId: state.pushedOffId,
         }}
       />
@@ -506,6 +508,8 @@ export default function DuelMatch() {
         </button>
         <span className="text-[0.7rem] text-[#75938f]">
           Runda {state.round + 1} / {state.totalRounds} · {isGrila ? "Grilă" : "Rapidă"}
+          {" · "}
+          <span className="text-[#9ec6c1]">{state.streakToWin} la rând câștigă</span>
         </span>
       </div>
 

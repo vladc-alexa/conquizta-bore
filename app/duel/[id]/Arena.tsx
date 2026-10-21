@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 // The 1v1 arena: both warriors stand on the cliff plateau. Every round win
-// shoves the loser toward their own edge; a net margin of `pushLimit` round
-// wins sends them over the cliff and ends the match. A drawn round moves nobody.
+// shoves the loser toward their own edge; `streakToWin` round wins IN A ROW send
+// them over the cliff and end the match. A loss or a draw resets the run.
 //
 // The logged-in player is always the LEFT fighter (drawn facing right, so their
 // attack reads left -> right). The opponent takes the right seat, mirrored. When
@@ -28,7 +28,8 @@ export type ArenaDuel = {
   host: ArenaWarrior;
   guest: ArenaWarrior | null;
   history: { winnerId: string | null }[];
-  pushLimit: number;
+  streakToWin: number;
+  streaks: { host: number; guest: number };
   pushedOffId: string | null;
 };
 
@@ -124,7 +125,10 @@ export default function Arena({ duel }: { duel: ArenaDuel }) {
   const mirrored = me === "guest";
   const mine = me === "host" ? duel.host : duel.guest;
   const foe = me === "host" ? duel.guest : duel.host;
-  const lead = (mine?.score ?? 0) - (foe?.score ?? 0);
+  // the shove follows the current RUN, not the total: a loss resets it
+  const myStreak = me === "host" ? duel.streaks.host : duel.streaks.guest;
+  const foeStreak = me === "host" ? duel.streaks.guest : duel.streaks.host;
+  const lead = myStreak - foeStreak;
 
   // a newly resolved round -> winner jabs, loser takes the shove
   useEffect(() => {
