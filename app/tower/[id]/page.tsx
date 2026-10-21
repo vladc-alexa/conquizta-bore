@@ -128,7 +128,9 @@ export default function TowerGamePage() {
                 ? `SPRINT FINAL · runda ${state.round + 1} · cine ajunge sus câștigă`
                 : state.phase === "done"
                   ? "Turnul a fost cucerit"
-                  : `Runda ${state.round + 1} · ultimul cade la finalul rundei · sus = ${state.height} trepte`}
+                  : state.round + 1 <= state.cutRound
+                    ? `Runda ${state.round + 1} · toți urcă până la runda ${state.cutRound} · sus = ${state.height} trepte`
+                    : `Runda ${state.round + 1} · ultimul cade la finalul rundei · sus = ${state.height} trepte`}
           </p>
         </div>
         <div className="flex items-center gap-2">
