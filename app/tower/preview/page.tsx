@@ -33,6 +33,7 @@ const seed: TowerStatePlayer[] = NAMES.map((name, seat) => ({
   score: 40 + seat * 7,
   rungs: RUNGS[seat],
   eliminated: seat === 6,
+  fellRound: seat === 6 ? 7 : null,
   isBot: seat % 2 === 1,
   mine: seat === 3,
 }));

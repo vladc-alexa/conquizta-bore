@@ -1,20 +1,24 @@
 // TURNUL — the 8-player ladder siege.
 //
 // Rules (server-authoritative, resolved lazily on every state poll):
-//   * 9 rounds, one question per round, 8 seats (bots fill empty seats).
+//   * Open-ended: one question per round, 8 seats (bots fill empty seats), and
+//     rounds keep coming until somebody reaches the summit (TOWER_HEIGHT rungs).
 //   * Every answer earns points: correct = up to 100, faster = more; wrong = 0.
 //   * Your points for the round become rungs climbed: the round's best climber
 //     always gains the full RUNGS_PER_ROUND, everyone else scales less, and a
 //     wrong answer leaves you standing still.
-//   * After round 8 the player with the lowest total falls off the ladder.
-//   * Round 9 is the final: the best answer takes the summit and the game.
+//   * From round 2 on, the player with the lowest total falls off the ladder at
+//     the end of EVERY round (never the last one standing).
+//   * The first climber to touch the summit wins and the game closes.
 import { prisma } from "@/lib/prisma";
 import { fetchGrilaPool, type PlanEntry } from "@/lib/duel";
 
 export const TOWER_PLAYERS = 8;
-export const TOWER_ROUNDS = 9;
-/** Round index at which the lowest score goes over the railing (0-based). */
-export const TOWER_CUT_ROUND = 7; // after round 8
+/** Questions frozen into the plan at start — a ceiling, not a target: the game
+ *  ends on the summit, long before this in practice (≈11 rounds at 4 rungs). */
+export const TOWER_PLAN_SIZE = 40;
+/** 0-based round index from which the lowest climber falls — every round. */
+export const TOWER_CUT_FROM_ROUND = 1; // after round 2
 export const TOWER_ROUND_MS = 15_000;
 export const TOWER_ROUND_GRACE_MS = 1_500;
 export const RUNGS_PER_ROUND = 4;
@@ -41,18 +45,20 @@ export function rungsFor(score: number): number {
 }
 
 export async function buildTowerPlan(): Promise<TowerEntry[]> {
-  const pool = (await fetchGrilaPool(TOWER_ROUNDS + 10)) as TowerEntry[];
-  return pool.slice(0, TOWER_ROUNDS);
+  const pool = (await fetchGrilaPool(TOWER_PLAN_SIZE)) as TowerEntry[];
+  return pool.slice(0, TOWER_PLAN_SIZE);
 }
 
 // ---- bots ---------------------------------------------------------------
+// Bots are deliberately mediocre: they miss most questions and answer slowly,
+// so a human who half-knows the quiz out-climbs them.
 function botSkill(): number {
-  return 0.35 + Math.random() * 0.5; // 0.35 .. 0.85
+  return 0.15 + Math.random() * 0.3; // 0.15 .. 0.45
 }
 
 export function botAnswer(): { isCorrect: boolean; score: number; elapsedMs: number } {
   const correct = Math.random() < botSkill();
-  const elapsedMs = 1_500 + Math.floor(Math.random() * (TOWER_ROUND_MS - 2_000));
+  const elapsedMs = 5_000 + Math.floor(Math.random() * (TOWER_ROUND_MS - 5_500));
   const score = correct ? towerScore(true, elapsedMs) : 0;
   return { isCorrect: correct, score, elapsedMs };
 }
@@ -73,13 +79,13 @@ export async function fillWithBots(gameId: string): Promise<void> {
   if (rows.length) await prisma.towerPlayer.createMany({ data: rows, skipDuplicates: true });
 }
 
-/** Start a WAITING game: freeze the 9-question plan, seat bots, open round 1. */
+/** Start a WAITING game: freeze the question plan, seat bots, open round 1. */
 export async function startTower(gameId: string): Promise<void> {
   const game = await prisma.towerGame.findUnique({ where: { id: gameId }, include: { players: true } });
   if (!game || game.status !== "WAITING") return;
   await fillWithBots(gameId);
   const plan = await buildTowerPlan();
-  if (plan.length < TOWER_ROUNDS) {
+  if (plan.length < 3) {
     throw new Error("nu sunt destule întrebări pentru un turn");
   }
   await prisma.towerGame.updateMany({
@@ -148,11 +154,10 @@ export async function resolveTower(gameId: string): Promise<void> {
 
     // we are the resolver for this round: claim it before writing anything
     const after = r + 1;
-    const isFinal = r === TOWER_ROUNDS - 1;
-    const isCut = r === TOWER_CUT_ROUND;
+    const outOfQuestions = after >= plan.length;
     const res = await prisma.towerGame.updateMany({
       where: { id: gameId, status: "IN_PROGRESS", currentRound: r },
-      data: isFinal
+      data: outOfQuestions
         ? { currentRound: after }
         : { currentRound: after, roundStartedAt: new Date() },
     });
@@ -163,59 +168,39 @@ export async function resolveTower(gameId: string): Promise<void> {
     }
     await recomputeStandings(gameId);
 
-    // ---- the cut: lowest total falls off the ladder after round 8 ----
-    if (isCut) {
-      const ranked = await prisma.towerPlayer.findMany({ where: { gameId, eliminated: false } });
-      const lowest = ranked.sort(
-        (a, b) => a.score - b.score || a.rungs - b.rungs || b.seat - a.seat
-      )[0];
+    const standing = await prisma.towerPlayer.findMany({ where: { gameId, eliminated: false } });
+    const ranked = [...standing].sort(
+      (a, b) => b.rungs - a.rungs || b.score - a.score || a.seat - b.seat
+    );
+
+    // ---- the summit: first climber to touch the top wins, whenever that is ----
+    const champion = ranked.find((p) => p.rungs >= TOWER_HEIGHT) ?? null;
+    if (champion || outOfQuestions) {
+      const winner = champion ?? ranked[0] ?? null;
+      if (champion) {
+        await prisma.towerPlayer.update({
+          where: { id: champion.id },
+          data: { rungs: TOWER_HEIGHT }, // exactly on the top rung
+        });
+      }
+      await prisma.towerGame.updateMany({
+        where: { id: gameId, status: "IN_PROGRESS" },
+        // winnerId holds the winning SEAT (TowerPlayer.id) — bots have no user
+        data: { status: "COMPLETED", completedAt: new Date(), winnerId: winner?.id ?? null },
+      });
+      return;
+    }
+
+    // ---- the cut: from round 2 on, the lowest total falls at the end of every
+    // round. The last climber standing is never pushed off — they keep climbing. ----
+    if (r >= TOWER_CUT_FROM_ROUND && ranked.length > 1) {
+      const lowest = [...ranked].reverse()[0];
       if (lowest) {
         await prisma.towerPlayer.update({
           where: { id: lowest.id },
-          data: { eliminated: true, fellRound: TOWER_ROUNDS - 1 },
+          data: { eliminated: true, fellRound: r + 1 },
         });
       }
-      continue;
-    }
-
-    // ---- the final: best answer of round 9 takes the summit ----
-    if (isFinal) {
-      const answersFinal = await prisma.towerAnswer.findMany({ where: { gameId, round: r } });
-      const alive = new Set(
-        (await prisma.towerPlayer.findMany({ where: { gameId, eliminated: false } })).map((p) => p.id)
-      );
-      const contending = answersFinal
-        .filter((a) => alive.has(a.playerId))
-        .sort((a, b) => b.score - a.score || a.elapsedMilliseconds - b.elapsedMilliseconds);
-      const topAnswer = contending[0];
-      if (topAnswer) {
-        const all = await prisma.towerPlayer.findMany({ where: { gameId } });
-        const topScore = Math.max(...all.map((p) => p.score));
-        const answered = all.find((p) => p.id === topAnswer.playerId) ?? null;
-        // an exact tie on the final answer falls back to the best overall total
-        const tieOnFinal =
-          contending.length > 1 && contending[0].score === contending[1].score && (answered?.score ?? 0) < topScore;
-        const champion = tieOnFinal
-          ? [...all].sort((a, b) => b.score - a.score || b.rungs - a.rungs || a.seat - b.seat)[0]
-          : answered;
-        if (champion) {
-          await prisma.towerPlayer.update({
-            where: { id: champion.id },
-            data: { rungs: TOWER_HEIGHT }, // the summit — drawn reaching the top
-          });
-        }
-        await prisma.towerGame.updateMany({
-          where: { id: gameId, status: "IN_PROGRESS" },
-          // winnerId holds the winning SEAT (TowerPlayer.id) — bots have no user
-          data: { status: "COMPLETED", completedAt: new Date(), winnerId: champion?.id ?? null },
-        });
-      } else {
-        await prisma.towerGame.updateMany({
-          where: { id: gameId, status: "IN_PROGRESS" },
-          data: { status: "COMPLETED", completedAt: new Date() },
-        });
-      }
-      return;
     }
   }
 }
@@ -228,6 +213,8 @@ export type TowerStatePlayer = {
   score: number;
   rungs: number;
   eliminated: boolean;
+  /** round number (1-based) after which this climber fell */
+  fellRound: number | null;
   isBot: boolean;
   mine: boolean;
 };
@@ -300,11 +287,12 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
     };
   });
 
+  // "final" = somebody is one round away from the summit (they can win this round)
   const phase: TowerState["phase"] = !done && game.status === "WAITING"
     ? "lobby"
     : done
       ? "done"
-      : game.currentRound === TOWER_ROUNDS - 1 && players.some((p) => p.eliminated)
+      : live.some((p) => p.rungs >= TOWER_HEIGHT - RUNGS_PER_ROUND)
         ? "final"
         : "climb";
 
@@ -313,8 +301,9 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
     status: game.status,
     phase,
     round: game.currentRound,
-    totalRounds: TOWER_ROUNDS,
-    cutRound: TOWER_CUT_ROUND + 1,
+    // open-ended: totalRounds is only the plan ceiling, the game ends on the summit
+    totalRounds: plan.length,
+    cutRound: TOWER_CUT_FROM_ROUND + 1,
     height: TOWER_HEIGHT,
     players: players.map((p) => ({
       id: p.id,
@@ -323,6 +312,7 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
       score: p.score,
       rungs: p.rungs,
       eliminated: p.eliminated,
+      fellRound: p.fellRound ?? null,
       isBot: p.isBot,
       mine: p.userId === viewerId,
     })),

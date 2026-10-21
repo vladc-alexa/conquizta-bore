@@ -1,6 +1,6 @@
 "use client";
 
-// /tower/[id] — one tower: lobby, then 9 rounds of climbing, then the summit.
+// /tower/[id] — one tower: lobby, then rounds of climbing until someone tops out.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Tower from "@/components/Tower";
@@ -125,10 +125,10 @@ export default function TowerGamePage() {
             {state.phase === "lobby"
               ? "Aștept jucători — locurile libere se umplu cu boți la start"
               : state.phase === "final"
-                ? `FINALA · runda ${state.round + 1} / ${state.totalRounds}`
+                ? `SPRINT FINAL · runda ${state.round + 1} · cine ajunge sus câștigă`
                 : state.phase === "done"
                   ? "Turnul a fost cucerit"
-                  : `Runda ${state.round + 1} / ${state.totalRounds} · după runda ${state.cutRound} ultimul cade`}
+                  : `Runda ${state.round + 1} · ultimul cade la finalul rundei · sus = ${state.height} trepte`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export default function TowerGamePage() {
             <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl p-4 flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <span className="font-cinzel text-[#9ec6c1] text-[0.8rem] tracking-widest">
-                  {state.phase === "final" ? "RUNDA FINALĂ" : `RUNDA ${state.round + 1}`}
+                  {state.phase === "final" ? `RUNDA ${state.round + 1} · SPRINT FINAL` : `RUNDA ${state.round + 1}`}
                 </span>
                 <span className={`text-[0.78rem] tabular-nums ${msLeft < 4000 ? "text-[#c98b6b]" : "text-[#75938f]"}`}>
                   {Math.ceil(msLeft / 1000)}s
@@ -222,7 +222,7 @@ export default function TowerGamePage() {
               ) : state.myAnswered ? (
                 <div className="text-[#75938f] text-[0.78rem]">Răspuns înregistrat. Aștept ceilalți…</div>
               ) : me?.eliminated ? (
-                <div className="text-[#c98b6b] text-[0.78rem]">Ai căzut de pe scară — privește finala.</div>
+                <div className="text-[#c98b6b] text-[0.78rem]">Ai căzut de pe scară — privește cine ajunge sus.</div>
               ) : (
                 <div className="text-[#75938f] text-[0.7rem]">
                   {state.answeredCount}/{state.liveCount} au răspuns
@@ -277,7 +277,8 @@ export default function TowerGamePage() {
             ))}
             {eliminated && state.phase !== "done" && (
               <div className="text-[0.7rem] text-[#c98b6b] text-center pt-1">
-                {eliminated.name} a căzut de pe scară după runda {state.cutRound}
+                {eliminated.name} a căzut de pe scară după runda{" "}
+                {eliminated.fellRound ?? state.cutRound}
               </div>
             )}
           </div>

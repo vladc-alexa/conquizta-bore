@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import TowerLobbyPanel from "@/components/TowerLobbyPanel";
 
 const RULES = [
-  ["8 jucători, 9 runde", "Locurile libere sunt luate de boți — poți urca și singur."],
+  ["8 jucători, runde până la vârf", "Locurile libere sunt luate de boți — poți urca și singur."],
   ["Fiecare răspuns are punctaj", "Corect și rapid = până la 100 de puncte; greșit = 0."],
   ["Cine punctează mai mult urcă mai mult", "Punctajul rundei devine trepte: cel mai bun urcă 4, restul proporțional."],
-  ["După runda 8 cade ultimul", "Jucătorul cu cel mai mic total se prăbușește de pe scară."],
-  ["Runda 9 e finala", "Cel mai bun răspuns din finală cucerește turnul."],
+  ["Din runda 2 cade ultimul", "La finalul fiecărei runde, jucătorul cu cel mai mic total se prăbușește de pe scară."],
+  ["Cine ajunge primul sus câștigă", "Nu sunt runde fixe: turnul are 36 de trepte și meciul ține până le urcă cineva."],
 ];
 
 export default function TowerLobbyPage() {
@@ -19,7 +19,7 @@ export default function TowerLobbyPage() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="font-cinzel text-[#9ec6c1] text-[1.3rem] tracking-widest">🏰 TURNUL</h1>
-          <p className="text-[#75938f] text-[0.75rem]">Asediul pe scări — 8 jucători, 9 runde, un singur cuceritor.</p>
+          <p className="text-[#75938f] text-[0.75rem]">Asediul pe scări — 8 jucători, 36 de trepte, un singur cuceritor.</p>
         </div>
         <a
           href="/"
