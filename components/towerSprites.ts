@@ -1,0 +1,35 @@
+// Sprite slots for the 8 climbers in the tower artwork.
+//
+// Drop the generated PNGs in `public/tower/players/` (transparent background,
+// full body, feet at the bottom edge of the canvas) and fill in `src` here.
+// While a slot has no `src` the climber falls back to the gem/initial avatar,
+// so the game keeps working with whatever art is ready.
+//
+// `climb` is the pose used on the wall; `fall` (optional) is shown for the
+// player who drops off after round 8.
+export type ClimberSprite = {
+  src: string;
+  /** pose used for the eliminated player; defaults to `src` (rotated) */
+  fall?: string;
+  /** vertical scale multiplier, in case one character reads smaller */
+  scale?: number;
+};
+
+/** index = seat (0..7) */
+export const CLIMBER_SPRITES: (ClimberSprite | null)[] = [
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+];
+
+/** Fraction of the artwork width where each ladder sits (measured from the photo). */
+export const LADDER_X = [0.340, 0.388, 0.435, 0.480, 0.527, 0.574, 0.622, 0.670];
+
+/** Vertical band of the climb, as fractions of the artwork height. */
+export const CLIMB_TOP = 0.15;
+export const CLIMB_BASE = 0.87;

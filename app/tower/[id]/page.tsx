@@ -142,12 +142,7 @@ export default function TowerGamePage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4 items-start">
-        <Tower
-          players={state.players}
-          height={state.height}
-          winnerId={state.winnerId}
-          eliminatedId={state.eliminatedId}
-        />
+        <Tower players={state.players} />
 
         <div className="flex flex-col gap-3">
           {/* ---- lobby ---- */}
