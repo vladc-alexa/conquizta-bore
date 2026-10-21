@@ -258,6 +258,8 @@ export type TowerState = {
   winnerId: string | null;
   history: {
     round: number;
+    /** the Question row, so the post-game list can report a bad one */
+    questionId: string;
     prompt: string;
     reveal: string;
     bestPlayerId: string | null;
@@ -297,6 +299,7 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
     const best = [...rows].sort((a, b) => b.score - a.score || a.elapsedMilliseconds - b.elapsedMilliseconds)[0];
     return {
       round: i,
+      questionId: e.questionId,
       prompt: liveQ?.prompt ?? e.prompt,
       reveal,
       bestPlayerId: best ? best.playerId : null,

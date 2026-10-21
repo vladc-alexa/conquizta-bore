@@ -12,6 +12,29 @@ export default function TowerGamePage() {
   const router = useRouter();
   const [state, setState] = useState<TowerState | null>(null);
   const [err, setErr] = useState("");
+  // ---- post-match: report a bad question (pulls it off the site, admin queue) ----
+  const [reported, setReported] = useState<Set<string>>(new Set());
+  const [reportErr, setReportErr] = useState("");
+
+  async function reportQuestion(qid: string) {
+    if (reported.has(qid)) return;
+    setReportErr("");
+    try {
+      const r = await fetch(`/api/questions/${qid}/report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: "raportată din Turnul" }),
+      });
+      if (r.ok || r.status === 409) {
+        setReported((prev) => new Set(prev).add(qid));
+        return;
+      }
+      const d = await r.json().catch(() => ({}));
+      setReportErr(d.error || "Nu am putut raporta întrebarea.");
+    } catch {
+      setReportErr("Eroare de rețea.");
+    }
+  }
   const [busy, setBusy] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ correct: boolean; rungs: number } | null>(null);
@@ -292,7 +315,12 @@ export default function TowerGamePage() {
       {/* ---- round-by-round ---- */}
       {state.history.length > 0 && (
         <div className="bg-[#0c1a17] border border-[#1e3a34] rounded-2xl p-3">
-          <div className="text-[0.7rem] text-[#75938f] uppercase tracking-wider mb-2">Runde jucate</div>
+          <div className="flex items-baseline justify-between gap-2 mb-2">
+            <div className="text-[0.7rem] text-[#75938f] uppercase tracking-wider">Runde jucate</div>
+            {state.status === "COMPLETED" && (
+              <div className="text-[0.66rem] text-[#75938f]">Întrebare greșită? Raporteaz-o ⚠</div>
+            )}
+          </div>
           <ol className="flex flex-col gap-1.5">
             {[...state.history].reverse().map((h) => {
               const best = state.players.find((p) => p.id === h.bestPlayerId);
@@ -308,10 +336,24 @@ export default function TowerGamePage() {
                       tu +{mineGain.rungs}▲
                     </span>
                   )}
+                  {state.status === "COMPLETED" && (
+                    reported.has(h.questionId) ? (
+                      <span className="shrink-0 text-[#8fd9a8] text-[0.7rem]">✓ raportată</span>
+                    ) : (
+                      <button
+                        onClick={() => reportQuestion(h.questionId)}
+                        title="Raportează întrebarea — iese din joc și ajunge la moderare"
+                        className="shrink-0 ml-auto text-[#c98b6b] hover:text-[#e8a98b] text-[0.7rem] border border-[#3a2a24] rounded px-1.5 py-0.5 bg-[#160f0d] cursor-pointer"
+                      >
+                        ⚠ raportează
+                      </button>
+                    )
+                  )}
                 </li>
               );
             })}
           </ol>
+          {reportErr && <div className="text-red-400 text-[0.72rem] mt-1.5">{reportErr}</div>}
         </div>
       )}
     </div>
