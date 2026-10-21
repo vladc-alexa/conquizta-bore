@@ -420,16 +420,17 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
       .filter((a) => a.round === game.currentRound)
       .map((a) => ({ playerId: a.playerId, ms: a.elapsedMilliseconds }))
       .sort((a, b) => a.ms - b.ms),
-    reveal:
-      (entry ?? (intermission ? plan[throwRound] ?? null : null)) && mine &&
-      answers.some((a) => a.round === throwRound && a.playerId === mine.id)
-        ? (() => {
-            const e = (entry ?? plan[throwRound]) as TowerEntry;
-            return e.mode === "rapide"
-              ? String(e.answer)
-              : (e.options.find((o) => o.id === e.correctOptionId)?.text ?? null);
-          })()
-        : null,
+    // The reveal belongs to the round that just CLOSED and only during the breather.
+    // Never derive it from the open question: that handed the live answer to anyone
+    // who had answered an earlier round (reported 2026-10-21).
+    reveal: (() => {
+      if (!roundOpen || !intermission) return null;
+      const closed = plan[game.currentRound - 1] ?? plan[throwRound] ?? null;
+      if (!closed) return null;
+      return closed.mode === "rapide"
+        ? String(closed.answer)
+        : (closed.options.find((o) => o.id === closed.correctOptionId)?.text ?? null);
+    })(),
     canThrow:
       roundOpen &&
       !!mine &&
