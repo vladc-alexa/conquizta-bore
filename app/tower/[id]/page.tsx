@@ -38,7 +38,7 @@ export default function TowerGamePage() {
   const [busy, setBusy] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
   const [typed, setTyped] = useState(""); // rapidă round: the typed guess
-  const [feedback, setFeedback] = useState<{ correct: boolean; rungs: number } | null>(null);
+  const [feedback, setFeedback] = useState<{ correct: boolean; rungs: number; ms: number } | null>(null);
   const [now, setNow] = useState(Date.now());
   const roundRef = useRef<number>(-1);
 
@@ -83,6 +83,12 @@ export default function TowerGamePage() {
     return Math.max(0, state.startedAt + state.windowMs - now);
   }, [state?.startedAt, state?.windowMs, now]);
 
+  // 4s breather between rounds: the next question opens when startedAt arrives
+  const msUntilStart = useMemo(() => {
+    if (!state?.startedAt) return 0;
+    return Math.max(0, state.startedAt - now);
+  }, [state?.startedAt, now]);
+
   async function answer(optionId: string) {
     if (!state || picked) return;
     setPicked(optionId);
@@ -109,7 +115,7 @@ export default function TowerGamePage() {
         setErr(d.error || "Răspunsul nu a fost înregistrat.");
         return false;
       }
-      setFeedback({ correct: !!d.isCorrect, rungs: Number(d.rungs) || 0 });
+      setFeedback({ correct: !!d.isCorrect, rungs: Number(d.rungs) || 0, ms: Number(d.elapsedMs) || 0 });
       load();
       return true;
     } catch {
@@ -218,6 +224,15 @@ export default function TowerGamePage() {
             </div>
           )}
 
+          {/* ---- breather between rounds ---- */}
+          {msUntilStart > 0 && state.phase !== "lobby" && state.phase !== "done" && (
+            <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl p-4 flex flex-col items-center gap-1">
+              <div className="font-cinzel text-[#9ec6c1] text-[0.8rem] tracking-widest">RUNDA {state.round + 1}</div>
+              <div className="text-[2rem] tabular-nums text-[#e6f2ef]">{(msUntilStart / 1000).toFixed(1)}s</div>
+              <div className="text-[#75938f] text-[0.72rem]">Următoarea întrebare…</div>
+            </div>
+          )}
+
           {/* ---- question ---- */}
           {state.question && state.phase !== "lobby" && state.phase !== "done" && (
             <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl p-4 flex flex-col gap-3">
@@ -290,6 +305,9 @@ export default function TowerGamePage() {
               {feedback ? (
                 <div className={`text-[0.8rem] ${feedback.correct ? "text-[#8fd9a8]" : "text-[#c98b6b]"}`}>
                   {feedback.correct ? `Corect · +${feedback.rungs} trepte` : "Greșit · ai stat pe loc"}
+                  {state.question.mode === "rapide" && feedback.ms > 0 && (
+                    <span className="text-[#75938f]"> · răspuns în {(feedback.ms / 1000).toFixed(1)}s</span>
+                  )}
                 </div>
               ) : state.myAnswered ? (
                 <div className="text-[#75938f] text-[0.78rem]">Răspuns înregistrat. Aștept ceilalți…</div>
@@ -384,6 +402,7 @@ export default function TowerGamePage() {
                   {mineGain && (
                     <span className="shrink-0 text-[#75938f]">
                       tu +{mineGain.rungs}▲
+                      {h.mode === "rapide" && mineGain.ms > 0 ? ` · ${(mineGain.ms / 1000).toFixed(1)}s` : ""}
                     </span>
                   )}
                   {state.status === "COMPLETED" && (

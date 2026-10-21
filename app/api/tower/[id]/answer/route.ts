@@ -29,6 +29,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const started = game.roundStartedAt?.getTime() ?? Date.now();
   const elapsedRaw = Date.now() - started;
+  // 4s breather between rounds: the window opens when roundStartedAt arrives
+  if (elapsedRaw < 0) {
+    return NextResponse.json({ error: "runda nu a început încă" }, { status: 409 });
+  }
   if (elapsedRaw > TOWER_ROUND_MS + TOWER_ROUND_GRACE_MS) {
     return NextResponse.json({ error: "timpul a expirat" }, { status: 409 });
   }
@@ -72,5 +76,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   await resolveTower(id); // last player in -> the round settles immediately
-  return NextResponse.json({ ok: true, isCorrect, score, rungs: rungsFor(score) });
+  return NextResponse.json({
+    ok: true,
+    isCorrect,
+    score,
+    rungs: rungsFor(score),
+    elapsedMs: Math.round(elapsed), // shown on rapidă rounds
+  });
 }

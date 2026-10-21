@@ -26,6 +26,9 @@ export const TOWER_PLAN_SIZE = 40;
 export const TOWER_CUT_FROM_ROUND = 9; // first fall after round 10
 export const TOWER_ROUND_MS = 15_000;
 export const TOWER_ROUND_GRACE_MS = 1_500;
+/** Breather between rounds: the next question opens this long after the round
+ *  settles, so players can read what happened before the clock restarts. */
+export const TOWER_INTERMISSION_MS = 4_000;
 export const RUNGS_PER_ROUND = 4;
 /** Visual height of the tower in rungs — the winner climbs all of them. */
 export const TOWER_HEIGHT = 36;
@@ -185,7 +188,7 @@ export async function resolveTower(gameId: string): Promise<void> {
       where: { id: gameId, status: "IN_PROGRESS", currentRound: r },
       data: outOfQuestions
         ? { currentRound: after }
-        : { currentRound: after, roundStartedAt: new Date() },
+        : { currentRound: after, roundStartedAt: new Date(Date.now() + TOWER_INTERMISSION_MS) },
     });
     if (res.count === 0) return; // another poll resolved this round first
 
@@ -280,6 +283,8 @@ export type TowerState = {
     responseType: string | null;
   } | null;
   startedAt: number | null;
+  /** > 0 while the 4s breather runs — the question is not sent yet */
+  startsInMs: number;
   windowMs: number;
   myAnswered: boolean;
   answeredCount: number;
@@ -294,7 +299,7 @@ export type TowerState = {
     prompt: string;
     reveal: string;
     bestPlayerId: string | null;
-    gains: { playerId: string; score: number; rungs: number }[];
+    gains: { playerId: string; score: number; rungs: number; ms: number }[];
   }[];
 };
 
@@ -308,7 +313,10 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
   const live = players.filter((p) => !p.eliminated);
   const done = game.status === "COMPLETED";
   const roundOpen = game.status === "IN_PROGRESS";
-  const entry = roundOpen && game.currentRound < plan.length ? plan[game.currentRound] : null;
+  const opensAt = game.roundStartedAt?.getTime() ?? 0;
+  const intermission = roundOpen && opensAt > Date.now();
+  const entry = roundOpen && !intermission && game.currentRound < plan.length ? plan[game.currentRound] : null;
+  const startsInMs = intermission ? opensAt - Date.now() : 0;
 
   // after the match, read the live question text back (same reason as the duel:
   // editors fix bad questions from the review screen)
@@ -337,7 +345,7 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
       reveal,
       mode: e.mode,
       bestPlayerId: best ? best.playerId : null,
-      gains: rows.map((a) => ({ playerId: a.playerId, score: a.score, rungs: a.rungs })),
+      gains: rows.map((a) => ({ playerId: a.playerId, score: a.score, rungs: a.rungs, ms: a.elapsedMilliseconds })),
     };
   });
 
@@ -383,6 +391,7 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
         }
       : null,
     startedAt: game.roundStartedAt?.getTime() ?? null,
+    startsInMs,
     windowMs: TOWER_ROUND_MS,
     myAnswered: !!mine && answers.some((a) => a.round === game.currentRound && a.playerId === mine.id),
     answeredCount: answers.filter((a) => a.round === game.currentRound).length,
