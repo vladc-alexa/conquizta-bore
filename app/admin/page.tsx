@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import PromptText from "@/components/PromptText";
 
 interface AdminUser {
   id: string;
@@ -702,7 +703,7 @@ export default function AdminPage() {
                           <span className="text-[0.65rem] text-[#75938f] border border-[#1e3a34] rounded px-1.5 py-0.5">dezactivată</span>
                         )}
                       </div>
-                      <div className="text-[#cbdcda] leading-snug mt-1">{q.prompt}</div>
+                      <div className="text-[#cbdcda] leading-snug mt-1"><PromptText text={q.prompt} /></div>
                       <div className="text-[0.72rem] text-[#8fb0ac] mt-0.5">
                         Corect: <strong className="text-[#9ec6c1]">{q.correctAnswer ?? "—"}</strong>
                       </div>

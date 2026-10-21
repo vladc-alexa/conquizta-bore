@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Arena from "./Arena";
+import PromptText from "@/components/PromptText";
 
 type AnswerRow = { userId: string; isCorrect: boolean; elapsedMs: number; score: number | null; mine: boolean };
 type HistoryRow = {
@@ -381,7 +382,7 @@ export default function DuelMatch() {
                       {h.winnerId === me.id ? "✔ câștigată" : h.winnerId ? "✖ pierdută" : "– egal"}
                     </span>
                   </div>
-                  <div className="text-[0.88rem] text-[#cbdcda] leading-snug">{view.prompt}</div>
+                  <div className="text-[0.88rem] text-[#cbdcda] leading-snug"><PromptText text={view.prompt} /></div>
                   <div className="text-[0.78rem] text-[#8fb0ac]">
                     Corect: <strong className="text-[#9ec6c1]">{view.reveal}</strong>
                     {h.answers.map((a, i) => (
@@ -554,7 +555,7 @@ export default function DuelMatch() {
           </div>
         </div>
 
-        <p className="font-cinzel text-[1.05rem] leading-relaxed min-h-[60px]">{state.prompt}</p>
+        <p className="font-cinzel text-[1.05rem] leading-relaxed min-h-[60px]"><PromptText text={state.prompt} /></p>
 
         {!isGrila && state.responseType && (
           <div className="self-start text-[0.7rem] text-[#0c1a17] bg-[#6f9c99]/90 rounded-full px-2.5 py-1 font-bold tracking-wide">

@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Tower from "@/components/Tower";
+import PromptText, { artPreview } from "@/components/PromptText";
 import type { TowerState } from "@/lib/tower";
 
 export default function TowerGamePage() {
@@ -251,7 +252,7 @@ export default function TowerGamePage() {
                   style={{ width: `${Math.max(0, Math.min(100, (msLeft / state.windowMs) * 100))}%` }}
                 />
               </div>
-              <p className="text-[#dfe7e5] text-[0.95rem] leading-snug">{state.question.prompt}</p>
+              <p className="text-[#dfe7e5] text-[0.95rem] leading-snug"><PromptText text={state.question.prompt} /></p>
               {state.question.mode === "rapide" && (
                 <div className="flex flex-col gap-1.5">
                   <div className="text-[0.68rem] text-[#75938f] uppercase tracking-wider">
@@ -394,7 +395,7 @@ export default function TowerGamePage() {
                     R{h.round + 1}
                     {h.mode === "rapide" ? " ⚡" : ""}
                   </span>
-                  <span className="min-w-0 truncate">{h.prompt}</span>
+                  <span className="min-w-0 truncate">{artPreview(h.prompt)}</span>
                   <span className="text-[#8fd9a8] shrink-0">→ {h.reveal}</span>
                   {best && <span className="shrink-0 text-[#9ec6c1]">{best.name}</span>}
                   {mineGain && (

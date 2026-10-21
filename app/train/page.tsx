@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import PromptText from "@/components/PromptText";
 
 type Mode = "rapide" | "grila" | null;
 
@@ -389,7 +390,7 @@ export default function TrainPage() {
                     </span>
                     <span className="text-[0.85rem]">{r.isCorrect ? "✔" : r.timeout ? "⏱" : "✖"}</span>
                   </div>
-                  <div className="text-[0.9rem] text-[#cbdcda] leading-snug">{r.prompt}</div>
+                  <div className="text-[0.9rem] text-[#cbdcda] leading-snug"><PromptText text={r.prompt} /></div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.8rem]">
                     <span className={r.isCorrect ? "text-green-400" : "text-red-400"}>
                       Ai răspuns: <strong>{r.myAnswer}</strong>
@@ -477,7 +478,7 @@ export default function TrainPage() {
           </div>
         </div>
 
-        <p className="font-cinzel text-[1.05rem] leading-relaxed min-h-[60px]">{q?.prompt}</p>
+        <p className="font-cinzel text-[1.05rem] leading-relaxed min-h-[60px]"><PromptText text={q?.prompt ?? ""} /></p>
 
         {!isGrila && (q as RapideQuestion).responseType && (
           <div className="self-start text-[0.7rem] text-[#0c1a17] bg-[#6f9c99]/90 rounded-full px-2.5 py-1 font-bold tracking-wide">
