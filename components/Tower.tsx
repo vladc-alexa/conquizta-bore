@@ -90,21 +90,28 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
         // pose is a fall frame and the winner holds still at the summit.
         const climbing = !p.eliminated && p.rungs < SUMMIT_RUNGS && !!walking[p.id];
 
+        // the anchor is the climber's feet: sprite sits on it, the name tag is
+        // absolutely positioned under it so it never shifts the climb position.
+        // Tags alternate between two rows — eight ladders are only ~55px apart,
+        // so a single row of names collides as soon as everyone is at 0 rungs.
         return (
           <div
             key={p.id}
-            className="absolute flex flex-col items-center transition-all duration-700 ease-out"
+            className="absolute transition-all duration-700 ease-out"
             style={{
               left: `${xPct * 100}%`,
               bottom: `${bottomPct * 100}%`,
-              transform: `translate(-50%, ${p.eliminated ? "8px" : "4px"}) rotate(${p.eliminated ? -70 : 0}deg)`,
+              transform: `translate(-50%, ${p.eliminated ? "10px" : "0px"}) rotate(${p.eliminated ? -70 : 0}deg)`,
               opacity: p.eliminated ? 0.75 : 1,
               zIndex: p.mine ? 30 : 20,
             }}
             title={`${p.name}${p.isBot ? " (bot)" : ""} — ${p.rungs} trepte · ${p.score} pct`}
           >
             {p.rungs >= SUMMIT_RUNGS && !p.eliminated && (
-              <div className="leading-none mb-[1px] drop-shadow" style={{ fontSize: "clamp(12px, 2.1cqh, 20px)" }}>
+              <div
+                className="absolute inset-x-0 -top-[1.05em] text-center leading-none drop-shadow"
+                style={{ fontSize: "clamp(12px, 2.1cqh, 20px)" }}
+              >
                 👑
               </div>
             )}
@@ -119,7 +126,7 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
                   width: "auto",
                   animationDelay: climbing ? `${(seat * 0.09).toFixed(2)}s` : undefined,
                 }}
-                className={`drop-shadow-[0_2px_3px_rgba(0,0,0,.55)]${
+                className={`block drop-shadow-[0_2px_3px_rgba(0,0,0,.55)]${
                   climbing ? " climber-sprite" : " climber-sprite--held"
                 }`}
               />
@@ -139,8 +146,13 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
               </div>
             )}
             <span
-              className="mt-[1px] whitespace-nowrap rounded bg-[#040a08]/70 px-1 leading-[1.15] text-[#e6f1ee]"
-              style={{ fontSize: "clamp(10px, 2.1cqh, 17px)", ...(p.mine ? { color: "#ffe9a8" } : null) }}
+              className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-[#040a08]/75 px-1 leading-[1.15] text-[#e6f1ee]"
+              style={{
+                fontSize: "clamp(10px, 1.9cqh, 16px)",
+                top: `${p.eliminated ? 100 : 96}%`,
+                marginTop: seat % 2 === 1 ? "1.35em" : "0.15em",
+                ...(p.mine ? { color: "#ffe9a8" } : null),
+              }}
             >
               {p.name}
               {p.eliminated ? " 💀" : ""}
