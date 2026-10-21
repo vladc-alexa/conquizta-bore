@@ -36,6 +36,8 @@ model User {
   questionReports QuestionReport[]
   duelsAsHost     Duel[]             @relation("DuelHost")
   duelsAsGuest    Duel[]             @relation("DuelGuest")
+  towerGamesAsHost TowerGame[]       @relation("TowerHost")
+  towerSeats      TowerPlayer[]
 }
 
 enum DuelStatus {
@@ -86,6 +88,76 @@ model DuelAnswer {
 
   @@unique([duelId, userId, round])
   @@index([duelId])
+}
+
+// TURNUL — 8-player ladder siege, 9 rounds. Everyone climbs a tower face with
+// their own ladder; each answer earns points and the round's points become
+// rungs. After round 8 the lowest score falls off the ladder, and round 9
+// crowns the player who reaches the top. Rounds resolve server-side (see
+// lib/tower.ts); bots fill empty seats so a single player can start.
+enum TowerStatus {
+  WAITING
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+model TowerGame {
+  id             String       @id @default(uuid()) @db.Uuid
+  hostId         String       @db.Uuid
+  status         TowerStatus  @default(WAITING)
+  plan           Json
+  currentRound   Int          @default(0)
+  roundStartedAt DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  startedAt      DateTime?
+  completedAt    DateTime?
+  winnerId       String?      @db.Uuid
+  host           User         @relation("TowerHost", fields: [hostId], references: [id], onDelete: Cascade)
+  players        TowerPlayer[]
+  answers        TowerAnswer[]
+
+  @@index([status, createdAt])
+  @@index([hostId])
+}
+
+model TowerPlayer {
+  id         String     @id @default(uuid()) @db.Uuid
+  gameId     String     @db.Uuid
+  userId     String?    @db.Uuid
+  name       String     @db.VarChar(32)
+  isBot      Boolean    @default(false)
+  seat       Int
+  score      Int        @default(0)
+  rungs      Int        @default(0)
+  eliminated Boolean    @default(false)
+  fellRound  Int?
+  game       TowerGame  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  answers    TowerAnswer[]
+
+  @@unique([gameId, seat])
+  @@index([gameId])
+}
+
+model TowerAnswer {
+  id                  String      @id @default(uuid()) @db.Uuid
+  gameId              String      @db.Uuid
+  playerId            String      @db.Uuid
+  round               Int
+  questionId          String      @db.Uuid
+  selectedOptionId    String?     @db.Uuid
+  isCorrect           Boolean     @default(false)
+  score               Int         @default(0)
+  rungs               Int         @default(0)
+  elapsedMilliseconds Int         @default(0)
+  answeredAt          DateTime    @default(now())
+  game                TowerGame   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  player              TowerPlayer @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, playerId, round])
+  @@index([gameId])
 }
 
 model ChatMessage {

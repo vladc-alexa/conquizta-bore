@@ -85,7 +85,7 @@ export default function DuelLobbyPanel({ onUnauthorized }: { onUnauthorized?: ()
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">⚔️ 1 la 1</h3>
-        <span className="text-[#75938f] text-[0.65rem]">10 RUNDE · 6 GRILĂ + 4 RAPIDĂ</span>
+        <span className="text-[#75938f] text-[0.65rem]">3 CÂȘTIGURI LA RÂND = MECIUL</span>
       </div>
 
       <button

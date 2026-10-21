@@ -383,6 +383,14 @@ export default function Dashboard() {
             <div className="text-[#122420] text-[0.8rem] mt-1 font-bold">VREI SA TI-O MASORI?</div>
           </a>
 
+          <a
+            href="/tower"
+            className="bg-gradient-to-br from-[#d9a441] to-[#8a6120] border-2 border-[#d9a44180] rounded-2xl shadow-2xl text-center p-[1.15rem] hover:brightness-110 active:translate-y-px"
+          >
+            <div className="font-cinzel text-[#0c1a17] text-[1rem] tracking-widest">🏰 Turnul</div>
+            <div className="text-[#2a1d08] text-[0.75rem] mt-1 font-bold">8 JUCĂTORI · 9 RUNDE</div>
+          </a>
+
           <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-[1.15rem] flex flex-col gap-2">
             <h3 className="font-cinzel text-[#9ec6c1] text-[0.85rem] tracking-widest">😂 Gluma zilei</h3>
             <p className="text-[#cbdcda] text-[0.9rem] leading-relaxed font-cinzel">„Tu! Tu esti gluma!”</p>
