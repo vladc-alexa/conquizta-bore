@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isError, requireAdmin, requireEditor } from "@/lib/admin";
+import { editSummary, logQuestionEdit } from "@/lib/questionAudit";
 
 // DELETE /api/admin/questions/[id] — PERMANENT delete (admins only).
 // Irreversible: removes the question, its options, reports and per-question user
@@ -19,6 +20,8 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     prisma.duelAnswer.deleteMany({ where: { questionId: id } }),
     prisma.question.delete({ where: { id } }),
   ]);
+  // the question is gone, so the trail keeps only the snapshot + who did it
+  await logQuestionEdit({ questionId: null, editorId: auth.id, action: "delete", prompt: question.prompt });
   return NextResponse.json({ ok: true, deleted: id });
 }
 
@@ -30,7 +33,10 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   if (isError(auth)) return auth;
 
   const { id } = await ctx.params;
-  const question = await prisma.question.findUnique({ where: { id }, select: { id: true } });
+  const question = await prisma.question.findUnique({
+    where: { id },
+    select: { id: true, prompt: true, options: { select: { text: true, isCorrect: true } } },
+  });
   if (!question) return NextResponse.json({ error: "Întrebarea nu există." }, { status: 404 });
 
   const body = await req.json().catch(() => null);
@@ -86,5 +92,16 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     // leaves the review queue and loses its "reported" badge.
     prisma.questionReport.deleteMany({ where: { questionId: id } }),
   ]);
+  // who edited it, and what actually changed (null = saved without differences)
+  await logQuestionEdit({
+    questionId: id,
+    editorId: auth.id,
+    action: "edit",
+    prompt,
+    summary: editSummary(
+      { prompt: question.prompt, options: question.options },
+      { prompt, options: cleanOptions.map((o: { text: string; isCorrect: boolean }) => ({ text: o.text, isCorrect: o.isCorrect })) }
+    ),
+  });
   return NextResponse.json({ ok: true });
 }

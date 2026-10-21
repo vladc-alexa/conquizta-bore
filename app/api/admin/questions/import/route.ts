@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireEditor, isError } from "@/lib/admin";
+import { logQuestionEdits } from "@/lib/questionAudit";
 
 // POST /api/admin/questions/import { csv, dryRun? }
 // Bulk-import questions from a CSV pasted by an admin/editor.
@@ -219,7 +220,7 @@ export async function POST(req: Request) {
     const CHUNK = 100;
     for (let i = 0; i < unique.length; i += CHUNK) {
       const slice = unique.slice(i, i + CHUNK);
-      await prisma.$transaction(
+      const created = await prisma.$transaction(
         slice.map((r) =>
           prisma.question.create({
             data: {
@@ -233,9 +234,14 @@ export async function POST(req: Request) {
                     : [{ text: String(r.answer), position: 0, isCorrect: true }],
               },
             },
-            select: { id: true },
+            select: { id: true, prompt: true },
           })
         )
+      );
+      // the trail: one row per imported question, tagged with the importing editor
+      await logQuestionEdits(
+        auth.id,
+        created.map((q) => ({ questionId: q.id, action: "import" as const, prompt: q.prompt }))
       );
       imported += slice.length;
     }

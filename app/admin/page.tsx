@@ -14,6 +14,18 @@ interface AdminUser {
   createdAt: string;
 }
 
+type EditAction = "create" | "import" | "edit" | "publish" | "unpublish" | "delete";
+
+interface QuestionEditRow {
+  id: string;
+  editorId: string | null;
+  editorName: string;
+  action: EditAction;
+  summary: string | null;
+  prompt: string;
+  createdAt: string;
+}
+
 interface AdminQuestion {
   id: string;
   prompt: string;
@@ -21,7 +33,21 @@ interface AdminQuestion {
   correctAnswer: string | null;
   options: { id: string; text: string; isCorrect: boolean }[];
   reportCount: number;
+  lastEdit: { editorId: string | null; editorName: string; action: EditAction; at: string } | null;
 }
+
+// kind of change, in the words the admins use
+const ACTION_LABEL: Record<EditAction, string> = {
+  create: "creată",
+  import: "importată",
+  edit: "editată",
+  publish: "activată",
+  unpublish: "dezactivată",
+  delete: "ștearsă",
+};
+
+const fmtWhen = (iso: string) =>
+  new Date(iso).toLocaleString("ro-RO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export default function AdminPage() {
   const [me, setMe] = useState<{ name: string; isAdmin: boolean; canEditQuestions: boolean } | null>(null);
@@ -62,6 +88,10 @@ export default function AdminPage() {
     encoding?: string;
   } | null>(null);
   const [impMsg, setImpMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [qEditor, setQEditor] = useState("");
+  const [editors, setEditors] = useState<{ id: string; name: string; n: number }[]>([]);
+  const [qEdits, setQEdits] = useState<QuestionEditRow[] | null>(null);
+  const [qEditsBusy, setQEditsBusy] = useState(false);
   const [qCounts, setQCounts] = useState<{
     active: { total: number; grila: number; rapide: number; other: number };
     inactive: { total: number; grila: number; rapide: number; other: number };
@@ -92,7 +122,9 @@ export default function AdminPage() {
       setQLoading(true);
       try {
         const res = await fetch(
-          `/api/admin/questions?search=${encodeURIComponent(qSearch)}&status=${qStatus}&limit=50&offset=${offset}`
+          `/api/admin/questions?search=${encodeURIComponent(qSearch)}&status=${qStatus}&limit=50&offset=${offset}${
+            qEditor ? `&editorId=${encodeURIComponent(qEditor)}` : ""
+          }`
         );
         if (res.ok) {
           const data = await res.json();
@@ -102,6 +134,7 @@ export default function AdminPage() {
           setQTotal(typeof data.total === "number" ? data.total : 0);
           setQHasMore(offset + list.length < (data.total ?? 0));
           if (data.counts) setQCounts(data.counts);
+          if (Array.isArray(data.editors)) setEditors(data.editors);
         }
       } catch {
         /* ignore */
@@ -109,7 +142,7 @@ export default function AdminPage() {
         setQLoading(false);
       }
     },
-    [qSearch, qStatus]
+    [qSearch, qStatus, qEditor]
   );
 
   const onListScroll = () => {
@@ -219,6 +252,14 @@ export default function AdminPage() {
     while (opts.length < 4) opts.push({ text: "", isCorrect: false });
     setEditOptions(opts.slice(0, 4));
     setEditMsg(null);
+    // who touched this question before — loaded in the background
+    setQEdits(null);
+    setQEditsBusy(true);
+    fetch(`/api/admin/questions/${q.id}/edits`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setQEdits(d?.edits ?? []))
+      .catch(() => setQEdits([]))
+      .finally(() => setQEditsBusy(false));
   };
 
   const switchEditType = (t: "rapide" | "grila") => {
@@ -286,7 +327,7 @@ export default function AdminPage() {
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qSearch, qStatus, canEdit]);
+  }, [qSearch, qStatus, qEditor, canEdit]);
 
   const toggleMute = async (u: AdminUser) => {
     const res = await fetch(`/api/admin/users/${u.id}/mute`, { method: "POST" });
@@ -553,6 +594,21 @@ export default function AdminPage() {
               <option value="published">Publicate</option>
               <option value="disabled">Dezactivate</option>
             </select>
+            {editors.length > 0 && (
+              <select
+                value={qEditor}
+                onChange={(e) => setQEditor(e.target.value)}
+                title="Doar întrebările la care ultima modificare e a acestui editor"
+                className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] text-[0.8rem] p-2 outline-none cursor-pointer max-w-44"
+              >
+                <option value="">Toți editorii</option>
+                {editors.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name} ({e.n})
+                  </option>
+                ))}
+              </select>
+            )}
         </div>
         {qCounts && (
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[0.75rem] border-t border-[#1e3a3450] pt-2.5">
@@ -666,6 +722,25 @@ export default function AdminPage() {
                         </div>
                       </>
                     )}
+                    {/* audit trail: who created/edited/activated this question */}
+                    <div className="border-t border-[#1e3a3450] pt-2.5 flex flex-col gap-1.5">
+                      <div className="text-[0.68rem] text-[#75938f] uppercase tracking-wider">Istoric editări</div>
+                      {qEditsBusy && <div className="text-[0.72rem] text-[#75938f]">Se încarcă…</div>}
+                      {!qEditsBusy && qEdits && qEdits.length === 0 && (
+                        <div className="text-[0.72rem] text-[#75938f]">
+                          Nicio urmă — întrebarea e dinainte de jurnalul de editări.
+                        </div>
+                      )}
+                      {!qEditsBusy &&
+                        qEdits?.map((h) => (
+                          <div key={h.id} className="flex items-baseline gap-2 text-[0.72rem] text-[#8fb0ac]">
+                            <span className="text-[#75938f] shrink-0">{fmtWhen(h.createdAt)}</span>
+                            <span className="text-[#9ec6c1] shrink-0">{h.editorName}</span>
+                            <span className="shrink-0">{ACTION_LABEL[h.action] ?? h.action}</span>
+                            {h.summary && <span className="text-[#75938f] truncate">· {h.summary}</span>}
+                          </div>
+                        ))}
+                    </div>
                     {editMsg && <div className={`text-[0.8rem] ${editMsg.ok ? "text-green-400" : "text-red-400"}`}>{editMsg.text}</div>}
                     <div className="flex gap-2">
                       <button
@@ -706,6 +781,16 @@ export default function AdminPage() {
                       <div className="text-[#cbdcda] leading-snug mt-1"><PromptText text={q.prompt} /></div>
                       <div className="text-[0.72rem] text-[#8fb0ac] mt-0.5">
                         Corect: <strong className="text-[#9ec6c1]">{q.correctAnswer ?? "—"}</strong>
+                      </div>
+                      <div className="text-[0.68rem] text-[#75938f] mt-0.5">
+                        {q.lastEdit ? (
+                          <>
+                            {ACTION_LABEL[q.lastEdit.action] ?? "modificată"} de{" "}
+                            <span className="text-[#9ec6c1]">{q.lastEdit.editorName}</span> · {fmtWhen(q.lastEdit.at)}
+                          </>
+                        ) : (
+                          "fără istoric de editare"
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap justify-end">

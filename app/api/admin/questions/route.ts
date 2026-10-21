@@ -15,6 +15,8 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const search = url.searchParams.get("search")?.trim() || "";
   const status = url.searchParams.get("status") || "reported";
+  // filter by the editor who made the LAST change to the question
+  const editorId = url.searchParams.get("editorId") || "";
   const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "50", 10) || 50, 1), 200);
   const offset = Math.max(parseInt(url.searchParams.get("offset") || "0", 10) || 0, 0);
 
@@ -47,6 +49,36 @@ export async function GET(req: Request) {
       .map((r) => r.questionId);
     where.id = { in: reportedIds.slice(offset, offset + limit) };
   }
+
+  // ---- who touched what: latest edit per question, plus per-editor totals ----
+  const latestEdits = await prisma.$queryRaw<
+    { questionId: string; editorId: string | null; editorName: string; action: string; createdAt: Date }[]
+  >`SELECT DISTINCT ON ("questionId") "questionId", "editorId", "editorName", action, "createdAt"
+    FROM "QuestionEdit"
+    WHERE "questionId" IS NOT NULL
+    ORDER BY "questionId", "createdAt" DESC`;
+  const lastEditBy = new Map(latestEdits.map((e) => [e.questionId, e]));
+
+  if (editorId) {
+    const mine = new Set(latestEdits.filter((e) => e.editorId === editorId).map((e) => e.questionId));
+    if (reportedIds) {
+      // keep the report ranking, just drop the rows this editor never touched
+      reportedIds = reportedIds.filter((id) => mine.has(id));
+      where.id = { in: reportedIds.slice(offset, offset + limit) };
+    } else {
+      const current = (where.id as { in?: string[] } | undefined)?.in;
+      const ids = current ? current.filter((id) => mine.has(id)) : [...mine];
+      // an empty `in` matches everything — use an id that cannot exist
+      where.id = { in: ids.length ? ids : ["00000000-0000-0000-0000-000000000000"] };
+    }
+  }
+
+  const editors = await prisma.$queryRaw<{ id: string; name: string; n: number }[]>`
+    SELECT "editorId" AS id, max("editorName") AS name, count(*)::int AS n
+    FROM "QuestionEdit"
+    WHERE "editorId" IS NOT NULL
+    GROUP BY 1
+    ORDER BY n DESC`;
 
   const [questions, reportCounts, total, shapeRows] = await Promise.all([
     prisma.question.findMany({
@@ -96,6 +128,12 @@ export async function GET(req: Request) {
     correctAnswer: q.options.find((o) => o.isCorrect)?.text ?? null,
     options: q.options.map((o) => ({ id: o.id, text: o.text, isCorrect: o.isCorrect })),
     reportCount: reports.get(q.id) ?? 0,
+    lastEdit: (() => {
+      const e = lastEditBy.get(q.id);
+      return e
+        ? { editorId: e.editorId, editorName: e.editorName, action: e.action, at: e.createdAt }
+        : null;
+    })(),
   }));
   if (reportedIds) {
     // restore the report-count ranking (the `in` filter loses it)
@@ -103,5 +141,5 @@ export async function GET(req: Request) {
     list.sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
   }
 
-  return NextResponse.json({ questions: list, counts, total, offset, limit });
+  return NextResponse.json({ questions: list, counts, total, offset, limit, editors, editorId: editorId || null });
 }

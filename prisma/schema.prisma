@@ -40,6 +40,7 @@ model User {
   duelsAsGuest    Duel[]             @relation("DuelGuest")
   towerGamesAsHost TowerGame[]       @relation("TowerHost")
   towerSeats      TowerPlayer[]
+  questionEdits   QuestionEdit[]
 
   @@index([lastSeenAt])
 }
@@ -201,6 +202,27 @@ model Question {
 
   @@index([categoryId, isPublished])
   reports         QuestionReport[]
+  edits           QuestionEdit[]
+}
+
+// Who touched a question, when and what changed — the admin "who edited this?"
+// trail. editorName and prompt are SNAPSHOTS: they survive a rename, and the
+// trail survives the question being deleted (questionId goes null, the row stays).
+model QuestionEdit {
+  id         String   @id @default(uuid()) @db.Uuid
+  questionId String?  @db.Uuid
+  editorId   String?  @db.Uuid
+  editorName String   @db.VarChar(32)
+  action     String   @db.VarChar(16) // create | import | edit | publish | unpublish | delete
+  prompt     String   @db.VarChar(1000)
+  summary    String?  @db.VarChar(300)
+  createdAt  DateTime @default(now())
+  question   Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  editor     User?     @relation(fields: [editorId], references: [id], onDelete: SetNull)
+
+  @@index([questionId, createdAt])
+  @@index([editorId, createdAt])
+  @@index([createdAt])
 }
 
 model QuestionReport {
