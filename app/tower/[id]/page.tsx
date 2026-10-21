@@ -192,7 +192,7 @@ export default function TowerGamePage() {
       {/* the board gets every pixel the side panel doesn't need: it used to be
           capped by max-w-6xl (≈700px even on a 1920 screen) */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(310px,340px)] gap-4 items-start">
-        <Tower players={state.players} />
+        <Tower players={state.players} answers={state.roundAnswers} />
 
         <div className="flex flex-col gap-3">
           {/* ---- lobby ---- */}

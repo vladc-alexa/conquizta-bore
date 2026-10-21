@@ -1,30 +1,46 @@
 // Sprite slots for the 8 climbers in the tower artwork.
 //
-// Drop the generated PNGs in `public/tower/players/` (transparent background,
-// full body, feet at the bottom edge of the canvas) and fill in `src` here.
-// While a slot has no `src` the climber falls back to the gem/initial avatar,
-// so the game keeps working with whatever art is ready.
+// Each seat has five painted states (see ~/.hermes skill note "Tower sprite art"):
+// `calm`, `tongue`, `frown`, `yawn`, `throw`. The climbers are drawn from behind
+// with the head turned back over the shoulder, so the face reads on the wall.
+// `fall` is the pose used for the climber who drops off.
 //
-// `climb` is the pose used on the wall; `fall` (optional) is shown for the
-// player who drops off after round 8.
+// A missing slot falls back to the gem/initial avatar, so art can land late
+// without touching the game.
 export type ClimberSprite = {
-  src: string;
-  /** pose used for the eliminated player; defaults to `src` (rotated) */
-  fall?: string;
+  calm: string;
+  fall: string;
+  tongue: string;
+  frown: string;
+  yawn: string;
+  throw: string;
   /** vertical scale multiplier, in case one character reads smaller */
   scale?: number;
 };
 
+const P = "/tower/players";
+
+function seat(n: number): ClimberSprite {
+  return {
+    calm: `${P}/e${n}.png`,
+    fall: `${P}/e${n}_frown.png`,
+    tongue: `${P}/e${n}_tongue.png`,
+    frown: `${P}/e${n}_frown.png`,
+    yawn: `${P}/e${n}_yawn.png`,
+    throw: `${P}/e${n}_throw.png`,
+  };
+}
+
 /** index = seat (0..7) */
 export const CLIMBER_SPRITES: (ClimberSprite | null)[] = [
-  { src: "/tower/players/c1.png", fall: "/tower/players/f1.png" }, // knight
-  { src: "/tower/players/c2.png", fall: "/tower/players/f2.png" }, // archer
-  { src: "/tower/players/c3.png", fall: "/tower/players/f3.png" }, // dwarf
-  { src: "/tower/players/c4.png", fall: "/tower/players/f4.png" }, // mage
-  { src: "/tower/players/c5.png", fall: "/tower/players/f5.png" }, // farm boy
-  { src: "/tower/players/c6.png", fall: "/tower/players/f6.png" }, // rogue
-  { src: "/tower/players/c7.png", fall: "/tower/players/f7.png" }, // scholar
-  { src: "/tower/players/c8.png", fall: "/tower/players/f8.png" }, // mercenary
+  seat(1), // knight
+  seat(2), // archer
+  seat(3), // dwarf
+  seat(4), // mage
+  seat(5), // farm boy
+  seat(6), // rogue
+  seat(7), // scholar
+  seat(8), // mercenary
 ];
 
 /** Fraction of the artwork width where each ladder sits.
@@ -37,9 +53,6 @@ export const LADDER_X = [
 
 /** Vertical band of the climb, as fractions of the artwork height, measured
  *  from the BOTTOM edge of the board (CSS `bottom`), so a climber at 0 rungs
- *  stands on the painted ladder foot and rises towards the wall top.
- *  Measured off `tower.jpg` (1024x572): ladder feet sit at y≈0.885, ladder
- *  top at y≈0.148 → bottom fractions 0.115 / 0.852. The container also holds
- *  the name tag under the sprite (≈2% of the height), hence the small offset. */
+ *  stands on the painted ladder foot and rises towards the wall top. */
 export const CLIMB_GROUND = 0.09;
 export const CLIMB_TOP = 0.79;

@@ -287,6 +287,8 @@ export type TowerState = {
   startsInMs: number;
   windowMs: number;
   myAnswered: boolean;
+  /** this round's answers, fastest first — feeds the cosmetic rock throw */
+  roundAnswers: { playerId: string; ms: number }[];
   answeredCount: number;
   liveCount: number;
   eliminatedId: string | null;
@@ -394,6 +396,10 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
     startsInMs,
     windowMs: TOWER_ROUND_MS,
     myAnswered: !!mine && answers.some((a) => a.round === game.currentRound && a.playerId === mine.id),
+    roundAnswers: answers
+      .filter((a) => a.round === game.currentRound)
+      .map((a) => ({ playerId: a.playerId, ms: a.elapsedMilliseconds }))
+      .sort((a, b) => a.ms - b.ms),
     answeredCount: answers.filter((a) => a.round === game.currentRound).length,
     liveCount: live.length,
     eliminatedId: players.find((p) => p.eliminated)?.id ?? null,

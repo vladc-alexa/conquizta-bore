@@ -233,3 +233,10 @@ h1 {
   80% { transform: translateX(-50%) translateX(-2px) rotate(-3deg); }
 }
 .victim-hit { animation: victim-shake 520ms ease-in-out; }
+
+@keyframes climber-hit-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(-3px) rotate(-4deg); }
+  60% { transform: translateX(3px) rotate(4deg); }
+}
+.climber-hit { animation: climber-hit-shake 420ms ease-in-out; }

@@ -31,7 +31,14 @@ const SUMMIT_RUNGS = 36;
  *  700ms slide transition + a couple of steps) */
 const STEP_MS = 1400;
 
-export default function Tower({ players }: { players: TowerStatePlayer[] }) {
+export default function Tower({
+  players,
+  answers = [],
+}: {
+  players: TowerStatePlayer[];
+  /** this round's answers, fastest first — drives the cosmetic rock throw */
+  answers?: { playerId: string; ms: number }[];
+}) {
   const ordered = [...players].sort((a, b) => a.seat - b.seat);
 
   // Climbers only walk while they are actually gaining rungs. The board polls
@@ -39,6 +46,70 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
   // including at 0 rungs, which reads as "they're all climbing already".
   const prevRungs = useRef<Record<string, number>>({});
   const [walking, setWalking] = useState<Record<string, boolean>>({});
+
+  // --- cosmetic rock throw -------------------------------------------------
+  // Purely visual: the fastest answer of the round lobs a rock at whoever is
+  // last on the wall. No score, no rung, no stun — the server never hears of it.
+  const [hitId, setHitId] = useState<string | null>(null);
+  const [throwingId, setThrowingId] = useState<string | null>(null);
+  const [rock, setRock] = useState({ x: 0, y: 0, spin: 0, on: false });
+  const lastThrow = useRef("");
+  const flying = useRef(false);
+
+  useEffect(() => {
+    const fastest = answers[0];
+    if (!fastest) return;
+    const key = `${fastest.playerId}:${fastest.ms}`;
+    if (lastThrow.current === key || flying.current) return;
+    const thrower = players.find((p) => p.id === fastest.playerId);
+    if (!thrower || thrower.eliminated) return;
+    const live = players.filter((p) => !p.eliminated && p.id !== thrower.id);
+    if (!live.length) return;
+    const target = live.reduce((a, b) => (b.rungs < a.rungs ? b : a));
+    lastThrow.current = key;
+    flying.current = true;
+
+    const xOf = (p: TowerStatePlayer) => (LADDER_X[p.seat % 8] ?? 0.5) * 100;
+    const yOf = (p: TowerStatePlayer) =>
+      (CLIMB_GROUND + Math.min(1, p.rungs / SUMMIT_RUNGS) * (CLIMB_TOP - CLIMB_GROUND)) * 100;
+    const x0 = xOf(thrower);
+    const y0 = yOf(thrower) + 4;
+    const x1 = xOf(target);
+    const y1 = yOf(target) + 3;
+
+    setThrowingId(thrower.id);
+    // safety net: a backgrounded tab throttles rAF, so never leave the throw
+    // face stuck on screen if the frames stop coming
+    window.setTimeout(() => {
+      flying.current = false;
+      setThrowingId(null);
+    }, 1500);
+    const t0 = performance.now();
+    const DUR = 640;
+    const step = (now: number) => {
+      const p = Math.min(1, (now - t0) / DUR);
+      setRock({
+        x: x0 + (x1 - x0) * p,
+        y: y0 + (y1 - y0) * p + Math.sin(Math.PI * p) * 6,
+        spin: p * 720,
+        on: true,
+      });
+      if (p < 1) {
+        requestAnimationFrame(step);
+        return;
+      }
+      setRock((r) => ({ ...r, on: false }));
+      setThrowingId(null);
+      setHitId(target.id);
+      flying.current = false;
+      window.setTimeout(() => setHitId(null), 900);
+    };
+    requestAnimationFrame(step);
+    // players/answers are polled every 1.5s; the throw keys off the answer row
+    // itself, so a re-render mid-flight must not restart it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers]);
+
 
   useEffect(() => {
     const gained: string[] = [];
@@ -62,6 +133,20 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
     }, STEP_MS);
     return () => window.clearTimeout(t);
   }, [players]);
+
+  const liveOrder = [...players].filter((p) => !p.eliminated).sort((a, b) => a.rungs - b.rungs);
+  const lastPlaceId = liveOrder[0]?.id ?? null;
+  const secondFastest = answers[1]?.playerId ?? null;
+
+  /** Which painted face a climber wears right now (all cosmetic). */
+  const expressionFor = (p: TowerStatePlayer): "calm" | "tongue" | "frown" | "yawn" | "throw" => {
+    if (hitId === p.id) return "frown";
+    if (throwingId === p.id) return "throw";
+    if (p.eliminated) return "frown";
+    if (secondFastest === p.id) return "tongue";
+    if (lastPlaceId === p.id) return "yawn";
+    return "calm";
+  };
 
   return (
     <div
@@ -99,7 +184,7 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
         return (
           <div
             key={p.id}
-            className="absolute transition-all duration-700 ease-out"
+            className={`absolute transition-all duration-700 ease-out${hitId === p.id ? " climber-hit" : ""}`}
             style={{
               left: `${xPct * 100}%`,
               bottom: `${bottomPct * 100}%`,
@@ -120,7 +205,11 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
             {sprite ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={p.eliminated && sprite.fall ? sprite.fall : sprite.src}
+                src={
+                  p.eliminated
+                    ? sprite.fall
+                    : sprite[expressionFor(p) === "calm" ? "calm" : expressionFor(p)]
+                }
                 alt={p.name}
                 draggable={false}
                 style={{
@@ -162,6 +251,18 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
           </div>
         );
       })}
+
+      {/* cosmetic rock in flight */}
+      <div
+        className="rock"
+        style={{
+          left: `${rock.x}%`,
+          top: `${100 - rock.y}%`,
+          opacity: rock.on ? 1 : 0,
+          transform: `translate(-50%, -50%) rotate(${rock.spin}deg)`,
+          zIndex: 40,
+        }}
+      />
 
       {/* summit marker: only once someone is king */}
       {ordered.some((p) => p.rungs >= SUMMIT_RUNGS) && (
