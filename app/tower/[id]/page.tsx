@@ -117,7 +117,7 @@ export default function TowerGamePage() {
   const ranked = [...state.players].sort((a, b) => b.rungs - a.rungs || b.score - a.score);
 
   return (
-    <div className="w-full max-w-6xl flex flex-col gap-4 py-2">
+    <div className="w-full max-w-[1700px] px-3 flex flex-col gap-4 py-2">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="font-cinzel text-[#9ec6c1] text-[1.2rem] tracking-widest">🏰 TURNUL</h1>
@@ -141,7 +141,9 @@ export default function TowerGamePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4 items-start">
+      {/* the board gets every pixel the side panel doesn't need: it used to be
+          capped by max-w-6xl (≈700px even on a 1920 screen) */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(310px,340px)] gap-4 items-start">
         <Tower players={state.players} />
 
         <div className="flex flex-col gap-3">

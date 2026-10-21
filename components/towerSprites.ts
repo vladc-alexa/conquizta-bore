@@ -35,6 +35,11 @@ export const LADDER_X = [
   0.3411, 0.3840, 0.4289, 0.4761, 0.5227, 0.5698, 0.6145, 0.6575,
 ];
 
-/** Vertical band of the climb, as fractions of the artwork height. */
-export const CLIMB_TOP = 0.15;
-export const CLIMB_BASE = 0.87;
+/** Vertical band of the climb, as fractions of the artwork height, measured
+ *  from the BOTTOM edge of the board (CSS `bottom`), so a climber at 0 rungs
+ *  stands on the painted ladder foot and rises towards the wall top.
+ *  Measured off `tower.jpg` (1024x572): ladder feet sit at y≈0.885, ladder
+ *  top at y≈0.148 → bottom fractions 0.115 / 0.852. The container also holds
+ *  the name tag under the sprite (≈2% of the height), hence the small offset. */
+export const CLIMB_GROUND = 0.09;
+export const CLIMB_TOP = 0.79;

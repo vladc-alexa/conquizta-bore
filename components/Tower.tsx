@@ -7,8 +7,9 @@
 // Art: `public/tower/tower.jpg`, sprite slots in `components/towerSprites.ts`.
 // Without sprites a climber renders as a gem-coloured pawn — same anchor, same
 // behaviour, so art can land later without touching the game.
+import { useEffect, useRef, useState } from "react";
 import type { TowerStatePlayer } from "@/lib/tower";
-import { CLIMB_BASE, CLIMB_TOP, CLIMBER_SPRITES, LADDER_X } from "./towerSprites";
+import { CLIMB_GROUND, CLIMB_TOP, CLIMBER_SPRITES, LADDER_X } from "./towerSprites";
 
 const SEAT_COLORS = [
   "#e0b34a",
@@ -26,8 +27,41 @@ const SEAT_LABELS = ["V", "B", "I", "M", "R", "A", "E", "C"];
 /** how many rungs it takes to reach the summit (must match lib/tower.ts) */
 const SUMMIT_RUNGS = 36;
 
+/** how long a climber keeps the walk loop after gaining rungs (matches the
+ *  700ms slide transition + a couple of steps) */
+const STEP_MS = 1400;
+
 export default function Tower({ players }: { players: TowerStatePlayer[] }) {
   const ordered = [...players].sort((a, b) => a.seat - b.seat);
+
+  // Climbers only walk while they are actually gaining rungs. The board polls
+  // every 1.5s, so without this every sprite loops the walk cycle forever —
+  // including at 0 rungs, which reads as "they're all climbing already".
+  const prevRungs = useRef<Record<string, number>>({});
+  const [walking, setWalking] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const gained: string[] = [];
+    for (const p of players) {
+      const before = prevRungs.current[p.id];
+      if (before !== undefined && p.rungs > before) gained.push(p.id);
+      prevRungs.current[p.id] = p.rungs;
+    }
+    if (gained.length === 0) return;
+    setWalking((w) => {
+      const next = { ...w };
+      for (const id of gained) next[id] = true;
+      return next;
+    });
+    const t = window.setTimeout(() => {
+      setWalking((w) => {
+        const next = { ...w };
+        for (const id of gained) delete next[id];
+        return next;
+      });
+    }, STEP_MS);
+    return () => window.clearTimeout(t);
+  }, [players]);
 
   return (
     <div
@@ -48,12 +82,13 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
         const seat = p.seat % 8;
         const xPct = LADDER_X[seat] ?? 0.5;
         const climbed = Math.min(1, Math.max(0, p.rungs / SUMMIT_RUNGS));
-        const bottomPct = CLIMB_BASE - climbed * (CLIMB_BASE - CLIMB_TOP);
+        // 0 rungs = ladder foot (bottom of the board), 36 rungs = wall top
+        const bottomPct = CLIMB_GROUND + climbed * (CLIMB_TOP - CLIMB_GROUND);
         const sprite = CLIMBER_SPRITES[seat] ?? null;
         const color = SEAT_COLORS[seat];
-        // climb loop only while actually climbing: the eliminated pose is a
-        // fall frame and the winner holds still at the summit.
-        const climbing = !p.eliminated && p.rungs < SUMMIT_RUNGS;
+        // climb loop only for the moment they gained rungs; the eliminated
+        // pose is a fall frame and the winner holds still at the summit.
+        const climbing = !p.eliminated && p.rungs < SUMMIT_RUNGS && !!walking[p.id];
 
         return (
           <div
@@ -69,7 +104,9 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
             title={`${p.name}${p.isBot ? " (bot)" : ""} — ${p.rungs} trepte · ${p.score} pct`}
           >
             {p.rungs >= SUMMIT_RUNGS && !p.eliminated && (
-              <div className="leading-none text-[0.7rem] mb-[1px] drop-shadow">👑</div>
+              <div className="leading-none mb-[1px] drop-shadow" style={{ fontSize: "clamp(12px, 2.1cqh, 20px)" }}>
+                👑
+              </div>
             )}
             {sprite ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -102,8 +139,8 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
               </div>
             )}
             <span
-              className="mt-[1px] whitespace-nowrap rounded bg-[#040a08]/70 px-1 text-[0.55rem] leading-[1.15] text-[#e6f1ee]"
-              style={p.mine ? { color: "#ffe9a8" } : undefined}
+              className="mt-[1px] whitespace-nowrap rounded bg-[#040a08]/70 px-1 leading-[1.15] text-[#e6f1ee]"
+              style={{ fontSize: "clamp(10px, 2.1cqh, 17px)", ...(p.mine ? { color: "#ffe9a8" } : null) }}
             >
               {p.name}
               {p.eliminated ? " 💀" : ""}
@@ -115,7 +152,10 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
       {/* summit marker: only once someone is king */}
       {ordered.some((p) => p.rungs >= SUMMIT_RUNGS) && (
         <div className="pointer-events-none absolute inset-x-0 top-[6%] flex justify-center">
-          <span className="rounded-full bg-[#040a08]/70 px-3 py-1 font-cinzel text-[0.7rem] tracking-widest text-[#ffe9a8]">
+          <span
+            className="rounded-full bg-[#040a08]/70 px-3 py-1 font-cinzel tracking-widest text-[#ffe9a8]"
+            style={{ fontSize: "clamp(11px, 2.2cqh, 18px)" }}
+          >
             👑 CUCERITOR
           </span>
         </div>
