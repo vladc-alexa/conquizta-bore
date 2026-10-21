@@ -64,7 +64,7 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (pathname === "/login" && session) {
+  if ((pathname === "/login" || pathname === "/register") && session) {
     const url = req.nextUrl.clone();
     url.pathname = "/";
     url.search = "";
@@ -75,5 +75,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/train/:path*", "/duel/:path*", "/admin", "/admin/login", "/api/:path*"],
+  matcher: ["/", "/login", "/register", "/train/:path*", "/duel/:path*", "/admin", "/admin/login", "/api/:path*"],
 };
