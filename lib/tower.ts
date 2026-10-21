@@ -326,7 +326,15 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
   const entry = roundOpen && !intermission && game.currentRound < plan.length ? plan[game.currentRound] : null;
   const startsInMs = intermission ? opensAt - Date.now() : 0;
   // rocks belong to the round you answered: during the breather that is the round just played
-  const throwRound = intermission ? Math.max(0, game.currentRound - 1) : game.currentRound;
+  const myAnswered = answers.filter((a) => mine && a.playerId === mine.id).map((a) => a.round);
+  // the round a rock belongs to: the one you are answering now, else the last
+  // one you answered — so the throw stays clickable after a solo round closes
+  const throwRound =
+    myAnswered.includes(game.currentRound)
+      ? game.currentRound
+      : myAnswered.length
+        ? Math.max(...myAnswered)
+        : game.currentRound;
   const rocks = await prisma.towerRock.findMany({
     where: { gameId, round: throwRound },
     orderBy: { createdAt: "asc" },
