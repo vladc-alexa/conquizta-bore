@@ -32,13 +32,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (!target || target.eliminated) return NextResponse.json({ error: "țintă invalidă" }, { status: 400 });
   if (target.id === me.id) return NextResponse.json({ error: "nu arunci în tine" }, { status: 400 });
 
-  // only after you answered the round — answering fast buys you the rock
+  // Rocks are thrown for the round you just answered. During the 10s breather
+  // that round is already resolved (currentRound already advanced), so a solo
+  // player still gets his throw instead of losing it to the instant close.
+  const intermission = game.roundStartedAt ? game.roundStartedAt.getTime() > Date.now() : false;
+  const round = intermission ? Math.max(0, game.currentRound - 1) : game.currentRound;
+
+  // only after you answered that round — answering buys you the rock
   const answered = await prisma.towerAnswer.findFirst({
-    where: { gameId: id, round: game.currentRound, playerId: me.id },
+    where: { gameId: id, round, playerId: me.id },
   });
   if (!answered) return NextResponse.json({ error: "răspunde mai întâi" }, { status: 409 });
 
-  const round = game.currentRound;
   const already = await prisma.towerRock.findFirst({ where: { gameId: id, round, throwerId: me.id } });
   if (already) return NextResponse.json({ error: "ai aruncat deja în runda asta" }, { status: 409 });
 

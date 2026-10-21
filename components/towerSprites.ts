@@ -1,8 +1,8 @@
 // Sprite slots for the 8 climbers in the tower artwork.
 //
 // Each seat has five painted states (see ~/.hermes skill note "Tower sprite art"):
-// `calm`, `tongue`, `frown`, `yawn`, `throw`. The climbers are drawn from behind
-// with the head turned back over the shoulder, so the face reads on the wall.
+// `calm`, `tongue`, `frown` — all facing the camera. Heads are NOT turned in the
+// calm pose; the grimace only shows while he throws or takes a rock.
 // `fall` is the pose used for the climber who drops off.
 //
 // A missing slot falls back to the gem/initial avatar, so art can land late
@@ -12,6 +12,7 @@ export type ClimberSprite = {
   fall: string;
   tongue: string;
   frown: string;
+  /** kept for older callers: no separate pose any more */
   yawn: string;
   throw: string;
   /** vertical scale multiplier, in case one character reads smaller */
@@ -26,8 +27,8 @@ function seat(n: number): ClimberSprite {
     fall: `${P}/e${n}_frown.png`,
     tongue: `${P}/e${n}_tongue.png`,
     frown: `${P}/e${n}_frown.png`,
-    yawn: `${P}/e${n}_yawn.png`,
-    throw: `${P}/e${n}_throw.png`,
+    yawn: `${P}/e${n}.png`,
+    throw: `${P}/e${n}_tongue.png`,
   };
 }
 

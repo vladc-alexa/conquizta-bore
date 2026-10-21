@@ -289,6 +289,8 @@ export type TowerState = {
   myAnswered: boolean;
   /** the correct answer of the current round — only for players who answered */
   reveal: string | null;
+  /** true while you may still throw a rock this round (answered, not thrown) */
+  canThrow: boolean;
   /** every rock thrown this round, oldest first (drives the animation) */
   rocks: { throwerId: string; targetId: string; at: number }[];
   /** this round's answers, fastest first — feeds the cosmetic rock throw */
@@ -314,10 +316,6 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
   if (!game) return null;
   const plan = game.plan as TowerEntry[];
   const answers = await prisma.towerAnswer.findMany({ where: { gameId }, orderBy: { round: "asc" } });
-  const rocks = await prisma.towerRock.findMany({
-    where: { gameId, round: game.currentRound },
-    orderBy: { createdAt: "asc" },
-  });
   const players = [...game.players].sort((a, b) => a.seat - b.seat);
   const mine = players.find((p) => p.userId === viewerId) ?? null;
   const live = players.filter((p) => !p.eliminated);
@@ -327,6 +325,12 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
   const intermission = roundOpen && opensAt > Date.now();
   const entry = roundOpen && !intermission && game.currentRound < plan.length ? plan[game.currentRound] : null;
   const startsInMs = intermission ? opensAt - Date.now() : 0;
+  // rocks belong to the round you answered: during the breather that is the round just played
+  const throwRound = intermission ? Math.max(0, game.currentRound - 1) : game.currentRound;
+  const rocks = await prisma.towerRock.findMany({
+    where: { gameId, round: throwRound },
+    orderBy: { createdAt: "asc" },
+  });
 
   // after the match, read the live question text back (same reason as the duel:
   // editors fix bad questions from the review screen)
@@ -409,11 +413,21 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
       .map((a) => ({ playerId: a.playerId, ms: a.elapsedMilliseconds }))
       .sort((a, b) => a.ms - b.ms),
     reveal:
-      entry && mine && answers.some((a) => a.round === game.currentRound && a.playerId === mine.id)
-        ? entry.mode === "rapide"
-          ? String(entry.answer)
-          : (entry.options.find((o) => o.id === entry.correctOptionId)?.text ?? null)
+      (entry ?? (intermission ? plan[throwRound] ?? null : null)) && mine &&
+      answers.some((a) => a.round === throwRound && a.playerId === mine.id)
+        ? (() => {
+            const e = (entry ?? plan[throwRound]) as TowerEntry;
+            return e.mode === "rapide"
+              ? String(e.answer)
+              : (e.options.find((o) => o.id === e.correctOptionId)?.text ?? null);
+          })()
         : null,
+    canThrow:
+      roundOpen &&
+      !!mine &&
+      !mine.eliminated &&
+      answers.some((a) => a.round === throwRound && a.playerId === mine.id) &&
+      !rocks.some((r) => r.throwerId === mine.id),
     rocks: rocks.map((r) => ({
       throwerId: r.throwerId,
       targetId: r.targetId,
