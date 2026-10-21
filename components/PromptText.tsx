@@ -7,12 +7,20 @@ export function artPreview(text: string): string {
   return `[art] ${first.slice(0, 40)}`;
 }
 
-export default function PromptText({ text, className = "" }: { text: string; className?: string }) {
+export default function PromptText({
+  text,
+  className = "",
+  wrap = false,
+}: {
+  text: string;
+  className?: string;
+  /** chat bubbles: keep the spacing but let long lines wrap instead of scrolling */
+  wrap?: boolean;
+}) {
   const art = /\n/.test(text) || / {2,}/.test(text);
   if (!art) return <span className={className}>{text}</span>;
-  return (
-    <pre className={`whitespace-pre overflow-x-auto font-mono text-[0.78em] leading-[1.2] ${className}`}>
-      {text}
-    </pre>
-  );
+  const shape = wrap
+    ? "whitespace-pre-wrap break-words"
+    : "whitespace-pre overflow-x-auto";
+  return <pre className={`${shape} font-mono text-[0.78em] leading-[1.2] ${className}`}>{text}</pre>;
 }

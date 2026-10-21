@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Mesajul nu poate fi gol." }, { status: 400 });
   }
   const msg = await prisma.chatMessage.create({
-    data: { userId: session.sub, authorName: user.displayName, text: text.slice(0, 500) },
+    data: { userId: session.sub, authorName: user.displayName, text: text.slice(0, 2000) },
     select: { id: true, authorName: true, text: true, createdAt: true },
   });
   return NextResponse.json({ message: msg });

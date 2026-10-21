@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BLACK_CHAT_COLOR, BLACK_NAME_OUTLINE, CHAT_COLORS, DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
+import PromptText from "@/components/PromptText";
 import DuelLobbyPanel from "@/components/DuelLobbyPanel";
 
 interface ChatMessage {
@@ -333,7 +334,7 @@ export default function Dashboard() {
                     {m.muted && <span className="text-[#75938f] text-[0.65rem] ml-1" title="mutat">🔇</span>}
                     {": "}
                   </span>
-                  <span className="text-[#cbdcda] flex-1">{m.text}</span>
+                  <span className="text-[#cbdcda] flex-1 min-w-0"><PromptText text={m.text} wrap /></span>
                   {isAdmin && (
                     <button
                       onClick={() => deleteMessage(m.id)}
@@ -349,13 +350,20 @@ export default function Dashboard() {
             <div ref={chatEndRef} />
           </div>
           <div className="p-[0.7rem] border-t border-[#1e3a3460] flex gap-2">
-            <input
+            <textarea
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              placeholder="Mesaj…"
-              maxLength={500}
-              className="flex-1 bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] text-[0.85rem] p-[0.6rem] outline-none focus:border-[#6f9c99]"
+              onKeyDown={(e) => {
+                // Enter sends, Shift+Enter breaks the line (art needs real newlines)
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              placeholder="Mesaj… (Shift+Enter = linie nouă)"
+              maxLength={2000}
+              rows={Math.min(6, Math.max(1, chatInput.split("\n").length))}
+              className="flex-1 resize-none bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] text-[0.85rem] p-[0.6rem] outline-none focus:border-[#6f9c99] font-mono"
             />
             <button
               onClick={sendMessage}
