@@ -85,7 +85,6 @@ export default function DuelLobbyPanel({ onUnauthorized }: { onUnauthorized?: ()
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">⚔️ 1 la 1</h3>
-        <span className="text-[#75938f] text-[0.65rem]">3 CÂȘTIGURI LA RÂND = MECIUL</span>
       </div>
 
       <button
@@ -115,7 +114,7 @@ export default function DuelLobbyPanel({ onUnauthorized }: { onUnauthorized?: ()
       <div className="flex flex-col gap-1.5">
         {games.length === 0 ? (
           <div className="text-[#75938f] text-[0.78rem] text-center p-4 border border-dashed border-[#1e3a34] rounded-xl">
-            Niciun meci deschis. Creează unul și apare aici pentru toți.
+            Niciun meci deschis.
           </div>
         ) : (
           games.map((g) => (
