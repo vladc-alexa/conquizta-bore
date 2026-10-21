@@ -11,6 +11,7 @@
 // the walk animation — everyone else must stay frozen.
 import { useEffect, useState } from "react";
 import Tower from "@/components/Tower";
+import TowerReactions from "@/components/TowerReactions";
 import type { TowerStatePlayer } from "@/lib/tower";
 
 const NAMES = [
@@ -64,6 +65,7 @@ export default function TowerPreview() {
           panou lateral (întrebare + scară) — placeholder în preview
         </div>
       </div>
+      <TowerReactions />
     </div>
   );
 }

@@ -210,3 +210,26 @@ h1 {
     animation: none;
   }
 }
+
+/* PROTOTIP: piatra aruncată + reacția celui lovit (dev harness only) */
+.rock {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1.9cqh;
+  height: 1.9cqh;
+  margin: -0.95cqh 0 0 -0.95cqh;
+  border-radius: 45%;
+  background: radial-gradient(circle at 32% 28%, #d6dcda, #7d8785 62%, #454e4c);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+@keyframes victim-shake {
+  0%, 100% { transform: translateX(-50%) rotate(0deg); }
+  20% { transform: translateX(-50%) translateX(-5px) rotate(-7deg); }
+  55% { transform: translateX(-50%) translateX(5px) rotate(7deg); }
+  80% { transform: translateX(-50%) translateX(-2px) rotate(-3deg); }
+}
+.victim-hit { animation: victim-shake 520ms ease-in-out; }
