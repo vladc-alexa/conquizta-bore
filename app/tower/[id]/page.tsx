@@ -37,6 +37,7 @@ export default function TowerGamePage() {
   }
   const [busy, setBusy] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
+  const [typed, setTyped] = useState(""); // rapidă round: the typed guess
   const [feedback, setFeedback] = useState<{ correct: boolean; rungs: number } | null>(null);
   const [now, setNow] = useState(Date.now());
   const roundRef = useRef<number>(-1);
@@ -58,6 +59,7 @@ export default function TowerGamePage() {
       if (d.round !== roundRef.current) {
         roundRef.current = d.round;
         setPicked(null);
+        setTyped("");
         setFeedback(null);
       }
     } catch {
@@ -84,21 +86,35 @@ export default function TowerGamePage() {
   async function answer(optionId: string) {
     if (!state || picked) return;
     setPicked(optionId);
+    await submit({ selectedOptionId: optionId });
+  }
+
+  /** rapidă round: type the answer and send it */
+  async function answerTyped() {
+    if (!state || picked || !typed.trim()) return;
+    setPicked("__typed__");
+    const ok = await submit({ answer: typed.trim() });
+    if (!ok) setPicked(null);
+  }
+
+  async function submit(payload: Record<string, string>): Promise<boolean> {
     try {
       const r = await fetch(`/api/tower/${id}/answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ selectedOptionId: optionId }),
+        body: JSON.stringify(payload),
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) {
         setErr(d.error || "Răspunsul nu a fost înregistrat.");
-        return;
+        return false;
       }
       setFeedback({ correct: !!d.isCorrect, rungs: Number(d.rungs) || 0 });
       load();
+      return true;
     } catch {
       setErr("Eroare de rețea.");
+      return false;
     }
   }
 
@@ -208,6 +224,9 @@ export default function TowerGamePage() {
               <div className="flex items-center justify-between">
                 <span className="font-cinzel text-[#9ec6c1] text-[0.8rem] tracking-widest">
                   {state.phase === "final" ? `RUNDA ${state.round + 1} · SPRINT FINAL` : `RUNDA ${state.round + 1}`}
+                  <span className={`ml-2 rounded px-1.5 py-0.5 text-[0.62rem] tracking-wider ${state.question.mode === "rapide" ? "bg-[#3a2a24] text-[#e8a98b]" : "bg-[#1b3330] text-[#9ec6c1]"}`}>
+                    {state.question.mode === "rapide" ? "⚡ RAPIDĂ" : "GRILĂ"}
+                  </span>
                 </span>
                 <span className={`text-[0.78rem] tabular-nums ${msLeft < 4000 ? "text-[#c98b6b]" : "text-[#75938f]"}`}>
                   {Math.ceil(msLeft / 1000)}s
@@ -220,6 +239,34 @@ export default function TowerGamePage() {
                 />
               </div>
               <p className="text-[#dfe7e5] text-[0.95rem] leading-snug">{state.question.prompt}</p>
+              {state.question.mode === "rapide" && (
+                <div className="flex flex-col gap-1.5">
+                  <div className="text-[0.68rem] text-[#75938f] uppercase tracking-wider">
+                    Rapidă · scrie răspunsul ({state.question.responseType ?? "număr"})
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      value={typed}
+                      onChange={(e) => setTyped(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") answerTyped();
+                      }}
+                      disabled={!!picked || state.myAnswered || !!me?.eliminated}
+                      inputMode="numeric"
+                      autoFocus
+                      placeholder="răspunsul tău"
+                      className="flex-1 min-w-0 bg-[#050d0b] border-2 border-[#1e3a34] focus:border-[#4d7a76] rounded-xl px-3 py-2 text-[0.95rem] text-[#e6f2ef] outline-none disabled:opacity-60 tabular-nums"
+                    />
+                    <button
+                      onClick={answerTyped}
+                      disabled={!!picked || state.myAnswered || !!me?.eliminated || !typed.trim()}
+                      className="shrink-0 rounded-xl px-4 py-2 font-cinzel text-[0.8rem] bg-gradient-to-br from-[#9ec6c1] to-[#6f9c99] text-[#0c1a17] disabled:opacity-50 cursor-pointer disabled:cursor-default"
+                    >
+                      Trimite
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-col gap-1.5">
                 {state.question.options.map((o, i) => {
                   const isPicked = picked === o.id;
@@ -327,7 +374,10 @@ export default function TowerGamePage() {
               const mineGain = h.gains.find((g) => g.playerId === me?.id);
               return (
                 <li key={h.round} className="text-[0.78rem] text-[#93a8a4] flex items-baseline gap-2">
-                  <span className="text-[#75938f] shrink-0">R{h.round + 1}</span>
+                  <span className="text-[#75938f] shrink-0">
+                    R{h.round + 1}
+                    {h.mode === "rapide" ? " ⚡" : ""}
+                  </span>
                   <span className="min-w-0 truncate">{h.prompt}</span>
                   <span className="text-[#8fd9a8] shrink-0">→ {h.reveal}</span>
                   {best && <span className="shrink-0 text-[#9ec6c1]">{best.name}</span>}

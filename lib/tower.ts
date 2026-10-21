@@ -3,15 +3,17 @@
 // Rules (server-authoritative, resolved lazily on every state poll):
 //   * Open-ended: one question per round, 8 seats (bots fill empty seats), and
 //     rounds keep coming until somebody reaches the summit (TOWER_HEIGHT rungs).
+//     Modes alternate: odd rounds are grilă, even rounds are rapidă (typed
+//     numeric answer, graded with the same tolerance as the 1v1 rapidă rounds).
 //   * Every answer earns points: correct = up to 100, faster = more; wrong = 0.
 //   * Your points for the round become rungs climbed: the round's best climber
 //     always gains the full RUNGS_PER_ROUND, everyone else scales less, and a
 //     wrong answer leaves you standing still.
-//   * From round 2 on, the player with the lowest total falls off the ladder at
-//     the end of EVERY round (never the last one standing).
+//   * From round 10 on, the player with the lowest total falls off the ladder at
+//     the end of EVERY round (never the last one standing — he wins the tower).
 //   * The first climber to touch the summit wins and the game closes.
 import { prisma } from "@/lib/prisma";
-import { fetchGrilaPool, type PlanEntry } from "@/lib/duel";
+import { fetchGrilaPool, fetchRapidePool, type PlanEntry } from "@/lib/duel";
 
 export const TOWER_PLAYERS = 8;
 /** Questions frozen into the plan at start — a ceiling, not a target: the game
@@ -34,8 +36,13 @@ const BOT_NAMES = [
   "Vlad", "Alina", "Radu", "Sorina", "Tudor", "Miruna",
 ];
 
-/** Tower rounds are always grilă, so narrow the duel plan union once here. */
-export type TowerEntry = Extract<PlanEntry, { mode: "grila" }>;
+/** Both modes are used: rounds alternate grilă / rapidă. */
+export type TowerEntry = PlanEntry;
+
+/** Round 1 = grilă, round 2 = rapidă (type-in answer), and so on. */
+export function towerModeFor(round: number): "grila" | "rapide" {
+  return round % 2 === 0 ? "grila" : "rapide";
+}
 
 export function towerScore(isCorrect: boolean, elapsedMs: number): number {
   if (!isCorrect) return 0;
@@ -48,8 +55,23 @@ export function rungsFor(score: number): number {
 }
 
 export async function buildTowerPlan(): Promise<TowerEntry[]> {
-  const pool = (await fetchGrilaPool(TOWER_PLAN_SIZE)) as TowerEntry[];
-  return pool.slice(0, TOWER_PLAN_SIZE);
+  // Alternate modes: half the plan is grilă, half is rapidă. If one pool is
+  // short (few rapidă-ready questions), pad with the other mode instead of
+  // failing — the round just keeps its alternating flavour as far as possible.
+  const half = Math.ceil(TOWER_PLAN_SIZE / 2);
+  const [grila, rapide] = await Promise.all([fetchGrilaPool(half + 6), fetchRapidePool(half + 6)]);
+  const plan: TowerEntry[] = [];
+  const used = new Set<string>(); // a question must not come back in the other mode
+  for (let i = 0; i < TOWER_PLAN_SIZE; i++) {
+    const want = towerModeFor(i);
+    const first = want === "grila" ? grila : rapide;
+    const second = want === "grila" ? rapide : grila;
+    const pick = first.find((e) => !used.has(e.questionId)) ?? second.find((e) => !used.has(e.questionId));
+    if (!pick) break;
+    used.add(pick.questionId);
+    plan.push(pick);
+  }
+  return plan;
 }
 
 // ---- bots ---------------------------------------------------------------
@@ -59,7 +81,7 @@ function botSkill(): number {
   return 0.15 + Math.random() * 0.3; // 0.15 .. 0.45
 }
 
-export function botAnswer(): { isCorrect: boolean; score: number; elapsedMs: number } {
+export function botAnswer(_entry?: TowerEntry): { isCorrect: boolean; score: number; elapsedMs: number } {
   const correct = Math.random() < botSkill();
   const elapsedMs = 5_000 + Math.floor(Math.random() * (TOWER_ROUND_MS - 5_500));
   const score = correct ? towerScore(true, elapsedMs) : 0;
@@ -141,13 +163,14 @@ export async function resolveTower(gameId: string): Promise<void> {
     const botRows = game.players
       .filter((p) => p.isBot && !p.eliminated && !answeredIds.has(p.id))
       .map((p) => {
-        const a = botAnswer();
+        const a = botAnswer(entry);
         return {
           gameId,
           playerId: p.id,
           round: r,
           questionId: entry.questionId,
-          selectedOptionId: a.isCorrect ? entry.correctOptionId : null,
+          selectedOptionId:
+            entry.mode === "grila" && a.isCorrect ? entry.correctOptionId : null,
           isCorrect: a.isCorrect,
           score: a.score,
           rungs: rungsFor(a.score),
@@ -248,7 +271,14 @@ export type TowerState = {
   myPlayerId: string | null;
   isHost: boolean;
   canStart: boolean;
-  question: { id: string; prompt: string; options: { id: string; text: string }[] } | null;
+  question: {
+    id: string;
+    mode: "grila" | "rapide";
+    prompt: string;
+    options: { id: string; text: string }[];
+    /** rapidă only: what to type (an / număr / text) */
+    responseType: string | null;
+  } | null;
   startedAt: number | null;
   windowMs: number;
   myAnswered: boolean;
@@ -260,6 +290,7 @@ export type TowerState = {
     round: number;
     /** the Question row, so the post-game list can report a bad one */
     questionId: string;
+    mode: "grila" | "rapide";
     prompt: string;
     reveal: string;
     bestPlayerId: string | null;
@@ -293,15 +324,18 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
   const history = plan.slice(0, game.currentRound).map((e, i) => {
     const rows = answers.filter((a) => a.round === i);
     const liveQ = liveText.get(e.questionId);
-    const reveal = liveQ
-      ? liveQ.options.find((o) => o.isCorrect)?.text ?? ""
-      : e.options.find((o) => o.id === e.correctOptionId)?.text ?? "";
+    const reveal = e.mode === "rapide"
+      ? String(e.answer)
+      : liveQ
+        ? liveQ.options.find((o) => o.isCorrect)?.text ?? ""
+        : e.options.find((o) => o.id === e.correctOptionId)?.text ?? "";
     const best = [...rows].sort((a, b) => b.score - a.score || a.elapsedMilliseconds - b.elapsedMilliseconds)[0];
     return {
       round: i,
       questionId: e.questionId,
       prompt: liveQ?.prompt ?? e.prompt,
       reveal,
+      mode: e.mode,
       bestPlayerId: best ? best.playerId : null,
       gains: rows.map((a) => ({ playerId: a.playerId, score: a.score, rungs: a.rungs })),
     };
@@ -342,8 +376,10 @@ export async function buildTowerState(gameId: string, viewerId: string): Promise
     question: entry
       ? {
           id: entry.questionId,
+          mode: entry.mode,
           prompt: liveText.get(entry.questionId)?.prompt ?? entry.prompt,
-          options: entry.options,
+          options: entry.mode === "grila" ? entry.options : [],
+          responseType: entry.mode === "rapide" ? entry.responseType : null,
         }
       : null,
     startedAt: game.roundStartedAt?.getTime() ?? null,

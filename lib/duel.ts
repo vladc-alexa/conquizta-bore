@@ -88,7 +88,7 @@ function responseTypeFor(prompt: string, answer: number): string {
   return "număr";
 }
 
-async function fetchRapidePool(limit: number) {
+export async function fetchRapidePool(limit: number) {
   const ids = await prisma.$queryRaw<{ id: string }[]>`
     SELECT q.id FROM "Question" q
     JOIN "QuestionOption" o ON o."questionId" = q.id AND o."isCorrect" = true
