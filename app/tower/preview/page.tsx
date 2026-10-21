@@ -66,6 +66,30 @@ export default function TowerPreview() {
         </div>
       </div>
       <TowerReactions />
+      <div className="mt-6">
+        <h2 className="mb-2 font-cinzel text-[0.78rem] tracking-widest text-[#9ec6c1]">
+          FIȘĂ EXPRESII · 8 URCĂTORI × 5 STĂRI
+        </h2>
+        <div className="grid grid-cols-5 gap-1 rounded-xl border-2 border-[#1e3a34] bg-[#0c1a17] p-2">
+          {["", "_tongue", "_frown", "_yawn", "_throw"].map((st) => (
+            <div key={st} className="text-center text-[0.62rem] text-[#75938f]">
+              {st === "" ? "calm" : st.slice(1)}
+            </div>
+          ))}
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) =>
+            ["", "_tongue", "_frown", "_yawn", "_throw"].map((st) => (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                key={`${i}${st}`}
+                src={`/tower/players/e${i}${st}.png`}
+                alt=""
+                className="mx-auto block"
+                style={{ height: "72px" }}
+              />
+            )),
+          )}
+        </div>
+      </div>
     </div>
   );
 }

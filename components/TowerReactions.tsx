@@ -86,7 +86,7 @@ export default function TowerReactions() {
           style={{ left: `${LADDER_X[VICTIM] * 100}%`, bottom: `${CLIMB_GROUND * 100}%` }}
         >
           <img
-            src={hit ? "/tower/players/k_frown.png" : "/tower/players/k_neutral.png"}
+            src={hit ? "/tower/players/e4_frown.png" : "/tower/players/e4.png"}
             alt=""
             style={{ height: "13cqh" }}
             className="block"
@@ -99,7 +99,7 @@ export default function TowerReactions() {
           style={{ left: `${LADDER_X[THROWER] * 100}%`, bottom: `${CLIMB_GROUND * 100}%` }}
         >
           <img
-            src={`/tower/players/k_${arm === "throw" ? "throw" : FACES[face]}.png`}
+            src={`/tower/players/e1_${arm === "throw" ? "throw" : FACES[face]}.png`}
             alt=""
             style={{ height: "13cqh" }}
             className="block"
