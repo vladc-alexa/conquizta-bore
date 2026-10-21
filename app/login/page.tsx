@@ -82,6 +82,13 @@ export default function LoginPage() {
         >
           {loading ? "Se autentifică…" : "Intră"}
         </button>
+
+        <p className="text-center text-[0.78rem] text-[#75938f]">
+          Nu ai cont?{" "}
+          <a href="/register" className="text-[#9ec6c1] underline hover:text-[#d7e6e3]">
+            Creează unul
+          </a>
+        </p>
       </form>
     </div>
   );
