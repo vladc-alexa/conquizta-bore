@@ -224,12 +224,10 @@ export default function TowerGamePage() {
             </div>
           )}
 
-          {/* ---- breather between rounds ---- */}
+          {/* ---- breather between rounds: quiet, no ticking number ---- */}
           {msUntilStart > 0 && state.phase !== "lobby" && state.phase !== "done" && (
-            <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl p-4 flex flex-col items-center gap-1">
-              <div className="font-cinzel text-[#9ec6c1] text-[0.8rem] tracking-widest">RUNDA {state.round + 1}</div>
-              <div className="text-[2rem] tabular-nums text-[#e6f2ef]">{(msUntilStart / 1000).toFixed(1)}s</div>
-              <div className="text-[#75938f] text-[0.72rem]">Următoarea întrebare…</div>
+            <div className="rounded-2xl border border-[#1e3a34] bg-[#0c1a17]/60 p-4 text-center text-[#75938f] text-[0.75rem]">
+              Următoarea întrebare…
             </div>
           )}
 
