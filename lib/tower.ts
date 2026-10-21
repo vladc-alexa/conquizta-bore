@@ -19,8 +19,9 @@ export const TOWER_PLAYERS = 8;
 export const TOWER_PLAN_SIZE = 40;
 // Cuts start late: the whole field climbs together until the tower is in sight,
 // then the lowest climber falls after EVERY round (0-based round index). Real
-// pace is ~2.5-3 rungs/round, so round 7 leaves 4-5 rivals alive for the summit.
-export const TOWER_CUT_FROM_ROUND = 6; // first fall after round 7
+// pace is ~2.5-3 rungs/round (36 rungs ≈ round 13), so the first fall lands on
+// round 10 and only the stragglers get picked off before the summit.
+export const TOWER_CUT_FROM_ROUND = 9; // first fall after round 10
 export const TOWER_ROUND_MS = 15_000;
 export const TOWER_ROUND_GRACE_MS = 1_500;
 export const RUNGS_PER_ROUND = 4;
@@ -193,14 +194,28 @@ export async function resolveTower(gameId: string): Promise<void> {
       return;
     }
 
-    // ---- the cut: from round 2 on, the lowest total falls at the end of every
-    // round. The last climber standing is never pushed off — they keep climbing. ----
+    // ---- the cut: from round 10 on, the lowest total falls at the end of every
+    // round. The last climber standing is never pushed off. ----
     if (r >= TOWER_CUT_FROM_ROUND && ranked.length > 1) {
       const lowest = [...ranked].reverse()[0];
       if (lowest) {
         await prisma.towerPlayer.update({
           where: { id: lowest.id },
           data: { eliminated: true, fellRound: r + 1 },
+        });
+      }
+    }
+
+    // ---- last climber standing: nobody can catch him any more, so the tower is
+    // his — he walks the remaining steps to the top instead of playing alone ----
+    const survivors = await prisma.towerPlayer.count({ where: { gameId, eliminated: false } });
+    if (r >= TOWER_CUT_FROM_ROUND && survivors === 1) {
+      const solo = ranked[0];
+      if (solo) {
+        await prisma.towerPlayer.update({ where: { id: solo.id }, data: { rungs: TOWER_HEIGHT } });
+        await prisma.towerGame.updateMany({
+          where: { id: gameId, status: "IN_PROGRESS" },
+          data: { status: "COMPLETED", completedAt: new Date(), winnerId: solo.id },
         });
       }
     }
