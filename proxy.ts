@@ -55,7 +55,8 @@ export async function proxy(req: NextRequest) {
   }
 
   // ---- normal auth logic ----
-  const needsAuth = pathname === "/" || PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
+  const needsAuth =
+    pathname === "/" || pathname === "/leaderboard" || PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
 
   if (needsAuth && !session) {
     const url = req.nextUrl.clone();
@@ -75,5 +76,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/register", "/train/:path*", "/duel/:path*", "/admin", "/admin/login", "/api/:path*"],
+  matcher: ["/", "/login", "/register", "/leaderboard", "/train/:path*", "/duel/:path*", "/admin", "/admin/login", "/api/:path*"],
 };

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BLACK_CHAT_COLOR, BLACK_NAME_OUTLINE, CHAT_COLORS, DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
-import Brand from "@/components/Brand";
+import DuelLobbyPanel from "@/components/DuelLobbyPanel";
 
 interface ChatMessage {
   id: string;
@@ -13,29 +13,16 @@ interface ChatMessage {
   muted: boolean;
 }
 
-interface LeaderRow {
-  id: string;
-  name: string;
-  prc: number | null;
-  grila: number | null;
-  rapide: number | null;
-  games: number;
-  hidden?: boolean;
-}
-
 export default function Dashboard() {
   const [name, setName] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const lastChatAtRef = useRef<string | null>(null);
   const [chatInput, setChatInput] = useState("");
-  const [rows, setRows] = useState<LeaderRow[]>([]);
-  const [meRow, setMeRow] = useState<LeaderRow | null>(null);
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [myColor, setMyColor] = useState<string | null>(null);
   const [showColors, setShowColors] = useState(false);
-  const [myScoreHidden, setMyScoreHidden] = useState(false);
   const [mySiteOff, setMySiteOff] = useState(false);
 
   // change-password modal
@@ -50,18 +37,6 @@ export default function Dashboard() {
   const [newName, setNewName] = useState("");
   const [nameMsg, setNameMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [nameBusy, setNameBusy] = useState(false);
-
-  const loadLeaderboard = useCallback(async () => {
-    try {
-      const res = await fetch("/api/leaderboard");
-      if (!res.ok) return;
-      const data = await res.json();
-      setRows(data.rows ?? []);
-      setMeRow(data.me ?? null);
-    } catch {
-      /* ignore */
-    }
-  }, []);
 
   // full=true loads the last 250 messages and replaces state; full=false asks the API
   // only for messages newer than our cursor and appends those we don't already have.
@@ -96,13 +71,11 @@ export default function Dashboard() {
           setName(d.name);
           setIsAdmin(!!d.isAdmin);
           setMyColor(d.nameColor ?? DEFAULT_CHAT_COLOR);
-          setMyScoreHidden(!!d.hideScore);
           setMySiteOff(!!d.siteOff);
         }
       })
       .catch(() => {});
     loadChat(true);
-    loadLeaderboard();
     // 5s delta poll; a full resync every 30s so deletions/renames by others still land.
     let tick = 0;
     const chatTimer = setInterval(() => {
@@ -110,7 +83,7 @@ export default function Dashboard() {
       loadChat(tick % 6 === 0);
     }, 5000);
     return () => clearInterval(chatTimer);
-  }, [loadChat, loadLeaderboard]);
+  }, [loadChat]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -206,19 +179,6 @@ export default function Dashboard() {
     window.location.href = mySiteOff ? "/admin/login" : "/login";
   };
 
-  const toggleMyScore = async () => {
-    try {
-      const res = await fetch("/api/auth/hide-score", { method: "POST" });
-      if (res.ok) {
-        const data = await res.json();
-        setMyScoreHidden(!!data.hideScore);
-        loadLeaderboard();
-      }
-    } catch {
-      /* ignore */
-    }
-  };
-
   const changePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPwMsg(null);
@@ -247,9 +207,14 @@ export default function Dashboard() {
   return (
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 py-4">
       {/* Header */}
-      <header className="flex items-center justify-between gap-3">
-        <Brand size={28} />
+      <header className="flex items-center justify-end gap-3">
         <div className="flex items-center gap-3">
+          <a
+            href="/leaderboard"
+            className="font-cinzel text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.8rem] border border-[#1e3a34] rounded-lg px-3.5 py-2 bg-[#0c1a17]"
+          >
+            👑 Clasament
+          </a>
           {isAdmin && (
             <a
               href="/admin"
@@ -316,7 +281,6 @@ export default function Dashboard() {
           <div className="flex items-center justify-between px-[1.15rem] py-[0.7rem] border-b border-[#1e3a3460] relative">
             <h3 className="font-cinzel text-[#9ec6c1] text-[0.85rem] tracking-widest">Chat general</h3>
             <div className="flex items-center gap-2">
-              <span className="text-[#75938f] text-[0.7rem]">{messages.length} mesaje</span>
               {name && (
                 <button
                   onClick={() => setShowColors((v) => !v)}
@@ -404,82 +368,9 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Center: Leaderboard */}
+        {/* Center: 1 la 1 lobby — create a match, others join it from here */}
         <section className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full flex-1 p-[1.15rem] flex flex-col gap-2.5">
-          <div className="flex items-center justify-between">
-            <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">👑 Clasamentul zilei</h3>
-            <div className="flex items-center gap-2">
-              {name && (
-                <button
-                  onClick={toggleMyScore}
-                  className={`text-[0.7rem] border rounded-lg px-2 py-1 cursor-pointer hover:brightness-110 ${
-                    myScoreHidden
-                      ? "text-[#b57edc] border-purple-500/40 bg-purple-900/20"
-                      : "text-[#8fb0ac] border-[#1e3a34] hover:bg-[#122420]"
-                  }`}
-                  title={myScoreHidden ? "Scorul tău e ascuns public — arată-l" : "Ascunde scorul tău de pe clasamentul public"}
-                >
-                  {myScoreHidden ? "🔒 Scor ascuns" : "🔒 Ascunde scorul"}
-                </button>
-              )}
-              <button
-                onClick={loadLeaderboard}
-                className="text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.75rem] cursor-pointer"
-                title="Reîmprospătează"
-              >
-                ⟳
-              </button>
-            </div>
-          </div>
-          {rows.length === 0 ? (
-            <div className="text-[#75938f] text-[0.8rem] text-center p-6">Niciun jucător cu PRC încă. Antrenează-te!</div>
-          ) : (
-            <div className="flex flex-col">
-              {rows.map((r, i) => (
-                <div
-                  key={r.id + i}
-                  className="grid grid-cols-[24px_1fr_auto] gap-2 text-[0.82rem] p-1.5 px-2 rounded items-center odd:bg-white/5"
-                >
-                  <span className="text-[#75938f] text-[0.75rem]">{i + 1}</span>
-                  <span className="min-w-0">
-                    <span className="font-cinzel truncate block text-[#cbdcda]">{r.name}</span>
-                    <span className="text-[0.65rem] text-[#75938f] block">
-                      {r.grila !== null && <>grilă {r.grila}</>}
-                      {r.grila !== null && r.rapide !== null && " · "}
-                      {r.rapide !== null && <>rapide {r.rapide}</>}
-                    </span>
-                  </span>
-                  <span className="font-cinzel text-[#9ec6c1] font-bold text-[1rem]">
-                    {r.prc != null ? r.prc.toLocaleString("ro-RO") : "—"}
-                  </span>
-                </div>
-              ))}
-              {meRow && !rows.some((r) => r.id === meRow.id) && (
-                <>
-                  <div className="border-t border-[#1e3a3460] my-1" />
-                  <div className="grid grid-cols-[24px_1fr_auto] gap-2 text-[0.82rem] p-1.5 px-2 rounded items-center bg-[#5d8b8826] border border-[#5d8b88a0]">
-                    <span className="text-[#75938f] text-[0.75rem]">{rows.length + 1}</span>
-                    <span className="min-w-0">
-                      <span className="font-cinzel truncate block text-[#9ec6c1]">
-                        {meRow.name} (tu)
-                        {meRow.hidden && (
-                          <span className="text-[0.65rem] text-[#b57edc] ml-1.5" title="Scorul tău e ascuns public">🔒</span>
-                        )}
-                      </span>
-                      <span className="text-[0.65rem] text-[#75938f] block">
-                        {meRow.grila !== null && <>grilă {meRow.grila}</>}
-                        {meRow.grila !== null && meRow.rapide !== null && " · "}
-                        {meRow.rapide !== null && <>rapide {meRow.rapide}</>}
-                      </span>
-                    </span>
-                    <span className="font-cinzel text-[#9ec6c1] font-bold text-[1rem]">
-                      {meRow.prc != null ? meRow.prc.toLocaleString("ro-RO") : "—"}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+          <DuelLobbyPanel onUnauthorized={() => { window.location.href = "/login"; }} />
         </section>
 
         {/* Right rail */}
@@ -490,14 +381,6 @@ export default function Dashboard() {
           >
             <div className="font-cinzel text-[#0c1a17] text-[1.1rem] tracking-widest">🏋️ Train</div>
             <div className="text-[#122420] text-[0.8rem] mt-1 font-bold">VREI SA TI-O MASORI?</div>
-          </a>
-
-          <a
-            href="/duel"
-            className="bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c170] rounded-2xl shadow-2xl text-center p-[1.15rem] hover:brightness-110 active:translate-y-px"
-          >
-            <div className="font-cinzel text-[#0c1a17] text-[1rem] tracking-widest">⚔️ 1 la 1</div>
-            <div className="text-[#122420] text-[0.75rem] mt-1 font-bold">10 RUNDE · 6 GRILĂ + 4 RAPIDĂ</div>
           </a>
 
           <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-[1.15rem] flex flex-col gap-2">

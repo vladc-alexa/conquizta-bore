@@ -24,7 +24,9 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* Top-aligned: with the global header in place, vertically centring pushes
+     tall pages (dashboard, leaderboard) off the top of the viewport. */
+  justify-content: flex-start;
   padding: 16px;
 }
 

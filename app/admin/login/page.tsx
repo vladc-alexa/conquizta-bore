@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Brand from "@/components/Brand";
 
 // Secret admin login — reachable only while the site is off (maintenance mode).
 // The regular /login page is blocked during that time.
@@ -40,9 +39,6 @@ export default function AdminLoginPage() {
         onSubmit={submit}
         className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full max-w-[380px] p-7 flex flex-col gap-4"
       >
-        <div className="flex justify-center">
-          <Brand size={30} />
-        </div>
         <p className="text-center text-[0.85rem] text-[#8fb0ac] -mt-2">Autentificare administrator</p>
 
         <label className="flex flex-col gap-1.5 text-[0.8rem] text-[#8fb0ac]">
