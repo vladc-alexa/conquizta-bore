@@ -51,6 +51,9 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
         const bottomPct = CLIMB_BASE - climbed * (CLIMB_BASE - CLIMB_TOP);
         const sprite = CLIMBER_SPRITES[seat] ?? null;
         const color = SEAT_COLORS[seat];
+        // climb loop only while actually climbing: the eliminated pose is a
+        // fall frame and the winner holds still at the summit.
+        const climbing = !p.eliminated && p.rungs < SUMMIT_RUNGS;
 
         return (
           <div
@@ -77,8 +80,11 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
                 style={{
                   height: `${(12.5 * (sprite.scale ?? 1)).toFixed(2)}cqh`,
                   width: "auto",
+                  animationDelay: climbing ? `${(seat * 0.09).toFixed(2)}s` : undefined,
                 }}
-                className="drop-shadow-[0_2px_3px_rgba(0,0,0,.55)]"
+                className={`drop-shadow-[0_2px_3px_rgba(0,0,0,.55)]${
+                  climbing ? " climber-sprite" : " climber-sprite--held"
+                }`}
               />
             ) : (
               <div

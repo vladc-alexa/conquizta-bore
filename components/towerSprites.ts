@@ -27,8 +27,13 @@ export const CLIMBER_SPRITES: (ClimberSprite | null)[] = [
   { src: "/tower/players/c8.png", fall: "/tower/players/f8.png" }, // mercenary
 ];
 
-/** Fraction of the artwork width where each ladder sits (measured from the photo). */
-export const LADDER_X = [0.340, 0.388, 0.435, 0.480, 0.527, 0.574, 0.622, 0.670];
+/** Fraction of the artwork width where each ladder sits.
+ *  Measured off `tower.jpg` by detecting the two long vertical rails of every
+ *  ladder in the wall band (16 rails -> 8 pairs); each value is the midpoint
+ *  between the pair. Re-measure if the board artwork is ever replaced. */
+export const LADDER_X = [
+  0.3411, 0.3840, 0.4289, 0.4761, 0.5227, 0.5698, 0.6145, 0.6575,
+];
 
 /** Vertical band of the climb, as fractions of the artwork height. */
 export const CLIMB_TOP = 0.15;

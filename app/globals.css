@@ -179,3 +179,34 @@ h1 {
     animation-duration: 0.01s;
   }
 }
+
+/* --- Turnul: climber climb loop -------------------------------------------
+   Two-frame climb: frame B is the horizontally mirrored sprite (limbs swap
+   sides, the painted ladder is symmetric so nothing drifts) plus a 1.5px
+   weight shift so it reads as "pull up a rung" instead of a sway. The engine
+   alternates frames every 350ms; seats get a staggered delay so the eight
+   ladders don't pulse in lockstep. */
+@keyframes climb-step {
+  0%,
+  49.99% {
+    transform: scaleX(1) translateY(0);
+  }
+  50%,
+  100% {
+    transform: scaleX(-1) translateY(-1.5px);
+  }
+}
+.climber-sprite {
+  animation: climb-step 700ms linear infinite;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+/* held = standing still (summit, or the sprite froze for a non-climbing state) */
+.climber-sprite--held {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .climber-sprite {
+    animation: none;
+  }
+}
