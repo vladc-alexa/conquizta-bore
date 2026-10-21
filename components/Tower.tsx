@@ -32,7 +32,7 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
   return (
     <div
       className="relative w-full overflow-hidden rounded-2xl border-2 border-[#1e3a34] shadow-2xl select-none"
-      style={{ aspectRatio: "1024 / 572" }}
+      style={{ aspectRatio: "1024 / 572", containerType: "size" }}
     >
       {/* artwork */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -75,7 +75,7 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
                 alt={p.name}
                 draggable={false}
                 style={{
-                  height: `${(7.5 * (sprite.scale ?? 1)).toFixed(2)}%`,
+                  height: `${(12.5 * (sprite.scale ?? 1)).toFixed(2)}cqh`,
                   width: "auto",
                 }}
                 className="drop-shadow-[0_2px_3px_rgba(0,0,0,.55)]"
@@ -84,12 +84,12 @@ export default function Tower({ players }: { players: TowerStatePlayer[] }) {
               <div
                 className="flex aspect-square items-center justify-center rounded-full border-2 font-cinzel"
                 style={{
-                  height: "5.5%",
+                  height: "8cqh",
                   background: `radial-gradient(circle at 32% 28%, ${color}, #0e211c 78%)`,
                   borderColor: p.mine ? "#f4e5b8" : "#0b1a16",
                   color: "#06120f",
                   boxShadow: "0 2px 4px rgba(0,0,0,.55)",
-                  fontSize: "0.6rem",
+                  fontSize: "3.1cqh",
                 }}
               >
                 {SEAT_LABELS[seat]}

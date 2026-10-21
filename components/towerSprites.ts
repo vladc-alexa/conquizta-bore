@@ -17,14 +17,14 @@ export type ClimberSprite = {
 
 /** index = seat (0..7) */
 export const CLIMBER_SPRITES: (ClimberSprite | null)[] = [
-  null,
-  null,
-  null,
-  null,
-  null,
-  null,
-  null,
-  null,
+  { src: "/tower/players/c1.png", fall: "/tower/players/f1.png" }, // knight
+  { src: "/tower/players/c2.png", fall: "/tower/players/f2.png" }, // archer
+  { src: "/tower/players/c3.png", fall: "/tower/players/f3.png" }, // dwarf
+  { src: "/tower/players/c4.png", fall: "/tower/players/f4.png" }, // mage
+  { src: "/tower/players/c5.png", fall: "/tower/players/f5.png" }, // farm boy
+  { src: "/tower/players/c6.png", fall: "/tower/players/f6.png" }, // rogue
+  { src: "/tower/players/c7.png", fall: "/tower/players/f7.png" }, // scholar
+  { src: "/tower/players/c8.png", fall: "/tower/players/f8.png" }, // mercenary
 ];
 
 /** Fraction of the artwork width where each ladder sits (measured from the photo). */
