@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Jost, Lato } from "next/font/google";
 import "./globals.css";
+import SiteHeader from "@/components/SiteHeader";
 
 const display = Jost({
   variable: "--font-display",
@@ -34,6 +35,7 @@ export default function RootLayout({
   return (
     <html lang="ro">
       <body className={`${display.variable} ${lato.variable} antialiased`}>
+        <SiteHeader />
         {children}
       </body>
     </html>

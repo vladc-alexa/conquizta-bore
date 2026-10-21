@@ -52,7 +52,6 @@ export default function DuelMatch() {
   const [typed, setTyped] = useState("");
   const [localSent, setLocalSent] = useState(false);
   const [flash, setFlash] = useState<"ok" | "bad" | null>(null);
-  const [copied, setCopied] = useState(false);
   const lastRound = useRef<number | null>(null);
 
   // ---- post-match review: report a question, or fix it in place (editors) ----
@@ -169,16 +168,6 @@ export default function DuelMatch() {
       /* ignore */
     }
     window.location.href = "/duel";
-  }
-
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/duel/${id}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* ignore */
-    }
   }
 
   // Player flags a bad question straight from the post-match list. The API
@@ -322,15 +311,12 @@ export default function DuelMatch() {
       <div className={`${CARD} w-full max-w-[520px] mx-auto p-7 flex flex-col gap-4 text-center`}>
         <h2 className="font-cinzel text-[#9ec6c1] text-[1.3rem] tracking-widest">⏳ Aștept adversarul</h2>
         <p className="text-[#cbdcda] text-[0.9rem] leading-relaxed">
-          Trimite-i linkul (sau codul) prietenului tău ca să înceapă meciul.
+          Meciul e deschis și apare pe pagina principală — oricine îl poate deschide cu <b>Join</b>. Începe automat când intră cineva.
         </p>
-        <div className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-xl p-3 font-mono text-[0.8rem] text-[#8fb0ac] break-all">
-          {id}
-        </div>
         <div className="flex gap-2.5">
-          <button onClick={copyLink} className={`${BTN_MAIN} flex-1`}>
-            {copied ? "Copiat ✓" : "📋 Copiază linkul"}
-          </button>
+          <a href="/" className={`${BTN_MAIN} flex-1 inline-flex items-center justify-center`}>
+            Vezi lobby-ul
+          </a>
           <button
             onClick={abandon}
             className="flex-1 bg-gradient-to-br from-[#101f1c] to-[#0c1a17] border-2 border-[#1e3a34] rounded-lg text-[#8fb0ac] font-cinzel p-3 hover:brightness-125 cursor-pointer"
