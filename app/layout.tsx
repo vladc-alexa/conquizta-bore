@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Jost, Lato } from "next/font/google";
 import "./globals.css";
 import SiteHeader from "@/components/SiteHeader";
+import PresenceBeacon from "@/components/PresenceBeacon";
 
 const display = Jost({
   variable: "--font-display",
@@ -36,6 +37,7 @@ export default function RootLayout({
     <html lang="ro">
       <body className={`${display.variable} ${lato.variable} antialiased`}>
         <SiteHeader />
+        <PresenceBeacon />
         {children}
       </body>
     </html>

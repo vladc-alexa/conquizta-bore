@@ -13,6 +13,8 @@ type Row = {
   joinedAt?: string | null;
 };
 
+type Online = { id: string; name: string; at?: string; you?: boolean };
+
 function fmtDate(iso?: string | null) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -25,6 +27,7 @@ export default function LeaderboardPage() {
   const [me, setMe] = useState<(Row & { hidden?: boolean }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [scoreHidden, setScoreHidden] = useState(false);
+  const [online, setOnline] = useState<Online[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -37,6 +40,7 @@ export default function LeaderboardPage() {
       if (!r.ok) return;
       const d = await r.json();
       setRows(d.rows ?? []);
+      setOnline(d.online ?? []);
       setMe(d.me ?? null);
       setScoreHidden(!!d.me?.hidden);
     } catch {
@@ -48,6 +52,9 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     load();
+    // presence is only fresh for 2 minutes — refresh the page data quietly
+    const t = setInterval(load, 60_000);
+    return () => clearInterval(t);
   }, [load]);
 
   const toggleHidden = async () => {
@@ -64,12 +71,17 @@ export default function LeaderboardPage() {
   };
 
   const meInList = me ? rows.some((r) => r.id === me.id) : false;
+  const onlineIds = new Set(online.map((p) => p.id));
+  const onlineNames = online.map((p) => p.name);
 
   const rowBody = (r: Row, pos: number | string, highlight: boolean) => (
     <>
       <span className="text-[#75938f] text-[0.75rem]">{pos}</span>
       <span className="min-w-0">
         <span className={`font-cinzel truncate block ${highlight ? "text-[#9ec6c1]" : "text-[#cbdcda]"}`}>
+          {onlineIds.has(r.id) && (
+            <span className="online-dot mr-1.5" title="Online acum" aria-label="online" />
+          )}
           {r.name}
           {highlight && " (tu)"}
         </span>
@@ -118,6 +130,34 @@ export default function LeaderboardPage() {
           </button>
         </div>
       </div>
+
+      {/* who is around right now — beats in from every open tab */}
+      <section className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-[1.15rem] flex flex-col gap-2">
+        <h2 className="font-cinzel text-[#9ec6c1] text-[0.95rem] tracking-widest flex items-center gap-2">
+          <span className="online-dot" />
+          Online acum
+          <span className="text-[#75938f] text-[0.78rem] tracking-normal font-normal">({online.length})</span>
+        </h2>
+        {online.length === 0 ? (
+          <div className="text-[#75938f] text-[0.78rem]">Nimeni online în acest moment.</div>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {onlineNames.map((n, i) => (
+              <span
+                key={online[i].id}
+                className={`rounded-lg border px-2 py-1 text-[0.75rem] font-cinzel ${
+                  online[i].you
+                    ? "border-[#5d8b88a0] bg-[#5d8b8826] text-[#9ec6c1]"
+                    : "border-[#1e3a34] bg-[#0c1a17] text-[#cbdcda]"
+                }`}
+              >
+                {n}
+                {online[i].you && <span className="text-[#75938f]"> (tu)</span>}
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-[1.15rem] flex flex-col gap-2">
         <h1 className="font-cinzel text-[#9ec6c1] text-[1.1rem] tracking-widest !mb-0 !text-[1.1rem]">

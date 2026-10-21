@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
 import { getLeaderboardSnapshot } from "@/lib/leaderboardCache";
+import { onlineUsers } from "@/lib/presence";
 
 export const dynamic = "force-dynamic";
 
@@ -66,5 +67,16 @@ export async function GET(req: Request) {
       }
     : null;
 
-  return NextResponse.json({ rows, myPos, me, computedAt, scope: all ? "all" : "top" });
+  // who is around right now — same payload, so the page needs one request
+  const online = (await onlineUsers(prisma)).map((p) => ({ ...p, you: p.id === session.sub }));
+
+  return NextResponse.json({
+    rows,
+    myPos,
+    me,
+    computedAt,
+    online,
+    onlineCount: online.length,
+    scope: all ? "all" : "top",
+  });
 }

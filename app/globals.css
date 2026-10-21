@@ -239,3 +239,22 @@ h1 {
   60% { transform: translateX(3px) rotate(4deg); }
 }
 .climber-hit { animation: climber-hit-shake 420ms ease-in-out; }
+
+/* presence: the green dot next to a player with an open tab */
+.online-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #5fd39a;
+  box-shadow: 0 0 0 2px rgba(95, 211, 154, 0.18);
+  animation: online-pulse 2.4s ease-in-out infinite;
+  vertical-align: middle;
+}
+@keyframes online-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .online-dot { animation: none; }
+}

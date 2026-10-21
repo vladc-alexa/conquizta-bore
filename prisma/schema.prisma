@@ -30,6 +30,8 @@ model User {
   nameColor       String?            @db.VarChar(16)
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
+  // last heartbeat from an open ST0NE QUIZ tab — drives the "online" list
+  lastSeenAt      DateTime?
   quizSessions    QuizSession[]
   questionStats   UserQuestionStat[]
   chatMessages    ChatMessage[]
@@ -38,6 +40,8 @@ model User {
   duelsAsGuest    Duel[]             @relation("DuelGuest")
   towerGamesAsHost TowerGame[]       @relation("TowerHost")
   towerSeats      TowerPlayer[]
+
+  @@index([lastSeenAt])
 }
 
 enum DuelStatus {
