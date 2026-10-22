@@ -96,7 +96,15 @@ try {
   ok(done.status === 200, "complete the session", done.body);
 
   // ---- leaderboard API: score, games, joinedAt ---------------------------
-  const lb = await api(ca, "/api/leaderboard?scope=all");
+  // the leaderboard snapshot is cached for 60s and refreshes in the background
+  // (stale-while-revalidate), so a just-finished session shows up on the call
+  // after next — poll briefly instead of asserting on the first stale read
+  let lb = await api(ca, "/api/leaderboard?scope=all");
+  for (let i = 0; i < 12; i++) {
+    if ((lb.body?.rows ?? []).some((r) => r.id === ua.id)) break;
+    await new Promise((r) => setTimeout(r, 400));
+    lb = await api(ca, "/api/leaderboard?scope=all");
+  }
   ok(lb.status === 200, "GET /api/leaderboard?scope=all", lb.status);
   const rowA = (lb.body?.rows ?? []).find((r) => r.id === ua.id);
   ok(!!rowA, "my row is in the full standings", lb.body?.rows);
