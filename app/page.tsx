@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BLACK_CHAT_COLOR, BLACK_NAME_OUTLINE, CHAT_COLORS, DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
-import PromptText from "@/components/PromptText";
+import PromptText, { isArt } from "@/components/PromptText";
 import DuelLobbyPanel from "@/components/DuelLobbyPanel";
+import { normalizeMessage } from "@/lib/messageText";
 
 interface ChatMessage {
   id: string;
@@ -39,7 +40,7 @@ export default function Dashboard() {
   const [nameMsg, setNameMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [nameBusy, setNameBusy] = useState(false);
 
-  // full=true loads the last 250 messages and replaces state; full=false asks the API
+  // full=true loads the last 100 messages and replaces state; full=false asks the API
   // only for messages newer than our cursor and appends those we don't already have.
   const loadChat = useCallback(async (full = false) => {
     try {
@@ -91,7 +92,8 @@ export default function Dashboard() {
   }, [messages]);
 
   const sendMessage = async () => {
-    const text = chatInput.trim();
+    // normalize, not .trim(): trimming would shift row 1 of pasted ASCII art
+    const text = normalizeMessage(chatInput);
     if (!text || sending) return;
     setSending(true);
     try {
@@ -320,7 +322,10 @@ export default function Dashboard() {
             ) : (
               messages.map((m) => (
                 <div key={m.id} className="text-[0.9rem] leading-snug flex items-start gap-1 group">
-                  <span
+                  {/* art gets its own block under the name: a <pre> starts on the
+                      next line instead of visually splitting the first row off */}
+                  <div className={`flex-1 min-w-0 ${isArt(m.text) ? "flex flex-col" : "flex items-start gap-1"}`}>
+                    <span
                     className="font-cinzel"
                     style={{
                       color: m.authorColor,
@@ -332,9 +337,10 @@ export default function Dashboard() {
                   >
                     {m.authorName}
                     {m.muted && <span className="text-[#75938f] text-[0.65rem] ml-1" title="mutat">🔇</span>}
-                    {": "}
-                  </span>
-                  <span className="text-[#cbdcda] flex-1 min-w-0"><PromptText text={m.text} wrap /></span>
+                    {isArt(m.text) ? ":" : ": "}
+                    </span>
+                    <span className="text-[#cbdcda] flex-1 min-w-0"><PromptText text={m.text} wrap /></span>
+                  </div>
                   {isAdmin && (
                     <button
                       onClick={() => deleteMessage(m.id)}

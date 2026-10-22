@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
-import { startTower, TOWER_PLAYERS } from "@/lib/tower";
+import { TOWER_PLAYERS } from "@/lib/tower";
 
-// POST /api/tower/[id]/join -> take the next free seat; the 8th player starts it
+// POST /api/tower/[id]/join -> take the next free seat. The tower does NOT start
+// itself when the last chair is taken: everyone waits in the lobby and the host
+// presses Start, so late arrivals still see who is at the table.
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const session = await verifySession(token);
@@ -33,6 +35,5 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     return NextResponse.json({ error: "locul a fost luat" }, { status: 409 });
   }
   const now = await prisma.towerPlayer.count({ where: { gameId: id } });
-  if (now >= TOWER_PLAYERS) await startTower(id);
-  return NextResponse.json({ ok: true, seat, started: now >= TOWER_PLAYERS });
+  return NextResponse.json({ ok: true, seat, seated: now, full: now >= TOWER_PLAYERS });
 }

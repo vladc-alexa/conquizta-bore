@@ -3,11 +3,16 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
 import { DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
+import { normalizeMessage } from "@/lib/messageText";
+
+// The dashboard shows the last 100 messages — enough to follow the room
+// without scrollback nobody reads.
+const CHAT_PAGE = 100;
 
 export async function GET(req: Request) {
   // ?since=<ISO> returns only messages newer than the cursor (ascending) — used by
   // the dashboard's 5s poll so an idle client transfers ~0 bytes instead of re-reading
-  // the last 250 messages every time.
+  // the last 100 messages every time.
   const sinceParam = new URL(req.url).searchParams.get("since");
   const sinceDate = sinceParam ? new Date(sinceParam) : null;
   const delta = !!sinceDate && !Number.isNaN(sinceDate.getTime());
@@ -24,7 +29,7 @@ export async function GET(req: Request) {
   const raw = await prisma.chatMessage.findMany({
     where: delta ? { createdAt: { gte: sinceDate! } } : {},
     orderBy: { createdAt: delta ? "asc" : "desc" },
-    take: 250,
+    take: CHAT_PAGE,
     select,
   });
   // full reads come newest-first; reverse to chronological. Deltas are already ascending.
@@ -57,7 +62,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Ești mutat. Nu poți trimite mesaje." }, { status: 403 });
   }
   const body = await req.json().catch(() => null);
-  const text = typeof body?.text === "string" ? body.text.trim() : "";
+  // normalize (not .trim()): .trim() would shift the first row of pasted ASCII art
+  const text = typeof body?.text === "string" ? normalizeMessage(body.text) : "";
   if (!text) {
     return NextResponse.json({ error: "Mesajul nu poate fi gol." }, { status: 400 });
   }

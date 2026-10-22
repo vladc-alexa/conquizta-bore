@@ -49,6 +49,8 @@ export default function DuelMatch() {
   const id = params?.id;
   const [state, setState] = useState<DuelState | null>(null);
   const [err, setErr] = useState("");
+  // host-only: "▶ Începe meciul" from the waiting screen
+  const [starting, setStarting] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [selected, setSelected] = useState<string | null>(null);
   const [typed, setTyped] = useState("");
@@ -310,15 +312,63 @@ export default function DuelMatch() {
 
   // ---------- waiting for an opponent ----------
   if (state.status === "WAITING") {
+    const iAmHost = state.role === "host";
+    const ready = !!state.guest;
+    const startBtn = async () => {
+      setStarting(true);
+      try {
+        const r = await fetch(`/api/duel/${state.id}/start`, { method: "POST" });
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          setErr(d.error || "N-am putut porni meciul.");
+        }
+      } catch {
+        setErr("Eroare de rețea.");
+      }
+      setStarting(false);
+    };
     return (
       <div className={`${CARD} w-full max-w-[520px] mx-auto p-7 flex flex-col gap-4 text-center`}>
-        <h2 className="font-cinzel text-[#9ec6c1] text-[1.3rem] tracking-widest">⏳ Aștept adversarul</h2>
+        <h2 className="font-cinzel text-[#9ec6c1] text-[1.3rem] tracking-widest">
+          {ready ? "✅ Adversarul e la masă" : "⏳ Aștept adversarul"}
+        </h2>
+        <div className="flex flex-col gap-1.5 text-left">
+          <div className="flex items-center gap-2 rounded-lg border border-[#2c514c] bg-[#122420] px-2.5 py-2 text-[0.82rem]">
+            <span className="text-[#8fd9a8]">●</span>
+            <span className="text-[#cbdcda] truncate">{state.host.name}</span>
+            {state.role === "host" && <span className="ml-auto text-[0.65rem] uppercase text-[#9ec6c1]">tu</span>}
+          </div>
+          <div
+            className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-[0.82rem] ${
+              state.guest ? "border-[#2c514c] bg-[#122420]" : "border-dashed border-[#1e3a34] bg-[#050d0b]"
+            }`}
+          >
+            <span className={state.guest ? "text-[#8fd9a8]" : "text-[#3f5c58]"}>{state.guest ? "●" : "○"}</span>
+            <span className={state.guest ? "text-[#cbdcda] truncate" : "text-[#75938f] italic"}>
+              {state.guest ? state.guest.name : "loc liber — intră cineva din lobby"}
+            </span>
+            {state.role === "guest" && <span className="ml-auto text-[0.65rem] uppercase text-[#9ec6c1]">tu</span>}
+          </div>
+        </div>
         <p className="text-[#cbdcda] text-[0.9rem] leading-relaxed">
-          Meciul e deschis și apare pe pagina principală — oricine îl poate deschide cu <b>Join</b>. Începe automat când intră cineva.
+          {iAmHost
+            ? ready
+              ? "Dă drumul rundei 1 când ești gata."
+              : "Meciul apare în lobby — oricine se poate așeza. Pornești tu, din lobby sau de aici."
+            : "Ai locul luat. Gazda dă drumul meciului — rămâi aici, se deschide singur."}
         </p>
+        {iAmHost && (
+          <button
+            onClick={startBtn}
+            disabled={!ready || starting}
+            className={`${BTN_MAIN} disabled:opacity-40 disabled:cursor-not-allowed`}
+          >
+            {starting ? "Pornesc…" : "▶ Începe meciul"}
+          </button>
+        )}
         <div className="flex gap-2.5">
-          <a href="/" className={`${BTN_MAIN} flex-1 inline-flex items-center justify-center`}>
-            Vezi lobby-ul
+          <a href="/" className="flex-1 inline-flex items-center justify-center bg-[#101f1c] border-2 border-[#1e3a34] rounded-lg text-[#8fb0ac] font-cinzel p-3 hover:brightness-125">
+            ← Lobby
           </a>
           <button
             onClick={abandon}
@@ -327,6 +377,7 @@ export default function DuelMatch() {
             Anulează
           </button>
         </div>
+        {err && <div className="text-red-400 text-[0.78rem]">{err}</div>}
       </div>
     );
   }

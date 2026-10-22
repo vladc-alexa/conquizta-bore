@@ -11,9 +11,10 @@ export default function SiteHeader() {
         href="/"
         aria-label="ST0NE QUIZ — pagina principală"
         title="Pagina principală"
-        className="inline-flex items-center py-1 hover:brightness-125 transition-[filter]"
+        className="inline-flex items-center py-2 hover:brightness-125 transition-[filter]"
       >
-        <Brand size={22} />
+        {/* deliberately large: the wordmark is the page's identity, not a nav icon */}
+        <Brand size={44} />
       </Link>
     </header>
   );

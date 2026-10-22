@@ -1,6 +1,11 @@
 // Renders text without collapsing ASCII art: JSX eats runs of spaces and all
 // newlines, which squashes pasted art into one line. Art (a newline or 2+ spaces)
 // is shown in a <pre>; normal text keeps the caller's styling.
+// Does this text need the <pre> treatment (pasted art rather than prose)?
+export function isArt(text: string): boolean {
+  return /\n/.test(text) || / {2,}/.test(text);
+}
+
 export function artPreview(text: string): string {
   if (!/\n/.test(text) && !/ {2,}/.test(text)) return text;
   const first = text.split("\n").map((l) => l.trim()).find(Boolean) ?? "";
