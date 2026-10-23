@@ -134,6 +134,16 @@ export async function resolveCarciuma(gameId: string): Promise<void> {
     if (now < closesAt) return; // round still open, or we are in the breather
 
     const round = game.currentRound;
+
+    // Claim the round before touching it. Two browser tabs polling at the same
+    // moment would otherwise both settle the same round and hand out two drinks;
+    // updateMany on the exact roundStartedAt is an atomic compare-and-swap.
+    const claim = await prisma.carciumaGame.updateMany({
+      where: { id: gameId, status: "IN_PROGRESS", currentRound: round, roundStartedAt: game.roundStartedAt },
+      data: { roundStartedAt: new Date(opensAt + 1) },
+    });
+    if (claim.count === 0) return; // someone else is settling this round
+
     const players = await prisma.carciumaPlayer.findMany({ where: { gameId }, orderBy: { seat: "asc" } });
     const existing = await prisma.carciumaAnswer.findMany({ where: { gameId, round } });
     const answered = new Set(existing.map((a) => a.playerId));
