@@ -24,6 +24,12 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const me = await prisma.user.findUnique({ where: { id: session.sub }, select: { displayName: true } });
   if (!me?.displayName) return NextResponse.json({ error: "fără nume" }, { status: 400 });
 
+  // taking someone else's chair means giving up your own open table
+  await prisma.carciumaGame.updateMany({
+    where: { hostId: session.sub, status: "WAITING", NOT: { id } },
+    data: { status: "ABANDONED" },
+  });
+
   const taken = new Set(game.players.map((p) => p.seat));
   let seat = 0;
   while (taken.has(seat)) seat++;

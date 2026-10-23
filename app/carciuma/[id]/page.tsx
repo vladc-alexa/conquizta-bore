@@ -115,7 +115,7 @@ export default function CarciumaPage() {
   }));
 
   return (
-    <main className="mx-auto w-full max-w-[1180px] px-3 pb-6">
+    <main className="mx-auto w-full max-w-[1320px] px-3 pb-6">
       <div className="flex flex-wrap items-center gap-3 py-3">
         <Link href="/" className="rounded-lg border border-[#3a2a1c] bg-[#1a1208] px-2.5 py-1.5 text-sm text-[#e0c9a6] hover:border-[#8a5a30]">
           ← înapoi

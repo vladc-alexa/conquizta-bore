@@ -22,7 +22,7 @@ const SEAT: Record<number, Cfg> = {
   2: { left: "62%", bottom: "44%", width: "20%", delay: "1.2s", z: 1 },
   3: { left: "0%", bottom: "12%", width: "25%", delay: "0.8s", z: 3 },
   4: { left: "75%", bottom: "12%", width: "25%", delay: "1.6s", z: 3 },
-  0: { left: "35%", bottom: "0%", width: "27%", delay: "2.0s", z: 4 },
+  0: { left: "35%", bottom: "17%", width: "27%", delay: "2.0s", z: 1 },
 };
 
 // one distinct character per seat, so the same face never shows up twice
@@ -120,6 +120,40 @@ export default function CarciumaScene({
       {[3, 4, 0].map((seat) => (
         <Patron key={seat} seat={seat} face={faces.get(seat) ?? "costel"} p={bySeat.get(seat)} action={action} flashSeat={flashSeat} winnerSeat={winnerSeat} />
       ))}
+
+      {/* name plates ride above the table so nobody's tag gets eaten by the rim */}
+      {[0, 1, 2, 3, 4].map((seat) => {
+        const p = bySeat.get(seat);
+        return p ? <Plate key={`plate-${seat}`} p={p} at={PLATE_AT[seat]} /> : null;
+      })}
+    </div>
+  );
+}
+
+
+const PLATE_AT: Record<number, { left: string; top: string }> = {
+  1: { left: "27%", top: "31%" },
+  2: { left: "71%", top: "31%" },
+  3: { left: "12%", top: "60%" },
+  4: { left: "87%", top: "60%" },
+  0: { left: "48%", top: "45%" },
+};
+
+function Plate({ p, at }: { p: ScenePlayer; at: { left: string; top: string } }) {
+  return (
+    <div
+      className={`absolute -translate-x-1/2 whitespace-nowrap rounded-lg border px-2 py-0.5 text-[0.66rem] backdrop-blur-[2px] ${
+        p.mine ? "border-[#e8b761] bg-[#1d1208]/85 text-[#ffd98e]" : "border-[#5b3d22] bg-[#120a04]/72 text-[#e8d7bd]"
+      }`}
+      style={{ left: at.left, top: at.top, zIndex: 40 }}
+    >
+      <span className="font-semibold">{p.name}{p.mine ? " (tu)" : ""}</span>
+      <span className="ml-1.5 inline-flex gap-[3px] align-middle">
+        {[0, 1, 2].map((i) => (
+          <i key={i} className="inline-block h-[6px] w-[6px] rounded-full border border-[#6b4a2c]"
+            style={{ background: i < p.drinks ? "#e2703a" : "#2a1d12" }} />
+        ))}
+      </span>
     </div>
   );
 }
@@ -180,19 +214,6 @@ function Patron({
           z<span>z</span><span>z</span>
         </div>
       )}
-      <div
-        className={`absolute left-1/2 top-[97%] -translate-x-1/2 whitespace-nowrap rounded-lg border px-2 py-0.5 text-[0.66rem] backdrop-blur-[2px] ${
-          p.mine ? "border-[#e8b761] bg-[#1d1208]/85 text-[#ffd98e]" : "border-[#5b3d22] bg-[#120a04]/72 text-[#e8d7bd]"
-        }`}
-      >
-        <span className="font-semibold">{p.name}{p.mine ? " (tu)" : ""}</span>
-        <span className="ml-1.5 inline-flex gap-[3px] align-middle">
-          {[0, 1, 2].map((i) => (
-            <i key={i} className="inline-block h-[6px] w-[6px] rounded-full border border-[#6b4a2c]"
-              style={{ background: i < p.drinks ? "#e2703a" : "#2a1d12" }} />
-          ))}
-        </span>
-      </div>
     </div>
   );
 }
