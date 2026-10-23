@@ -18,11 +18,12 @@ type Cfg = { left: string; bottom: string; width: string; delay: string; z: numb
 // seats around the round table: two at the back (behind the felt), two at the
 // sides, one in front. Everyone faces the camera, poker-room style.
 const SEAT: Record<number, Cfg> = {
-  1: { left: "18%", bottom: "44%", width: "20%", delay: "0.4s", z: 1 },
-  2: { left: "62%", bottom: "44%", width: "20%", delay: "1.2s", z: 1 },
-  3: { left: "0%", bottom: "12%", width: "25%", delay: "0.8s", z: 3 },
-  4: { left: "75%", bottom: "12%", width: "25%", delay: "1.6s", z: 3 },
-  0: { left: "35%", bottom: "17%", width: "27%", delay: "2.0s", z: 1 },
+  // three across the back, two at the near corners: everyone behind the rim
+  1: { left: "14%", bottom: "43%", width: "21%", delay: "0.4s", z: 1 },
+  2: { left: "39%", bottom: "45%", width: "22%", delay: "1.2s", z: 1 },
+  3: { left: "65%", bottom: "43%", width: "21%", delay: "1.8s", z: 1 },
+  0: { left: "-1%", bottom: "9%", width: "26%", delay: "0.9s", z: 3 },
+  4: { left: "75%", bottom: "9%", width: "26%", delay: "2.1s", z: 3 },
 };
 
 // one distinct character per seat, so the same face never shows up twice
@@ -107,17 +108,17 @@ export default function CarciumaScene({
       />
 
       {/* the back pair sits behind the table */}
-      {[1, 2].map((seat) => (
+      {[1, 2, 3].map((seat) => (
         <Patron key={seat} seat={seat} face={faces.get(seat) ?? "costel"} p={bySeat.get(seat)} action={action} flashSeat={flashSeat} winnerSeat={winnerSeat} />
       ))}
 
       {/* the poker table */}
-      <div className="pointer-events-none absolute" style={{ left: "15%", bottom: "2%", width: "70%", zIndex: 2 }}>
+      <div className="pointer-events-none absolute" style={{ left: "13%", bottom: "0%", width: "74%", zIndex: 2 }}>
         <CarciumaTable className="w-full" />
       </div>
 
 
-      {[3, 4, 0].map((seat) => (
+      {[0, 4].map((seat) => (
         <Patron key={seat} seat={seat} face={faces.get(seat) ?? "costel"} p={bySeat.get(seat)} action={action} flashSeat={flashSeat} winnerSeat={winnerSeat} />
       ))}
 
@@ -132,11 +133,11 @@ export default function CarciumaScene({
 
 
 const PLATE_AT: Record<number, { left: string; top: string }> = {
-  1: { left: "27%", top: "31%" },
-  2: { left: "71%", top: "31%" },
-  3: { left: "12%", top: "60%" },
-  4: { left: "87%", top: "60%" },
-  0: { left: "48%", top: "45%" },
+  1: { left: "24%", top: "31%" },
+  2: { left: "50%", top: "29%" },
+  3: { left: "76%", top: "31%" },
+  0: { left: "11%", top: "57%" },
+  4: { left: "88%", top: "57%" },
 };
 
 function Plate({ p, at }: { p: ScenePlayer; at: { left: string; top: string } }) {

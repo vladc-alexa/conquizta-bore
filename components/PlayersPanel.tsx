@@ -17,6 +17,7 @@ export default function PlayersPanel({ onClose }: { onClose?: () => void }) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [me, setMe] = useState<string | null>(null);
   const [open, setOpen] = useState(true);
+  const [showOffline, setShowOffline] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -36,7 +37,10 @@ export default function PlayersPanel({ onClose }: { onClose?: () => void }) {
     return () => clearInterval(t);
   }, [load]);
 
-  const online = players.filter((p) => p.online).length;
+  const onlineList = players.filter((p) => p.online);
+  const offlineList = players.filter((p) => !p.online);
+  const online = onlineList.length;
+  const shown = showOffline ? [...onlineList, ...offlineList] : onlineList;
 
   return (
     <div className="flex flex-col gap-2 min-h-0">
@@ -59,9 +63,16 @@ export default function PlayersPanel({ onClose }: { onClose?: () => void }) {
         </button>
       </div>
 
+      <button
+        onClick={() => setShowOffline((v) => !v)}
+        className="self-start text-[0.64rem] text-[#75938f] hover:text-[#9ec6c1] cursor-pointer"
+      >
+        {showOffline ? "▾ ascunde jucătorii offline" : `▸ arată jucătorii offline (${offlineList.length})`}
+      </button>
+
       <div className={`overflow-y-auto pr-0.5 ${open ? "max-h-[268px]" : "max-h-0 overflow-hidden"}`}>
         <ul className="flex flex-col gap-1">
-          {players.map((p) => (
+          {shown.map((p) => (
             <li
               key={p.id}
               className="flex items-center gap-1.5 rounded-lg border border-[#1e3a34] bg-[#050d0b] px-2 py-1 text-[0.76rem]"
@@ -79,7 +90,10 @@ export default function PlayersPanel({ onClose }: { onClose?: () => void }) {
               )}
             </li>
           ))}
-          {players.length === 0 && <li className="text-[#75938f] text-[0.72rem] text-center p-3">Se încarcă…</li>}
+          {!players.length && <li className="text-[#75938f] text-[0.72rem] text-center p-3">Se încarcă…</li>}
+          {!!players.length && !shown.length && (
+            <li className="text-[#75938f] text-[0.72rem] text-center p-2">Nimeni online acum.</li>
+          )}
         </ul>
       </div>
     </div>

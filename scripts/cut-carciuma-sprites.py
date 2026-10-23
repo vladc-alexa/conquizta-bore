@@ -71,12 +71,13 @@ def key_green(im: Image.Image, trim_band: bool = True) -> Image.Image:
             if frac[y] > 0.5:
                 cut = y
             else:
-                cut = min(len(frac), y + 4)
+                cut = min(len(frac), max(40, y - int(h * 0.045)))
                 break
     # kill the semi-transparent green halo the keying leaves on the edge
     a2 = np.array(out)
     a2[:, :, 3] = np.where(a2[:, :, 3] < 200, 0, 255)
     out = Image.fromarray(a2, "RGBA")
+    cut = min(cut, h - int(h * 0.16))  # cut the baked table ledge away
     out = out.crop((0, 0, w, max(cut, 40)))
     bbox = out.split()[3].getbbox()
     if bbox:

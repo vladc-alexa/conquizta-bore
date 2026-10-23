@@ -15,6 +15,7 @@ type Mine = {
 } | null;
 
 const SEATS = 5;
+const MIN_PLAYERS = 2;
 
 function ago(iso: string) {
   const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
@@ -92,6 +93,20 @@ export default function CarciumaLobbyPanel({
       const r = await fetch(`/api/carciuma/${id}/join`, { method: "POST" });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) setErr(d.error || "N-am putut lua loc la masă.");
+      await load();
+    } catch {
+      setErr("Eroare de rețea.");
+    }
+    setBusy(null);
+  }
+
+  async function callBots(id: string) {
+    setBusy("bots");
+    setErr("");
+    try {
+      const r = await fetch(`/api/carciuma/${id}/bots`, { method: "POST" });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) setErr(d.error || "N-am putut chema localnicii.");
       await load();
     } catch {
       setErr("Eroare de rețea.");
@@ -202,14 +217,21 @@ export default function CarciumaLobbyPanel({
           ) : hosting ? (
             <>
               <button
+                onClick={() => callBots(mine.id)}
+                disabled={busy !== null || filled >= SEATS}
+                className="bg-[#1d1208] border-2 border-[#6b451f] rounded-lg text-[#e8c46a] font-cinzel text-[0.82rem] tracking-wide p-2 hover:brightness-125 disabled:opacity-40 cursor-pointer"
+              >
+                {busy === "bots" ? "Chem localnicii…" : "🎲 Adaugă localnici pe scaunele libere"}
+              </button>
+              <button
                 onClick={() => start(mine.id)}
-                disabled={busy !== null}
+                disabled={busy !== null || filled < MIN_PLAYERS}
                 className="bg-gradient-to-br from-[#8fd9a8] to-[#3f8f63] border-2 border-[#8fd9a880] rounded-lg text-[#08201a] font-cinzel text-[0.95rem] tracking-wider p-2.5 hover:brightness-110 active:translate-y-px disabled:opacity-40 cursor-pointer"
               >
                 {busy === "start" ? "Pornesc…" : "▶ Începe băutura"}
               </button>
               <div className="text-[#9d7c56] text-[0.7rem] text-center leading-snug">
-                {filled > 1 ? `${filled} la masă — restul scaunelor le iau localnicii.` : "Poți porni și singur: boții iau scaunele libere."}
+                {filled < MIN_PLAYERS ? `Mai e nevoie de ${MIN_PLAYERS - filled} jucător — cheamă localnici sau așteaptă pe cineva.` : `${filled} la masă. Poți porni.`}
               </div>
             </>
           ) : (
@@ -251,7 +273,7 @@ export default function CarciumaLobbyPanel({
               </span>
               <button
                 onClick={() => join(g.id)}
-                disabled={busy !== null || !!mine}
+                disabled={busy !== null}
                 className="shrink-0 bg-gradient-to-br from-[#c98b3f] to-[#7d4f16] border-2 border-[#e2b87760] rounded-lg text-[#1a1208] font-cinzel text-[0.78rem] px-3.5 py-1.5 hover:brightness-110 disabled:opacity-40 cursor-pointer"
               >
                 {busy === g.id ? "Intru…" : "Ia loc"}

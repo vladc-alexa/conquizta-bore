@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BLACK_CHAT_COLOR, BLACK_NAME_OUTLINE, CHAT_COLORS, DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
 import PromptText, { isArt } from "@/components/PromptText";
-import DuelLobbyPanel from "@/components/DuelLobbyPanel";
 import TowerLobbyPanel from "@/components/TowerLobbyPanel";
 import CarciumaLobbyPanel from "@/components/CarciumaLobbyPanel";
 import PlayersPanel from "@/components/PlayersPanel";
@@ -420,13 +419,22 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Center: the lobbies. 1 la 1, the Turnul (with the registered players
-            roster sitting to its right) and La Carciuma underneath. Every panel
-            can be folded away with ✕ and is remembered per browser. */}
+        {/* Center: La Carciuma up top, then the Turnul with the registered
+            players roster to its right. Every panel folds away with ✕ and the
+            choice is remembered per browser. */}
         <div className="w-full flex-1 min-w-0 flex flex-col gap-4">
-          <section className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
-            <DuelLobbyPanel onUnauthorized={() => { window.location.href = "/login"; }} />
-          </section>
+          {closedPanels.carciuma ? (
+            <button
+              onClick={() => setPanelClosed("carciuma", false)}
+              className="w-full rounded-2xl border-2 border-dashed border-[#4a2f12] bg-[#150e06]/80 px-3 py-4 text-left text-[0.8rem] text-[#c8a274] hover:border-[#7d4f16] hover:text-[#e2b877] cursor-pointer"
+            >
+              🍺 La Carciuma e închisă — <span className="underline">deschide-o</span>
+            </button>
+          ) : (
+            <section className="bg-gradient-to-br from-[#2a1a0b] to-[#150e06] border-2 border-[#4a2f12] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
+              <CarciumaLobbyPanel onUnauthorized={() => { window.location.href = "/login"; }} onClose={() => setPanelClosed("carciuma", true)} />
+            </section>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-4 items-stretch">
             {closedPanels.tower ? (
@@ -456,18 +464,6 @@ export default function Dashboard() {
             )}
           </div>
 
-          {closedPanels.carciuma ? (
-            <button
-              onClick={() => setPanelClosed("carciuma", false)}
-              className="w-full rounded-2xl border-2 border-dashed border-[#4a2f12] bg-[#150e06]/80 px-3 py-4 text-left text-[0.8rem] text-[#c8a274] hover:border-[#7d4f16] hover:text-[#e2b877] cursor-pointer"
-            >
-              🍺 La Carciuma e închisă — <span className="underline">deschide-o</span>
-            </button>
-          ) : (
-            <section className="bg-gradient-to-br from-[#2a1a0b] to-[#150e06] border-2 border-[#4a2f12] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
-              <CarciumaLobbyPanel onUnauthorized={() => { window.location.href = "/login"; }} onClose={() => setPanelClosed("carciuma", true)} />
-            </section>
-          )}
         </div>
 
         {/* Right rail */}

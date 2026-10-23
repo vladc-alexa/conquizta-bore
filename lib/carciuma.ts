@@ -22,6 +22,7 @@ export const CARCIUMA_ROUND_MS = envMs("CARCIUMA_ROUND_MS", 15_000); // answer w
 export const CARCIUMA_ROUND_GRACE_MS = envMs("CARCIUMA_ROUND_GRACE_MS", 1_500); // let an in-flight answer land
 export const CARCIUMA_INTERMISSION_MS = envMs("CARCIUMA_INTERMISSION_MS", 6_000); // breather: "X bea!"
 export const CARCIUMA_MAX_DRINKS = 3; // then you pass out
+export const CARCIUMA_MIN_PLAYERS = 2; // enough for a drinking contest
 export const CARCIUMA_WAITING_TTL_MS = 10 * 60_000; // forgotten lobbies die
 export const CARCIUMA_BOT_NAMES = ["Bogdan", "Mirela", "Nea Costel", "Roxana", "Doru", "Lenuța"];
 /** Bots get roughly this share of questions right — enough to make the table lively. */
@@ -78,9 +79,12 @@ export async function fillCarciumaBots(gameId: string): Promise<void> {
 }
 
 export async function startCarciuma(gameId: string): Promise<void> {
+  const seated = await prisma.carciumaPlayer.count({ where: { gameId } });
+  if (seated < CARCIUMA_MIN_PLAYERS) {
+    throw new Error(`e nevoie de cel puțin ${CARCIUMA_MIN_PLAYERS} jucători la masă`);
+  }
   const plan = await buildCarciumaPlan();
   if (!plan.length) throw new Error("nu există întrebări publicate");
-  await fillCarciumaBots(gameId);
   await prisma.carciumaGame.update({
     where: { id: gameId },
     data: {

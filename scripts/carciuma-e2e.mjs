@@ -64,6 +64,8 @@ ok("table page 200", page.status === 200, page.status);
 const joined = await req(`/api/carciuma/${id}/join`, { method: "POST", cookie: b.cookie });
 ok("guest takes a chair", joined.status === 200, joined.status + joined.text.slice(0, 120));
 
+const bots = await req(`/api/carciuma/${id}/bots`, { method: "POST", cookie: a.cookie });
+ok("host can call the locals in", bots.status === 200 && bots.json?.seated === 5, bots.text.slice(0, 90));
 const started = await req(`/api/carciuma/${id}/start`, { method: "POST", cookie: a.cookie });
 ok("host starts the sitting", started.status === 200, started.status + started.text.slice(0, 120));
 st = (await req(`/api/carciuma/${id}`, { cookie: a.cookie })).json;
