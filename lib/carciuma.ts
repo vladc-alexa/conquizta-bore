@@ -7,6 +7,7 @@
 //
 // Like the tower, rounds are settled lazily by whoever asks for the state, so no
 // background worker is needed and a closed tab never freezes the table.
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fetchGrilaPool, type PlanEntry } from "@/lib/duel";
 
@@ -115,107 +116,115 @@ export async function answerCarciuma(
 }
 
 /**
- * Settle every round whose window has closed. Safe to call from anywhere: each
- * step is idempotent (unique answers per player+round, drinks applied once).
+ * Settle every round whose window has closed.
+ *
+ * Concurrency: every browser tab polls the table, so several requests can hit a
+ * closed round at the same instant. Each settle attempt runs in its own
+ * transaction that first takes a transaction-scoped advisory lock on the game
+ * id — the second request blocks, then re-reads the game, sees the round has
+ * moved on and does nothing. Every write inside is idempotent as well (scores
+ * are recomputed from the answer rows, a drink is only applied while its answer
+ * row is still marked as not-drunk), so a retry after a crash cannot double-pour.
  */
 export async function resolveCarciuma(gameId: string): Promise<void> {
   for (let guard = 0; guard < 30; guard += 1) {
-    const game = await prisma.carciumaGame.findUnique({ where: { id: gameId } });
-    if (!game || game.status !== "IN_PROGRESS") return;
-    const plan = game.plan as unknown as CarciumaEntry[];
-    const entry = plan[game.currentRound];
-    const opensAt = game.roundStartedAt?.getTime() ?? 0;
-    const closesAt = opensAt + CARCIUMA_ROUND_MS + CARCIUMA_ROUND_GRACE_MS;
-    const now = Date.now();
-    if (!entry) {
-      await finishCarciuma(game.id, null);
-      return;
-    }
-    if (now < closesAt) return; // round still open, or we are in the breather
-
-    const round = game.currentRound;
-
-    // Claim the round before touching it. Two browser tabs polling at the same
-    // moment would otherwise both settle the same round and hand out two drinks;
-    // updateMany on the exact roundStartedAt is an atomic compare-and-swap.
-    const claim = await prisma.carciumaGame.updateMany({
-      where: { id: gameId, status: "IN_PROGRESS", currentRound: round, roundStartedAt: game.roundStartedAt },
-      data: { roundStartedAt: new Date(opensAt + 1) },
+    const progressed = await prisma.$transaction((tx) => settleOneRound(tx, gameId), {
+      timeout: 20_000,
+      maxWait: 10_000,
     });
-    if (claim.count === 0) return; // someone else is settling this round
+    if (!progressed) return;
+  }
+}
 
-    const players = await prisma.carciumaPlayer.findMany({ where: { gameId }, orderBy: { seat: "asc" } });
-    const existing = await prisma.carciumaAnswer.findMany({ where: { gameId, round } });
-    const answered = new Set(existing.map((a) => a.playerId));
+async function settleOneRound(tx: Prisma.TransactionClient, gameId: string): Promise<boolean> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${gameId}))`;
 
-    // bots answer at close time (they never hold the round hostage)
-    for (const p of players) {
-      if (!p.isBot || p.passedOut || answered.has(p.id)) continue;
+  const game = await tx.carciumaGame.findUnique({ where: { id: gameId } });
+  if (!game || game.status !== "IN_PROGRESS") return false;
+  const plan = game.plan as unknown as CarciumaEntry[];
+  const entry = plan[game.currentRound];
+  if (!entry) {
+    await finishCarciuma(tx, game.id, null);
+    return false;
+  }
+  const opensAt = game.roundStartedAt?.getTime() ?? 0;
+  const closesAt = opensAt + CARCIUMA_ROUND_MS + CARCIUMA_ROUND_GRACE_MS;
+  if (Date.now() < closesAt) return false; // round still open, or we are in the breather
+
+  const round = game.currentRound;
+  const players = await tx.carciumaPlayer.findMany({ where: { gameId }, orderBy: { seat: "asc" } });
+
+  // answers already in (humans may answer right up to the whistle)
+  const answered = new Set(
+    (await tx.carciumaAnswer.findMany({ where: { gameId, round }, select: { playerId: true } })).map((a) => a.playerId)
+  );
+
+  // bots answer at close time (they never hold the round hostage)
+  const botRows = players
+    .filter((p) => p.isBot && !p.passedOut && !answered.has(p.id))
+    .map((p) => {
       const isCorrect = Math.random() < BOT_ACCURACY;
       const elapsed = botElapsed();
-      const opts = entry.options;
-      const pick = isCorrect
-        ? entry.correctOptionId
-        : opts.filter((o) => o.id !== entry.correctOptionId)[Math.floor(Math.random() * 3)]?.id ?? opts[0].id;
-      await prisma.carciumaAnswer.create({
-        data: {
-          gameId,
-          playerId: p.id,
-          round,
-          questionId: entry.questionId,
-          selectedOptionId: pick,
-          isCorrect,
-          score: answerScore(isCorrect, elapsed),
-          elapsedMilliseconds: elapsed,
-        },
-      });
-      await prisma.carciumaPlayer.update({
-        where: { id: p.id },
-        data: { score: { increment: answerScore(isCorrect, elapsed) } },
-      });
-    }
-
-    // anyone who stayed silent gets an empty row: silence is the slowest answer
-    for (const p of players) {
-      if (p.passedOut || answered.has(p.id)) continue;
-      const already = await prisma.carciumaAnswer.findUnique({
-        where: { gameId_round_playerId: { gameId, round, playerId: p.id } },
-      });
-      if (already) continue;
-      await prisma.carciumaAnswer.create({
-        data: {
-          gameId,
-          playerId: p.id,
-          round,
-          questionId: entry.questionId,
-          isCorrect: false,
-          score: 0,
-          elapsedMilliseconds: CARCIUMA_ROUND_MS + CARCIUMA_ROUND_GRACE_MS,
-        },
-      });
-    }
-
-    const rows = await prisma.carciumaAnswer.findMany({ where: { gameId, round } });
-    const awake = players.filter((p) => !p.passedOut);
-    const rowFor = (id: string) => rows.find((r) => r.playerId === id);
-    // worst first: lowest score, then slowest, then lowest seat (stable)
-    const ranking = [...awake].sort((a, b) => {
-      const ra = rowFor(a.id);
-      const rb = rowFor(b.id);
-      const sa = ra?.score ?? 0;
-      const sb = rb?.score ?? 0;
-      if (sa !== sb) return sa - sb;
-      const ea = ra?.elapsedMilliseconds ?? CARCIUMA_ROUND_MS;
-      const eb = rb?.elapsedMilliseconds ?? CARCIUMA_ROUND_MS;
-      if (ea !== eb) return eb - ea;
-      return a.seat - b.seat;
+      const wrong = entry.options.filter((o) => o.id !== entry.correctOptionId);
+      const pick = isCorrect ? entry.correctOptionId : wrong[Math.floor(Math.random() * wrong.length)]?.id ?? entry.options[0].id;
+      return {
+        gameId,
+        playerId: p.id,
+        round,
+        questionId: entry.questionId,
+        selectedOptionId: pick,
+        isCorrect,
+        score: answerScore(isCorrect, elapsed),
+        elapsedMilliseconds: elapsed,
+      };
     });
-    const drinker = ranking[0] ?? null;
-    if (drinker) {
-      const row = rowFor(drinker.id);
-      if (row) await prisma.carciumaAnswer.update({ where: { id: row.id }, data: { drank: true } });
+  // silence is the slowest answer: everyone still quiet gets an empty row
+  const silentRows = players
+    .filter((p) => !p.passedOut && !answered.has(p.id) && !botRows.some((b) => b.playerId === p.id))
+    .map((p) => ({
+      gameId,
+      playerId: p.id,
+      round,
+      questionId: entry.questionId,
+      selectedOptionId: null,
+      isCorrect: false,
+      score: 0,
+      elapsedMilliseconds: CARCIUMA_ROUND_MS + CARCIUMA_ROUND_GRACE_MS,
+    }));
+  const fresh = [...botRows, ...silentRows];
+  if (fresh.length) await tx.carciumaAnswer.createMany({ data: fresh, skipDuplicates: true });
+
+  // scores are a pure function of the answer rows, so recomputing is safe
+  const totals = await tx.carciumaAnswer.groupBy({ by: ["playerId"], where: { gameId }, _sum: { score: true } });
+  for (const t of totals) {
+    await tx.carciumaPlayer.update({ where: { id: t.playerId }, data: { score: t._sum.score ?? 0 } });
+  }
+
+  const rows = await tx.carciumaAnswer.findMany({ where: { gameId, round } });
+  const rowFor = (id: string) => rows.find((r) => r.playerId === id);
+  const awake = players.filter((p) => !p.passedOut);
+  // worst first: lowest score, then slowest, then lowest seat (stable)
+  const ranking = [...awake].sort((a, b) => {
+    const ra = rowFor(a.id);
+    const rb = rowFor(b.id);
+    const sa = ra?.score ?? 0;
+    const sb = rb?.score ?? 0;
+    if (sa !== sb) return sa - sb;
+    const ea = ra?.elapsedMilliseconds ?? CARCIUMA_ROUND_MS;
+    const eb = rb?.elapsedMilliseconds ?? CARCIUMA_ROUND_MS;
+    if (ea !== eb) return eb - ea;
+    return a.seat - b.seat;
+  });
+  const drinker = ranking[0] ?? null;
+  if (drinker) {
+    const row = rowFor(drinker.id);
+    // claim the drink on the answer row first: only the run that flips the flag pours
+    const marked = row
+      ? await tx.carciumaAnswer.updateMany({ where: { id: row.id, drank: false }, data: { drank: true } })
+      : { count: 0 };
+    if (marked.count > 0) {
       const drinks = Math.min(CARCIUMA_MAX_DRINKS, drinker.drinks + 1);
-      await prisma.carciumaPlayer.update({
+      await tx.carciumaPlayer.update({
         where: { id: drinker.id },
         data: {
           drinks,
@@ -224,29 +233,25 @@ export async function resolveCarciuma(gameId: string): Promise<void> {
         },
       });
     }
-
-    const after = await prisma.carciumaPlayer.findMany({ where: { gameId }, orderBy: { seat: "asc" } });
-    const stillAwake = after.filter((p) => !p.passedOut);
-    const nextRound = round + 1;
-    if (stillAwake.length <= 1 || nextRound >= plan.length) {
-      const winner = stillAwake.length
-        ? stillAwake[0]
-        : [...after].sort((a, b) => b.score - a.score)[0] ?? null;
-      await finishCarciuma(gameId, winner?.seat ?? null);
-      return;
-    }
-    await prisma.carciumaGame.update({
-      where: { id: gameId },
-      data: {
-        currentRound: nextRound,
-        roundStartedAt: new Date(Date.now() + CARCIUMA_INTERMISSION_MS),
-      },
-    });
   }
+
+  const after = await tx.carciumaPlayer.findMany({ where: { gameId }, orderBy: { seat: "asc" } });
+  const stillAwake = after.filter((p) => !p.passedOut);
+  const nextRound = round + 1;
+  if (stillAwake.length <= 1 || nextRound >= plan.length) {
+    const winner = stillAwake.length ? stillAwake[0] : [...after].sort((a, b) => b.score - a.score)[0] ?? null;
+    await finishCarciuma(tx, gameId, winner?.seat ?? null);
+    return false;
+  }
+  await tx.carciumaGame.update({
+    where: { id: gameId },
+    data: { currentRound: nextRound, roundStartedAt: new Date(Date.now() + CARCIUMA_INTERMISSION_MS) },
+  });
+  return true;
 }
 
-async function finishCarciuma(gameId: string, winnerSeat: number | null): Promise<void> {
-  await prisma.carciumaGame.update({
+async function finishCarciuma(db: Prisma.TransactionClient | typeof prisma, gameId: string, winnerSeat: number | null): Promise<void> {
+  await db.carciumaGame.update({
     where: { id: gameId },
     data: { status: "COMPLETED", completedAt: new Date(), winnerSeat },
   });
