@@ -56,7 +56,26 @@ PATRONS = {
         "back in a bun with a few loose strands, gold hoop earrings, deep green dress with a "
         "laced bodice, arms crossed on a table, facing the viewer, knowing smirk"
     ),
+    "doru": (
+        "waist-up portrait of a lean young carter in his late twenties, short ruffled dark hair, "
+        "stubble, patched leather jacket over a grey woollen shirt, seated at a table facing the "
+        "viewer, restless crooked grin"
+    ),
+    "roxana": (
+        "waist-up portrait of a cheerful village woman in her thirties, long chestnut braid over "
+        "one shoulder, rosy cheeks, embroidered white blouse with red thread, red headscarf, "
+        "seated at a table facing the viewer, bright laugh"
+    ),
 }
+
+TABLE = (
+    "Game asset: a round wooden card table seen from a slightly raised front angle, like the "
+    "table in an online poker room. Thick polished walnut rim with a carved edge, dark green "
+    "felt surface in the middle with a subtle stitch border, four small brass cup holders in "
+    "the felt, completely EMPTY (no people, no cards, no chips, no glasses). Centred, whole "
+    "table visible, symmetric ellipse. Flat uniform sage-green backdrop, nothing else in "
+    "frame. " + STYLE
+)
 
 MOODS = {
     "grin": "a huge toothy laugh, eyes squeezed shut with joy, head tilted slightly back",
@@ -180,6 +199,10 @@ def main():
                 save(vraw, f"patron-{slug}-{mood}")
             except Exception as exc:  # keep going: idle still works
                 print(f"  !! {slug}/{mood} failed: {exc}", file=sys.stderr)
+
+    print("table")
+    traw = call([{"text": TABLE}])
+    save(traw, "table")
 
     for slug, desc in BACKS.items():
         print(f"back {slug}")

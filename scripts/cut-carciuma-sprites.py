@@ -8,16 +8,18 @@ so each sprite ends exactly at the table surface it will be composited onto.
 import pathlib
 from collections import deque
 
+import os
+
 import numpy as np
 from PIL import Image
 
-RAW = pathlib.Path("/tmp/carciuma-raw")
+RAW = pathlib.Path(os.environ.get("ART_RAW", "/tmp/carciuma-raw"))
 OUT = pathlib.Path("public/carciuma")
 OUT.mkdir(parents=True, exist_ok=True)
 GREEN = np.array([161, 196, 91])
 
 
-def key_green(im: Image.Image) -> Image.Image:
+def key_green(im: Image.Image, trim_band: bool = True) -> Image.Image:
     im = im.convert("RGBA")
     a = np.array(im).astype(np.int16)
     h, w = a.shape[:2]
@@ -64,12 +66,13 @@ def key_green(im: Image.Image) -> Image.Image:
     )
     frac = band.mean(axis=1)
     cut = len(frac)
-    for y in range(len(frac) - 1, max(len(frac) // 2, 0), -1):
-        if frac[y] > 0.5:
-            cut = y
-        else:
-            cut = min(len(frac), y + 4)
-            break
+    if trim_band:
+        for y in range(len(frac) - 1, max(len(frac) // 2, 0), -1):
+            if frac[y] > 0.5:
+                cut = y
+            else:
+                cut = min(len(frac), y + 4)
+                break
     # kill the semi-transparent green halo the keying leaves on the edge
     a2 = np.array(out)
     a2[:, :, 3] = np.where(a2[:, :, 3] < 200, 0, 255)
@@ -82,8 +85,8 @@ def key_green(im: Image.Image) -> Image.Image:
 
 
 def main() -> None:
-    for p in sorted(RAW.glob("patron-*.webp")):
-        im = key_green(Image.open(p))
+    for p in sorted(list(RAW.glob("patron-*.webp")) + list(RAW.glob("table.webp"))):
+        im = key_green(Image.open(p), trim_band=p.stem != "table")
         im.save(OUT / p.name, "WEBP", quality=92, method=6)
         print(f"{p.name} -> {im.size}")
 
