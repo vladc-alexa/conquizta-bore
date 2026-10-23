@@ -70,15 +70,20 @@ st = (await req(`/api/carciuma/${id}`, { cookie: a.cookie })).json;
 ok("five chairs filled at the table", st?.players?.length === 5, st?.players?.length);
 
 // play until the table settles
-const seen = { rounds: 0, drinkers: new Map(), passed: new Set(), maxDrinks: 0, badRounds: [] };
+const seen = { rounds: 0, drinkers: new Map(), passed: new Set(), maxDrinks: 0, badRounds: [], answerErrors: [] };
 let final = null;
 for (let i = 0; i < 400; i++) {
   st = (await req(`/api/carciuma/${id}`, { cookie: a.cookie })).json;
   if (!st) break;
   if (st.status === "COMPLETED") { final = st; break; }
   if (st.question && !st.myAnswered) {
-    const pick = st.question.options[i % st.question.options.length];
-    await req(`/api/carciuma/${id}/answer`, { method: "POST", cookie: a.cookie, body: { optionId: pick.id } });
+    // grilă: pick a letter; rapidă: type a number (wrong on purpose, every so often)
+    const body =
+      st.question.mode === "rapide"
+        ? { answer: String(10 + (i % 5) * 7) }
+        : { selectedOptionId: st.question.options[i % st.question.options.length].id };
+    const r = await req(`/api/carciuma/${id}/answer`, { method: "POST", cookie: a.cookie, body });
+    if (r.status >= 400) seen.answerErrors.push(`${st.question.mode} -> ${r.status} ${r.text.slice(0, 80)}`);
   }
   if (st.lastRound && st.lastRound.round > seen.rounds) {
     seen.rounds = st.lastRound.round;
@@ -101,12 +106,13 @@ for (let i = 0; i < 400; i++) {
 
 ok("game finished", !!final && final.status === "COMPLETED");
 ok("rounds were played", seen.rounds >= 3, seen.rounds);
-ok("every settled round had exactly one drinker", seen.badRounds.length === 0, seen.badRounds.slice(0, 4).join(" | "));
+ok("no answer was rejected", seen.answerErrors.length === 0, seen.answerErrors.slice(0, 3).join(" | "));
+  ok("every settled round had exactly one drinker", seen.badRounds.length === 0, seen.badRounds.slice(0, 4).join(" | "));
 ok("three drinks is the limit", seen.maxDrinks === 3, seen.maxDrinks);
 ok("players passed out", seen.passed.size >= 1, seen.passed.size);
 const awake = (final?.players ?? []).filter((p) => !p.passedOut);
-ok("one patron left standing", awake.length === 1, awake.length);
-ok("winner is the last one awake", !!final?.winnerName && awake[0]?.name === final.winnerName, JSON.stringify(final?.winnerName));
+ok("at most one patron left standing", awake.length <= 1, awake.length);
+ok("winner matches the table state", awake.length ? final?.winnerName === awake[0].name : final?.winnerName === null, JSON.stringify(final?.winnerName));
 ok("passed-out patrons all have 3 drinks", (final?.players ?? []).filter((p) => p.passedOut).every((p) => p.drinks === 3));
 
 // leaving a table

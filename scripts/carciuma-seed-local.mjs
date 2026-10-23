@@ -57,6 +57,34 @@ async function main() {
     });
     if (q) made++;
   }
+  // rapide rounds: one numeric option, spaced so a nearby guess still scores
+  const NUMERIC = [
+    ["Câte picioare are un păianjen?", 8],
+    ["În ce an a căzut Constantinopolul?", 1453],
+    ["Câți dinți are un adult?", 32],
+    ["Câte state are SUA?", 50],
+    ["Câte corzi are o chitară clasică?", 6],
+    ["Câte minute are o zi?", 1440],
+    ["Câte oase are corpul uman?", 206],
+    ["Câte planete are sistemul solar?", 8],
+  ];
+  for (const [prompt, answer] of NUMERIC) {
+    await prisma.question.create({
+      data: {
+        prompt: `${prompt} #${stamp}`,
+        isPublished: true,
+        options: {
+          create: [
+            { text: String(answer - 2), position: 0, isCorrect: false },
+            { text: String(answer), position: 1, isCorrect: true },
+            { text: String(answer + 7), position: 2, isCorrect: false },
+            { text: String(answer + 19), position: 3, isCorrect: false },
+          ],
+        },
+      },
+    });
+    made++;
+  }
   console.log(JSON.stringify({ admin: admin.id, questions: made }));
 }
 

@@ -22,9 +22,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const body = await req.json().catch(() => null);
   const selectedOptionId = typeof body?.selectedOptionId === "string" ? body.selectedOptionId : null;
-  if (!selectedOptionId) return NextResponse.json({ error: "răspuns lipsă" }, { status: 400 });
+  const answer = typeof body?.answer === "string" ? body.answer : null;
+  if (!selectedOptionId && !answer) return NextResponse.json({ error: "răspuns lipsă" }, { status: 400 });
 
-  const res = await answerCarciuma(id, me.id, selectedOptionId);
+  const res = await answerCarciuma(id, me.id, { selectedOptionId, answer });
   if (!res.ok) return NextResponse.json({ error: res.error }, { status: 409 });
 
   await resolveCarciuma(id);

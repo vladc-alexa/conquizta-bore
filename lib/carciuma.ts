@@ -9,7 +9,7 @@
 // background worker is needed and a closed tab never freezes the table.
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { fetchGrilaPool, type PlanEntry } from "@/lib/duel";
+import { fetchGrilaPool, fetchRapidePool, gradeAnswer, type PlanEntry } from "@/lib/duel";
 
 export const CARCIUMA_SEATS = 5;
 export const CARCIUMA_PLAN_SIZE = 24;
@@ -27,11 +27,28 @@ export const CARCIUMA_BOT_NAMES = ["Bogdan", "Mirela", "Nea Costel", "Roxana", "
 /** Bots get roughly this share of questions right — enough to make the table lively. */
 const BOT_ACCURACY = 0.42;
 
-export type CarciumaEntry = Extract<PlanEntry, { mode: "grila" }>;
+export type CarciumaEntry = PlanEntry;
+/** every third round is a rapidă: type the number instead of picking a letter */
+const RAPIDE_EVERY = 3;
 
 export async function buildCarciumaPlan(): Promise<CarciumaEntry[]> {
-  const pool = await fetchGrilaPool(CARCIUMA_PLAN_SIZE + 8);
-  return pool.filter((e): e is CarciumaEntry => e.mode === "grila").slice(0, CARCIUMA_PLAN_SIZE);
+  // a mixed sitting: grilă for the gossip, rapide for the maths after two glasses
+  const [grila, rapide] = await Promise.all([
+    fetchGrilaPool(CARCIUMA_PLAN_SIZE + 4),
+    fetchRapidePool(Math.ceil(CARCIUMA_PLAN_SIZE / RAPIDE_EVERY) + 6),
+  ]);
+  const g = grila.filter((e): e is CarciumaEntry => e.mode === "grila");
+  const r = rapide.filter((e): e is CarciumaEntry => e.mode === "rapide");
+  const plan: CarciumaEntry[] = [];
+  let gi = 0;
+  let ri = 0;
+  for (let i = 0; i < CARCIUMA_PLAN_SIZE; i += 1) {
+    const wantRapide = (i + 1) % RAPIDE_EVERY === 0;
+    if (wantRapide && r[ri]) plan.push(r[ri++]);
+    else if (g[gi]) plan.push(g[gi++]);
+    else if (r[ri]) plan.push(r[ri++]);
+  }
+  return plan;
 }
 
 /** Correct answers are worth more the faster they arrive (40…100). */
@@ -79,7 +96,7 @@ export async function startCarciuma(gameId: string): Promise<void> {
 export async function answerCarciuma(
   gameId: string,
   playerId: string,
-  optionId: string
+  input: { selectedOptionId?: string | null; answer?: string | null }
 ): Promise<{ ok: boolean; error?: string }> {
   const game = await prisma.carciumaGame.findUnique({ where: { id: gameId } });
   if (!game || game.status !== "IN_PROGRESS") return { ok: false, error: "masa nu e deschisă" };
@@ -93,8 +110,14 @@ export async function answerCarciuma(
   if (now < opensAt) return { ok: false, error: "runda nu a început" };
   const elapsed = now - opensAt;
   if (elapsed > CARCIUMA_ROUND_MS + CARCIUMA_ROUND_GRACE_MS) return { ok: false, error: "timpul a expirat" };
-  const isCorrect = optionId === entry.correctOptionId;
-  const score = answerScore(isCorrect, elapsed);
+
+  if (entry.mode === "grila" && !input.selectedOptionId) return { ok: false, error: "răspuns lipsă" };
+  if (entry.mode === "rapide" && !String(input.answer ?? "").trim()) return { ok: false, error: "răspuns lipsă" };
+
+  const graded = gradeAnswer(entry, input, elapsed);
+  const isCorrect = graded.isCorrect;
+  const score =
+    entry.mode === "rapide" ? Math.max(0, Math.round(graded.score ?? 0)) : answerScore(isCorrect, elapsed);
   try {
     await prisma.carciumaAnswer.create({
       data: {
@@ -102,7 +125,8 @@ export async function answerCarciuma(
         playerId,
         round: game.currentRound,
         questionId: entry.questionId,
-        selectedOptionId: optionId,
+        selectedOptionId: entry.mode === "grila" ? input.selectedOptionId ?? null : null,
+        answerText: entry.mode === "rapide" ? String(input.answer ?? "").trim().slice(0, 40) : null,
         isCorrect,
         score,
         elapsedMilliseconds: elapsed,
@@ -165,6 +189,23 @@ async function settleOneRound(tx: Prisma.TransactionClient, gameId: string): Pro
     .map((p) => {
       const isCorrect = Math.random() < BOT_ACCURACY;
       const elapsed = botElapsed();
+      if (entry.mode === "rapide") {
+        // a drunk local guesses a nearby number; closeness still earns partial score
+        const drift = (Math.random() < 0.5 ? -1 : 1) * (1 + Math.floor(Math.random() * 12));
+        const guess = isCorrect ? entry.answer : entry.answer + drift;
+        const graded = gradeAnswer(entry, { answer: String(guess) }, elapsed);
+        return {
+          gameId,
+          playerId: p.id,
+          round,
+          questionId: entry.questionId,
+          selectedOptionId: null,
+          answerText: String(guess),
+          isCorrect: graded.isCorrect,
+          score: Math.max(0, Math.round(graded.score ?? 0)),
+          elapsedMilliseconds: elapsed,
+        };
+      }
       const wrong = entry.options.filter((o) => o.id !== entry.correctOptionId);
       const pick = isCorrect ? entry.correctOptionId : wrong[Math.floor(Math.random() * wrong.length)]?.id ?? entry.options[0].id;
       return {
@@ -173,6 +214,7 @@ async function settleOneRound(tx: Prisma.TransactionClient, gameId: string): Pro
         round,
         questionId: entry.questionId,
         selectedOptionId: pick,
+        answerText: null,
         isCorrect,
         score: answerScore(isCorrect, elapsed),
         elapsedMilliseconds: elapsed,
@@ -187,6 +229,7 @@ async function settleOneRound(tx: Prisma.TransactionClient, gameId: string): Pro
       round,
       questionId: entry.questionId,
       selectedOptionId: null,
+      answerText: null,
       isCorrect: false,
       score: 0,
       elapsedMilliseconds: CARCIUMA_ROUND_MS + CARCIUMA_ROUND_GRACE_MS,
@@ -279,7 +322,15 @@ export type CarciumaState = {
   myPlayerId: string | null;
   isHost: boolean;
   canStart: boolean;
-  question: { id: string; prompt: string; options: { id: string; text: string }[] } | null;
+  question:
+    | {
+        id: string;
+        prompt: string;
+        mode: "grila" | "rapide";
+        options: { id: string; text: string }[];
+        responseType: string | null;
+      }
+    | null;
   startedAt: number | null;
   startsInMs: number;
   windowMs: number;
@@ -344,7 +395,9 @@ export async function buildCarciumaState(gameId: string, viewerId: string): Prom
     isHost: game.hostId === viewerId,
     canStart: game.status === "WAITING" && game.hostId === viewerId,
     question: entry
-      ? { id: entry.questionId, prompt: entry.prompt, options: entry.options }
+      ? entry.mode === "grila"
+        ? { id: entry.questionId, prompt: entry.prompt, mode: "grila" as const, options: entry.options, responseType: null }
+        : { id: entry.questionId, prompt: entry.prompt, mode: "rapide" as const, options: [], responseType: entry.responseType }
       : null,
     startedAt: game.roundStartedAt?.getTime() ?? null,
     startsInMs: intermission ? opensAt - Date.now() : 0,
@@ -358,7 +411,7 @@ export async function buildCarciumaState(gameId: string, viewerId: string): Prom
             round: lastClosed,
             drinkerId: drinkerRow?.playerId ?? null,
             drinkerName: players.find((p) => p.id === drinkerRow?.playerId)?.name ?? null,
-            correctOptionId: closedEntry.correctOptionId,
+            correctOptionId: closedEntry.mode === "grila" ? closedEntry.correctOptionId : null,
             rows: lastRows
               .map((a) => ({
                 playerId: a.playerId,

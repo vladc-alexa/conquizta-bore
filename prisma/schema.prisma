@@ -367,6 +367,7 @@ model CarciumaAnswer {
   round               Int
   questionId          String         @db.Uuid
   selectedOptionId    String?        @db.Uuid
+  answerText          String?  @db.VarChar(40)
   isCorrect           Boolean        @default(false)
   score               Int            @default(0)
   elapsedMilliseconds Int            @default(0)
