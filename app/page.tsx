@@ -5,7 +5,16 @@ import { BLACK_CHAT_COLOR, BLACK_NAME_OUTLINE, CHAT_COLORS, DEFAULT_CHAT_COLOR }
 import PromptText, { isArt } from "@/components/PromptText";
 import DuelLobbyPanel from "@/components/DuelLobbyPanel";
 import TowerLobbyPanel from "@/components/TowerLobbyPanel";
+import CarciumaLobbyPanel from "@/components/CarciumaLobbyPanel";
+import PlayersPanel from "@/components/PlayersPanel";
 import { normalizeMessage } from "@/lib/messageText";
+
+type PanelKey = "tower" | "players" | "carciuma";
+
+function clockTime(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" });
+}
 
 interface ChatMessage {
   id: string;
@@ -27,6 +36,28 @@ export default function Dashboard() {
   const [myColor, setMyColor] = useState<string | null>(null);
   const [showColors, setShowColors] = useState(false);
   const [mySiteOff, setMySiteOff] = useState(false);
+  // which dashboard panels the player folded away (kept in localStorage)
+  const [closedPanels, setClosedPanels] = useState<Record<PanelKey, boolean>>({ tower: false, players: false, carciuma: false });
+  const setPanelClosed = useCallback((key: PanelKey, closed: boolean) => {
+    setClosedPanels((prev) => {
+      const next = { ...prev, [key]: closed };
+      try {
+        window.localStorage.setItem("bore.panels", JSON.stringify(next));
+      } catch {
+        /* private mode */
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("bore.panels");
+      if (raw) setClosedPanels((prev) => ({ ...prev, ...JSON.parse(raw) }));
+    } catch {
+      /* ignore malformed storage */
+    }
+  }, []);
 
   // change-password modal
   const [showPw, setShowPw] = useState(false);
@@ -209,7 +240,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 py-4">
+    <div className="w-full max-w-[1380px] mx-auto flex flex-col gap-4 py-4">
       {/* Header */}
       <header className="flex items-center justify-end gap-3">
         <div className="flex items-center gap-3">
@@ -342,6 +373,12 @@ export default function Dashboard() {
                     </span>
                     <span className="text-[#cbdcda] flex-1 min-w-0"><PromptText text={m.text} wrap /></span>
                   </div>
+                  <span
+                    className="mt-0.5 shrink-0 text-[0.58rem] tabular-nums text-[#5d7a76] group-hover:text-[#8fb0ac]"
+                    title={new Date(m.createdAt).toLocaleString("ro-RO")}
+                  >
+                    {clockTime(m.createdAt)}
+                  </span>
                   {isAdmin && (
                     <button
                       onClick={() => deleteMessage(m.id)}
@@ -383,16 +420,54 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Center: the two lobbies — 1 la 1 and the Turnul. Both live here next
-            to the chat: you open a table, watch who sits down, and press Start
-            without ever leaving the dashboard. */}
+        {/* Center: the lobbies. 1 la 1, the Turnul (with the registered players
+            roster sitting to its right) and La Carciuma underneath. Every panel
+            can be folded away with ✕ and is remembered per browser. */}
         <div className="w-full flex-1 min-w-0 flex flex-col gap-4">
           <section className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
             <DuelLobbyPanel onUnauthorized={() => { window.location.href = "/login"; }} />
           </section>
-          <section className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
-            <TowerLobbyPanel onUnauthorized={() => { window.location.href = "/login"; }} />
-          </section>
+
+          <div className="flex flex-col sm:flex-row gap-4 items-stretch">
+            {closedPanels.tower ? (
+              <button
+                onClick={() => setPanelClosed("tower", false)}
+                className="flex-1 rounded-2xl border-2 border-dashed border-[#1e3a34] bg-[#0c1a17]/70 px-3 py-4 text-left text-[0.8rem] text-[#8fb0ac] hover:border-[#3f615c] hover:text-[#9ec6c1] cursor-pointer"
+              >
+                🏰 Turnul e închis — <span className="underline">deschide-l</span>
+              </button>
+            ) : (
+              <section className="flex-1 min-w-0 bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
+                <TowerLobbyPanel onUnauthorized={() => { window.location.href = "/login"; }} onClose={() => setPanelClosed("tower", true)} />
+              </section>
+            )}
+
+            {closedPanels.players ? (
+              <button
+                onClick={() => setPanelClosed("players", false)}
+                className="sm:w-[196px] shrink-0 rounded-2xl border-2 border-dashed border-[#1e3a34] bg-[#0c1a17]/70 px-3 py-4 text-[0.78rem] text-[#8fb0ac] hover:border-[#3f615c] hover:text-[#9ec6c1] cursor-pointer"
+              >
+                👥 Jucătorii — <span className="underline">arată</span>
+              </button>
+            ) : (
+              <aside className="sm:w-[196px] shrink-0 bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-[0.95rem] flex flex-col">
+                <PlayersPanel onClose={() => setPanelClosed("players", true)} />
+              </aside>
+            )}
+          </div>
+
+          {closedPanels.carciuma ? (
+            <button
+              onClick={() => setPanelClosed("carciuma", false)}
+              className="w-full rounded-2xl border-2 border-dashed border-[#4a2f12] bg-[#150e06]/80 px-3 py-4 text-left text-[0.8rem] text-[#c8a274] hover:border-[#7d4f16] hover:text-[#e2b877] cursor-pointer"
+            >
+              🍺 La Carciuma e închisă — <span className="underline">deschide-o</span>
+            </button>
+          ) : (
+            <section className="bg-gradient-to-br from-[#2a1a0b] to-[#150e06] border-2 border-[#4a2f12] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
+              <CarciumaLobbyPanel onUnauthorized={() => { window.location.href = "/login"; }} onClose={() => setPanelClosed("carciuma", true)} />
+            </section>
+          )}
         </div>
 
         {/* Right rail */}

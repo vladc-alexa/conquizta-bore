@@ -31,7 +31,7 @@ function ago(iso: string) {
 
 const SEATS = 8;
 
-export default function TowerLobbyPanel({ onUnauthorized }: { onUnauthorized?: () => void }) {
+export default function TowerLobbyPanel({ onUnauthorized, onClose }: { onUnauthorized?: () => void; onClose?: () => void }) {
   const router = useRouter();
   const [games, setGames] = useState<OpenGame[]>([]);
   const [mine, setMine] = useState<Mine>(null);
@@ -144,7 +144,14 @@ export default function TowerLobbyPanel({ onUnauthorized }: { onUnauthorized?: (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">🏰 Turnul</h3>
-        <span className="text-[#75938f] text-[0.65rem]">8 JUCĂTORI · 36 DE TREPTE</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[#75938f] text-[0.65rem]">8 JUCĂTORI · 36 DE TREPTE</span>
+          {onClose && (
+            <button onClick={onClose} title="Închide turnul" className="text-[#75938f] hover:text-[#9ec6c1] cursor-pointer">
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {!mine && (

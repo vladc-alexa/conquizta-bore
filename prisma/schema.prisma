@@ -19,28 +19,30 @@ model AppSetting {
 }
 
 model User {
-  id              String             @id @default(uuid()) @db.Uuid
-  email           String?            @unique
-  passwordHash    String?
-  displayName     String             @unique @db.VarChar(32)
-  isAdmin         Boolean            @default(false)
-  canEditQuestions Boolean           @default(false)
-  isMuted         Boolean            @default(false)
-  hideScore       Boolean            @default(false)
-  nameColor       String?            @db.VarChar(16)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  id                  String             @id @default(uuid()) @db.Uuid
+  email               String?            @unique
+  passwordHash        String?
+  displayName         String             @unique @db.VarChar(32)
+  isAdmin             Boolean            @default(false)
+  canEditQuestions    Boolean            @default(false)
+  isMuted             Boolean            @default(false)
+  hideScore           Boolean            @default(false)
+  nameColor           String?            @db.VarChar(16)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
   // last heartbeat from an open ST0NE QUIZ tab — drives the "online" list
-  lastSeenAt      DateTime?
-  quizSessions    QuizSession[]
-  questionStats   UserQuestionStat[]
-  chatMessages    ChatMessage[]
-  questionReports QuestionReport[]
-  duelsAsHost     Duel[]             @relation("DuelHost")
-  duelsAsGuest    Duel[]             @relation("DuelGuest")
-  towerGamesAsHost TowerGame[]       @relation("TowerHost")
-  towerSeats      TowerPlayer[]
-  questionEdits   QuestionEdit[]
+  lastSeenAt          DateTime?
+  quizSessions        QuizSession[]
+  questionStats       UserQuestionStat[]
+  chatMessages        ChatMessage[]
+  questionReports     QuestionReport[]
+  duelsAsHost         Duel[]             @relation("DuelHost")
+  duelsAsGuest        Duel[]             @relation("DuelGuest")
+  towerGamesAsHost    TowerGame[]        @relation("TowerHost")
+  towerSeats          TowerPlayer[]
+  carciumaGamesAsHost CarciumaGame[]     @relation("CarciumaHost")
+  carciumaSeats       CarciumaPlayer[]   @relation("CarciumaSeats")
+  questionEdits       QuestionEdit[]
 
   @@index([lastSeenAt])
 }
@@ -56,20 +58,20 @@ enum DuelStatus {
 // creation (shuffled grila options included) so both players see the same
 // question in the same order. Rounds resolve server-side; see lib/duel.ts.
 model Duel {
-  id             String         @id @default(uuid()) @db.Uuid
-  hostId         String         @db.Uuid
-  guestId        String?        @db.Uuid
-  status         DuelStatus     @default(WAITING)
-  hostScore      Int            @default(0)
-  guestScore     Int            @default(0)
-  currentRound   Int            @default(0)
+  id             String       @id @default(uuid()) @db.Uuid
+  hostId         String       @db.Uuid
+  guestId        String?      @db.Uuid
+  status         DuelStatus   @default(WAITING)
+  hostScore      Int          @default(0)
+  guestScore     Int          @default(0)
+  currentRound   Int          @default(0)
   roundStartedAt DateTime?
   plan           Json
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   completedAt    DateTime?
-  host           User           @relation("DuelHost", fields: [hostId], references: [id], onDelete: Cascade)
-  guest          User?          @relation("DuelGuest", fields: [guestId], references: [id], onDelete: SetNull)
+  host           User         @relation("DuelHost", fields: [hostId], references: [id], onDelete: Cascade)
+  guest          User?        @relation("DuelGuest", fields: [guestId], references: [id], onDelete: SetNull)
   answers        DuelAnswer[]
 
   @@index([hostId])
@@ -108,18 +110,18 @@ enum TowerStatus {
 }
 
 model TowerGame {
-  id             String       @id @default(uuid()) @db.Uuid
-  hostId         String       @db.Uuid
-  status         TowerStatus  @default(WAITING)
+  id             String        @id @default(uuid()) @db.Uuid
+  hostId         String        @db.Uuid
+  status         TowerStatus   @default(WAITING)
   plan           Json
-  currentRound   Int          @default(0)
+  currentRound   Int           @default(0)
   roundStartedAt DateTime?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   startedAt      DateTime?
   completedAt    DateTime?
-  winnerId       String?      @db.Uuid
-  host           User         @relation("TowerHost", fields: [hostId], references: [id], onDelete: Cascade)
+  winnerId       String?       @db.Uuid
+  host           User          @relation("TowerHost", fields: [hostId], references: [id], onDelete: Cascade)
   players        TowerPlayer[]
   answers        TowerAnswer[]
   rocks          TowerRock[]
@@ -129,18 +131,18 @@ model TowerGame {
 }
 
 model TowerPlayer {
-  id         String     @id @default(uuid()) @db.Uuid
-  gameId     String     @db.Uuid
-  userId     String?    @db.Uuid
-  name       String     @db.VarChar(32)
-  isBot      Boolean    @default(false)
+  id         String        @id @default(uuid()) @db.Uuid
+  gameId     String        @db.Uuid
+  userId     String?       @db.Uuid
+  name       String        @db.VarChar(32)
+  isBot      Boolean       @default(false)
   seat       Int
-  score      Int        @default(0)
-  rungs      Int        @default(0)
-  eliminated Boolean    @default(false)
+  score      Int           @default(0)
+  rungs      Int           @default(0)
+  eliminated Boolean       @default(false)
   fellRound  Int?
-  game       TowerGame  @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  game       TowerGame     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   answers    TowerAnswer[]
 
   @@unique([gameId, seat])
@@ -167,56 +169,56 @@ model TowerAnswer {
 }
 
 model ChatMessage {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String?  @db.Uuid
-  authorName  String   @db.VarChar(32)
-  text        String   @db.VarChar(2000)
-  createdAt   DateTime @default(now())
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid
+  authorName String   @db.VarChar(32)
+  text       String   @db.VarChar(2000)
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
 }
 
 model Category {
-  id              String     @id @default(uuid()) @db.Uuid
-  name            String     @unique @db.VarChar(100)
-  slug            String     @unique @db.VarChar(100)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  questions       Question[]
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String     @unique @db.VarChar(100)
+  slug      String     @unique @db.VarChar(100)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  questions Question[]
 }
 
 model Question {
-  id              String           @id @default(uuid()) @db.Uuid
-  categoryId      String?          @db.Uuid
-  prompt          String
-  explanation     String?
-  difficulty      Int              @default(1)
-  isPublished     Boolean          @default(false)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  category        Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  options         QuestionOption[]
-  sessionAnswers  SessionAnswer[]
-  userStats       UserQuestionStat[]
+  id             String             @id @default(uuid()) @db.Uuid
+  categoryId     String?            @db.Uuid
+  prompt         String
+  explanation    String?
+  difficulty     Int                @default(1)
+  isPublished    Boolean            @default(false)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  category       Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  options        QuestionOption[]
+  sessionAnswers SessionAnswer[]
+  userStats      UserQuestionStat[]
+  reports        QuestionReport[]
+  edits          QuestionEdit[]
 
   @@index([categoryId, isPublished])
-  reports         QuestionReport[]
-  edits           QuestionEdit[]
 }
 
 // Who touched a question, when and what changed — the admin "who edited this?"
 // trail. editorName and prompt are SNAPSHOTS: they survive a rename, and the
 // trail survives the question being deleted (questionId goes null, the row stays).
 model QuestionEdit {
-  id         String   @id @default(uuid()) @db.Uuid
-  questionId String?  @db.Uuid
-  editorId   String?  @db.Uuid
-  editorName String   @db.VarChar(32)
-  action     String   @db.VarChar(16) // create | import | edit | publish | unpublish | delete
-  prompt     String   @db.VarChar(1000)
-  summary    String?  @db.VarChar(300)
-  createdAt  DateTime @default(now())
+  id         String    @id @default(uuid()) @db.Uuid
+  questionId String?   @db.Uuid
+  editorId   String?   @db.Uuid
+  editorName String    @db.VarChar(32)
+  action     String    @db.VarChar(16) // create | import | edit | publish | unpublish | delete
+  prompt     String    @db.VarChar(1000)
+  summary    String?   @db.VarChar(300)
+  createdAt  DateTime  @default(now())
   question   Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
   editor     User?     @relation(fields: [editorId], references: [id], onDelete: SetNull)
 
@@ -226,13 +228,13 @@ model QuestionEdit {
 }
 
 model QuestionReport {
-  id          String   @id @default(uuid()) @db.Uuid
-  questionId  String   @db.Uuid
-  userId      String?  @db.Uuid
-  note        String   @db.VarChar(500)
-  createdAt   DateTime @default(now())
-  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id         String   @id @default(uuid()) @db.Uuid
+  questionId String   @db.Uuid
+  userId     String?  @db.Uuid
+  note       String   @db.VarChar(500)
+  createdAt  DateTime @default(now())
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([questionId])
 }
@@ -250,46 +252,46 @@ model QuestionOption {
 }
 
 model QuizSession {
-  id              String            @id @default(uuid()) @db.Uuid
-  userId          String?           @db.Uuid
-  status          QuizSessionStatus @default(IN_PROGRESS)
-  questionCount   Int
-  correctCount    Int               @default(0)
-  startedAt       DateTime          @default(now())
-  completedAt     DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  user            User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  answers         SessionAnswer[]
+  id            String            @id @default(uuid()) @db.Uuid
+  userId        String?           @db.Uuid
+  status        QuizSessionStatus @default(IN_PROGRESS)
+  questionCount Int
+  correctCount  Int               @default(0)
+  startedAt     DateTime          @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  user          User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  answers       SessionAnswer[]
 
   @@index([userId, completedAt])
 }
 
 model SessionAnswer {
-  id                String          @id @default(uuid()) @db.Uuid
-  quizSessionId     String          @db.Uuid
-  questionId        String          @db.Uuid
-  selectedOptionId  String?         @db.Uuid
-  submittedAnswer   String?
-  isCorrect         Boolean
+  id                  String          @id @default(uuid()) @db.Uuid
+  quizSessionId       String          @db.Uuid
+  questionId          String          @db.Uuid
+  selectedOptionId    String?         @db.Uuid
+  submittedAnswer     String?
+  isCorrect           Boolean
   elapsedMilliseconds Int
-  answeredAt        DateTime        @default(now())
-  quizSession       QuizSession     @relation(fields: [quizSessionId], references: [id], onDelete: Cascade)
-  question          Question        @relation(fields: [questionId], references: [id], onDelete: Restrict)
-  selectedOption    QuestionOption? @relation("SelectedOption", fields: [selectedOptionId], references: [id], onDelete: SetNull)
+  answeredAt          DateTime        @default(now())
+  quizSession         QuizSession     @relation(fields: [quizSessionId], references: [id], onDelete: Cascade)
+  question            Question        @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  selectedOption      QuestionOption? @relation("SelectedOption", fields: [selectedOptionId], references: [id], onDelete: SetNull)
 
   @@unique([quizSessionId, questionId])
   @@index([questionId])
 }
 
 model UserQuestionStat {
-  userId          String   @db.Uuid
-  questionId      String   @db.Uuid
-  attempts        Int      @default(0)
-  correctAttempts Int      @default(0)
+  userId          String    @db.Uuid
+  questionId      String    @db.Uuid
+  attempts        Int       @default(0)
+  correctAttempts Int       @default(0)
   lastAnsweredAt  DateTime?
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question        Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question        Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@id([userId, questionId])
   @@index([questionId])
@@ -306,4 +308,73 @@ model TowerRock {
 
   @@unique([gameId, round, throwerId])
   @@index([gameId, round, targetId])
+}
+
+enum CarciumaStatus {
+  WAITING
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+// La Carciuma — five patrons around one wooden table. Every round serves one
+// question; the worst answer (lowest score, slowest on a tie, silence counts as
+// slowest) has to drink. Three drinks and that patron is under the table.
+model CarciumaGame {
+  id             String           @id @default(uuid()) @db.Uuid
+  hostId         String           @db.Uuid
+  status         CarciumaStatus   @default(WAITING)
+  plan           Json
+  currentRound   Int              @default(0)
+  roundStartedAt DateTime?
+  winnerSeat     Int?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  host           User             @relation("CarciumaHost", fields: [hostId], references: [id], onDelete: Cascade)
+  players        CarciumaPlayer[]
+  answers        CarciumaAnswer[]
+
+  @@index([status, createdAt])
+  @@index([hostId])
+}
+
+model CarciumaPlayer {
+  id        String           @id @default(uuid()) @db.Uuid
+  gameId    String           @db.Uuid
+  userId    String?          @db.Uuid
+  name      String           @db.VarChar(32)
+  seat      Int
+  isBot     Boolean          @default(false)
+  drinks    Int              @default(0)
+  passedOut Boolean          @default(false)
+  outRound  Int?
+  score     Int              @default(0)
+  createdAt DateTime         @default(now())
+  game      CarciumaGame     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user      User?            @relation("CarciumaSeats", fields: [userId], references: [id], onDelete: SetNull)
+  answers   CarciumaAnswer[]
+
+  @@unique([gameId, seat])
+  @@index([userId])
+}
+
+model CarciumaAnswer {
+  id                  String         @id @default(uuid()) @db.Uuid
+  gameId              String         @db.Uuid
+  playerId            String         @db.Uuid
+  round               Int
+  questionId          String         @db.Uuid
+  selectedOptionId    String?        @db.Uuid
+  isCorrect           Boolean        @default(false)
+  score               Int            @default(0)
+  elapsedMilliseconds Int            @default(0)
+  drank               Boolean        @default(false)
+  createdAt           DateTime       @default(now())
+  game                CarciumaGame   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  player              CarciumaPlayer @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, round, playerId])
+  @@index([gameId, round])
 }

@@ -258,3 +258,30 @@ h1 {
 @media (prefers-reduced-motion: reduce) {
   .online-dot { animation: none; }
 }
+
+/* ---- La Carciuma ---- */
+@keyframes cq-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.cq-bob { animation: cq-bob 2.6s ease-in-out infinite; }
+
+@keyframes cq-zzz {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.8); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-6px, -26px) scale(1.15); }
+}
+.cq-zzz { animation: cq-zzz 2.8s ease-out infinite; }
+
+@keyframes cq-splash {
+  0% { opacity: 0; transform: translateY(4px) scale(0.7); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-26px) scale(1.1); }
+}
+.cq-splash { animation: cq-splash 1.6s ease-out forwards; }
+
+@keyframes cq-glow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.75; }
+}
+.cq-glow { animation: cq-glow 2.2s ease-in-out infinite; }
