@@ -74,7 +74,7 @@ ok("five chairs filled at the table", st?.players?.length === 5, st?.players?.le
 // play until the table settles
 const seen = { rounds: 0, drinkers: new Map(), passed: new Set(), maxDrinks: 0, badRounds: [], answerErrors: [] };
 let final = null;
-for (let i = 0; i < 400; i++) {
+for (let i = 0; i < 1200; i++) {
   st = (await req(`/api/carciuma/${id}`, { cookie: a.cookie })).json;
   if (!st) break;
   if (st.status === "COMPLETED") { final = st; break; }

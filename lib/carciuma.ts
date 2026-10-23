@@ -179,7 +179,7 @@ async function settleOneRound(tx: Prisma.TransactionClient, gameId: string): Pro
   }
   const opensAt = game.roundStartedAt?.getTime() ?? 0;
   const closesAt = opensAt + CARCIUMA_ROUND_MS + CARCIUMA_ROUND_GRACE_MS;
-  if (Date.now() < closesAt) return false; // round still open, or we are in the breather
+  if (Date.now() < opensAt) return false; // still in the breather
 
   const round = game.currentRound;
   const players = await tx.carciumaPlayer.findMany({ where: { gameId }, orderBy: { seat: "asc" } });
@@ -188,6 +188,12 @@ async function settleOneRound(tx: Prisma.TransactionClient, gameId: string): Pro
   const answered = new Set(
     (await tx.carciumaAnswer.findMany({ where: { gameId, round }, select: { playerId: true } })).map((a) => a.playerId)
   );
+
+  // nobody left to answer: pour now instead of staring at the clock
+  const awaiting = players.filter((p) => !p.passedOut);
+  const allIn =
+    awaiting.length > 0 && awaiting.every((p) => p.isBot || answered.has(p.id));
+  if (Date.now() < closesAt && !allIn) return false;
 
   // bots answer at close time (they never hold the round hostage)
   const botRows = players
@@ -349,6 +355,8 @@ export type CarciumaState = {
     drinkerId: string | null;
     drinkerName: string | null;
     correctOptionId: string | null;
+    mode: "grila" | "rapide";
+    answer: string | null;
     rows: { playerId: string; score: number; ms: number; correct: boolean; drank: boolean }[];
   } | null;
   winnerId: string | null;
@@ -418,6 +426,9 @@ export async function buildCarciumaState(gameId: string, viewerId: string): Prom
             drinkerId: drinkerRow?.playerId ?? null,
             drinkerName: players.find((p) => p.id === drinkerRow?.playerId)?.name ?? null,
             correctOptionId: closedEntry.mode === "grila" ? closedEntry.correctOptionId : null,
+            mode: closedEntry.mode,
+            answer:
+              closedEntry.mode === "rapide" && closedEntry.answer != null ? String(closedEntry.answer) : null,
             rows: lastRows
               .map((a) => ({
                 playerId: a.playerId,

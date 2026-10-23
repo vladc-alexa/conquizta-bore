@@ -282,21 +282,35 @@ export default function CarciumaPage() {
                     {nextIn > 0 ? `Pauză — se mai toarnă un rând. Runda următoare în ${nextIn}s.` : "Se pregătește runda…"}
                   </p>
                   {state.lastRound && (
-                    <ul className="grid gap-1 text-xs">
-                      {state.lastRound.rows.map((row) => {
-                        const p = state.players.find((x) => x.id === row.playerId);
-                        if (!p) return null;
-                        return (
-                          <li key={row.playerId} className={`flex items-center gap-2 rounded-lg px-2 py-1 ${row.drank ? "bg-[#3a1c0e] text-[#ffd0a8]" : "bg-[#221606] text-[#c8b79c]"}`}>
-                            <span className="w-24 truncate">{p.name}</span>
-                            <span className={row.correct ? "text-[#8fd9a8]" : "text-[#c98b7a]"}>{row.correct ? "corect" : "greșit"}</span>
-                            <span className="text-[#8d755a]">{(row.ms / 1000).toFixed(1)}s</span>
-                            <span className="ml-auto font-semibold">{row.score}p</span>
-                            {row.drank && <span className="rounded bg-[#7a2f16] px-1.5 py-0.5 text-[0.65rem] uppercase tracking-wide text-[#ffd0a8]">bea</span>}
-                          </li>
-                        );
-                      })}
-                    </ul>
+                    <>
+                      {state.lastRound.mode === "rapide" && state.lastRound.answer != null && (
+                        <p className="mb-2 rounded-lg bg-[#12241c] px-3 py-1.5 text-sm text-[#8fd9a8]">
+                          Răspunsul corect: <strong>{state.lastRound.answer}</strong>
+                        </p>
+                      )}
+                      <ul className="grid gap-1 text-xs">
+                        {(state.lastRound.mode === "rapide"
+                          ? [...state.lastRound.rows].sort((a, b) => a.ms - b.ms)
+                          : state.lastRound.rows
+                        ).map((row) => {
+                          const p = state.players.find((x) => x.id === row.playerId);
+                          if (!p) return null;
+                          return (
+                            <li key={row.playerId} className={`flex items-center gap-2 rounded-lg px-2 py-1 ${row.drank ? "bg-[#3a1c0e] text-[#ffd0a8]" : "bg-[#221606] text-[#c8b79c]"}`}>
+                              <span className="w-24 truncate">{p.name}</span>
+                              {state.lastRound?.mode === "grila" ? (
+                                <span className={row.correct ? "text-[#8fd9a8]" : "text-[#c98b7a]"}>{row.correct ? "corect" : "greșit"}</span>
+                              ) : (
+                                <span className="text-[#e0c9a6]">a răspuns în</span>
+                              )}
+                              <span className="text-[#8d755a]">{(row.ms / 1000).toFixed(1)}s</span>
+                              <span className="ml-auto font-semibold">{row.score}p</span>
+                              {row.drank && <span className="rounded bg-[#7a2f16] px-1.5 py-0.5 text-[0.65rem] uppercase tracking-wide text-[#ffd0a8]">bea</span>}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
                   )}
                 </div>
               )}
