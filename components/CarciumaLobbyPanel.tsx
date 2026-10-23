@@ -100,11 +100,15 @@ export default function CarciumaLobbyPanel({
     setBusy(null);
   }
 
-  async function callBots(id: string) {
+  async function callBots(id: string, count = 1) {
     setBusy("bots");
     setErr("");
     try {
-      const r = await fetch(`/api/carciuma/${id}/bots`, { method: "POST" });
+      const r = await fetch(`/api/carciuma/${id}/bots`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count }),
+      });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) setErr(d.error || "N-am putut chema localnicii.");
       await load();
@@ -221,7 +225,14 @@ export default function CarciumaLobbyPanel({
                 disabled={busy !== null || filled >= SEATS}
                 className="bg-[#1d1208] border-2 border-[#6b451f] rounded-lg text-[#e8c46a] font-cinzel text-[0.82rem] tracking-wide p-2 hover:brightness-125 disabled:opacity-40 cursor-pointer"
               >
-                {busy === "bots" ? "Chem localnicii…" : "🎲 Adaugă localnici pe scaunele libere"}
+                {busy === "bots" ? "+1…" : "🎲 +1 localnic"}
+              </button>
+              <button
+                onClick={() => callBots(mine.id, SEATS)}
+                disabled={busy !== null || filled >= SEATS}
+                className="bg-[#1d1208] border-2 border-[#6b451f] rounded-lg text-[#e8c46a] font-cinzel text-[0.82rem] tracking-wide p-2 hover:brightness-125 disabled:opacity-40 cursor-pointer"
+              >
+                {filled >= SEATS ? "Masa e plină" : `🎲 Umple masa (${SEATS - filled})`}
               </button>
               <button
                 onClick={() => start(mine.id)}

@@ -125,20 +125,20 @@ export default function CarciumaScene({
       {/* name plates ride above the table so nobody's tag gets eaten by the rim */}
       {[0, 1, 2, 3, 4].map((seat) => {
         const p = bySeat.get(seat);
-        return p ? <Plate key={`plate-${seat}`} p={p} at={PLATE_AT[seat]} /> : null;
+        return p ? <Plate key={`plate-${seat}`} p={p} at={plateAt(seat)} /> : null;
       })}
     </div>
   );
 }
 
 
-const PLATE_AT: Record<number, { left: string; top: string }> = {
-  1: { left: "24%", top: "31%" },
-  2: { left: "50%", top: "29%" },
-  3: { left: "76%", top: "31%" },
-  0: { left: "11%", top: "57%" },
-  4: { left: "88%", top: "57%" },
-};
+// name plates hang at the feet of each patron, under their sprite box
+function plateAt(seat: number): { left: string; top: string } {
+  const cfg = SEAT[seat];
+  const left = parseFloat(cfg.left) + parseFloat(cfg.width) / 2;
+  const top = Math.min(97, 100 - parseFloat(cfg.bottom) + 1.5);
+  return { left: `${left}%`, top: `${top}%` };
+}
 
 function Plate({ p, at }: { p: ScenePlayer; at: { left: string; top: string } }) {
   return (

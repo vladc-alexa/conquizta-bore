@@ -64,18 +64,20 @@ function botElapsed(): number {
 }
 
 /** Fill every empty seat with a patron who can actually play. */
-export async function fillCarciumaBots(gameId: string): Promise<void> {
+export async function fillCarciumaBots(gameId: string, count = CARCIUMA_SEATS): Promise<number> {
   const players = await prisma.carciumaPlayer.findMany({ where: { gameId }, select: { seat: true } });
   const taken = new Set(players.map((p) => p.seat));
   const names = [...CARCIUMA_BOT_NAMES].sort(() => Math.random() - 0.5);
   let n = 0;
   for (let seat = 0; seat < CARCIUMA_SEATS; seat += 1) {
+    if (n >= count) break;
     if (taken.has(seat)) continue;
     await prisma.carciumaPlayer.create({
       data: { gameId, name: names[n % names.length], seat, isBot: true },
     });
     n += 1;
   }
+  return n;
 }
 
 export async function startCarciuma(gameId: string): Promise<void> {
