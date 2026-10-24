@@ -135,7 +135,9 @@ export default function CarciumaScene({
 // name plates hang at the feet of each patron, under their sprite box
 function plateAt(seat: number): { left: string; top: string } {
   const cfg = SEAT[seat];
-  const left = parseFloat(cfg.left) + parseFloat(cfg.width) / 2;
+  // clamped: on a narrow phone the edge seats would hang their plate off the scene
+  const raw = parseFloat(cfg.left) + parseFloat(cfg.width) / 2;
+  const left = Math.min(86, Math.max(14, raw));
   const top = Math.min(97, 100 - parseFloat(cfg.bottom) + 1.5);
   return { left: `${left}%`, top: `${top}%` };
 }
@@ -148,7 +150,7 @@ function Plate({ p, at }: { p: ScenePlayer; at: { left: string; top: string } })
       }`}
       style={{ left: at.left, top: at.top, zIndex: 40 }}
     >
-      <span className="font-semibold">{p.name}{p.mine ? " (tu)" : ""}</span>
+      <span className="inline-block max-w-[7.5rem] truncate align-bottom font-semibold">{p.name}{p.mine ? " (tu)" : ""}</span>
       <span className="ml-1.5 inline-flex gap-[3px] align-middle">
         {[0, 1, 2].map((i) => (
           <i key={i} className="inline-block h-[6px] w-[6px] rounded-full border border-[#6b4a2c]"

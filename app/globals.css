@@ -19,7 +19,7 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: var(--font-lato), sans-serif;
-  min-height: 100vh;
+  min-height: 100dvh; /* dvh: 100vh includes the collapsing mobile toolbar */
   margin: 0;
   display: flex;
   flex-direction: column;
@@ -28,6 +28,22 @@ body {
      tall pages (dashboard, leaderboard) off the top of the viewport. */
   justify-content: flex-start;
   padding: 16px;
+  /* keep content clear of the notch / home indicator on phones */
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+  -webkit-text-size-adjust: 100%;
+}
+
+/* iOS Safari zooms the whole page when a focused field is under 16px.
+   Unlayered rules beat Tailwind's utilities, so this wins without !important. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
 }
 
 /* Themed scrollbars (chat + leaderboard) */
