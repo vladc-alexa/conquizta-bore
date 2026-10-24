@@ -356,11 +356,30 @@ export type CarciumaState = {
     drinkerName: string | null;
     correctOptionId: string | null;
     mode: "grila" | "rapide";
+    /** THE correct answer, text for both modes — revealed once the round closes */
     answer: string | null;
-    rows: { playerId: string; score: number; ms: number; correct: boolean; drank: boolean }[];
+    rows: { playerId: string; score: number; ms: number; correct: boolean; drank: boolean; answer: string | null }[];
   } | null;
   winnerId: string | null;
   winnerName: string | null;
+  /** question-by-question recap of the whole sitting — filled only once the table is done */
+  review: {
+    round: number;
+    prompt: string;
+    mode: "grila" | "rapide";
+    /** the option text for a grilă, the number as a string for a rapidă */
+    correctAnswer: string | null;
+    rows: {
+      playerId: string;
+      name: string;
+      /** what that patron actually said; null = kept quiet */
+      answer: string | null;
+      correct: boolean;
+      ms: number;
+      score: number;
+      drank: boolean;
+    }[];
+  }[];
 };
 
 export async function buildCarciumaState(gameId: string, viewerId: string): Promise<CarciumaState | null> {
@@ -427,8 +446,14 @@ export async function buildCarciumaState(gameId: string, viewerId: string): Prom
             drinkerName: players.find((p) => p.id === drinkerRow?.playerId)?.name ?? null,
             correctOptionId: closedEntry.mode === "grila" ? closedEntry.correctOptionId : null,
             mode: closedEntry.mode,
+            // reveal the truth for both modes: the option text on a grilă, the
+            // number on a rapidă — players should never be left guessing
             answer:
-              closedEntry.mode === "rapide" && closedEntry.answer != null ? String(closedEntry.answer) : null,
+              closedEntry.mode === "grila"
+                ? closedEntry.options.find((o) => o.id === closedEntry.correctOptionId)?.text ?? null
+                : closedEntry.answer != null
+                  ? String(closedEntry.answer)
+                  : null,
             rows: lastRows
               .map((a) => ({
                 playerId: a.playerId,
@@ -436,13 +461,58 @@ export async function buildCarciumaState(gameId: string, viewerId: string): Prom
                 ms: a.elapsedMilliseconds,
                 correct: a.isCorrect,
                 drank: a.drank,
+                answer:
+                  closedEntry.mode === "grila"
+                    ? closedEntry.options.find((o) => o.id === a.selectedOptionId)?.text ?? null
+                    : a.answerText ?? null,
               }))
               .sort((a, b) => b.score - a.score || a.ms - b.ms),
           }
         : null,
     winnerId: winner?.id ?? null,
     winnerName: winner?.name ?? null,
+    // The recap reads straight off the plan + the answer rows, so no extra table
+    // is needed and it survives forever after the table clears.
+    review: done
+      ? buildCarciumaReview({ plan, rounds: game.currentRound + 1, answers, players })
+      : [],
   };
+}
+
+/** Every played round, with the truth and what each patron said — for the post-game review. */
+function buildCarciumaReview(input: {
+  plan: CarciumaEntry[];
+  rounds: number;
+  answers: { round: number; playerId: string; selectedOptionId: string | null; answerText: string | null; isCorrect: boolean; score: number; elapsedMilliseconds: number; drank: boolean }[];
+  players: { id: string; name: string }[];
+}): CarciumaState["review"] {
+  const { plan, rounds, answers, players } = input;
+  const nameOf = new Map(players.map((p) => [p.id, p.name]));
+  return plan.slice(0, Math.max(0, rounds)).flatMap((entry, round) => {
+    const rows = answers.filter((a) => a.round === round);
+    if (!rows.length) return [];
+    const optionText = (optionId: string | null) =>
+      optionId && entry.mode === "grila" ? entry.options.find((o) => o.id === optionId)?.text ?? null : null;
+    return [
+      {
+        round,
+        prompt: entry.prompt,
+        mode: entry.mode,
+        correctAnswer: entry.mode === "grila" ? optionText(entry.correctOptionId) : String(entry.answer),
+        rows: rows
+          .map((a) => ({
+            playerId: a.playerId,
+            name: nameOf.get(a.playerId) ?? "?",
+            answer: optionText(a.selectedOptionId) ?? a.answerText ?? null,
+            correct: a.isCorrect,
+            ms: a.elapsedMilliseconds,
+            score: a.score,
+            drank: a.drank,
+          }))
+          .sort((a, b) => b.score - a.score || a.ms - b.ms),
+      },
+    ];
+  });
 }
 
 /** Close my own forgotten lobbies so an old table never blocks a new one. */

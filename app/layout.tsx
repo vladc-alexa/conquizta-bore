@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Jost, Lato } from "next/font/google";
 import "./globals.css";
 import SiteHeader from "@/components/SiteHeader";
@@ -26,6 +26,14 @@ export const metadata: Metadata = {
     siteName: "ST0NE QUIZ",
     type: "website",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // cover: lets env(safe-area-inset-*) report the notch/home-bar insets
+  viewportFit: "cover",
+  themeColor: "#040a08",
 };
 
 export default function RootLayout({

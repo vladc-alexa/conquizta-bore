@@ -121,19 +121,22 @@ export default function CarciumaPage() {
           ← înapoi
         </Link>
         <h1 className="font-display text-2xl text-[#ffd98e]">La Carciuma</h1>
-        <div className="ml-auto flex items-center gap-2 text-xs">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2 text-xs">
           {state?.phase === "table" && (
             <span className="rounded-full border border-[#5b3d22] bg-[#1d1208] px-2.5 py-1 text-[#e0c9a6]">
               runda {Math.min(state.round + 1, state.totalRounds)}/{state.totalRounds}
             </span>
           )}
-          {state && (
+          {state && state.phase !== "done" && (
             <span className="rounded-full border border-[#5b3d22] bg-[#1d1208] px-2.5 py-1 text-[#e0c9a6]">
               {state.awakeCount} încă la masă
             </span>
           )}
-          <button onClick={leave} className="rounded-lg border border-[#6b3a2a] bg-[#2a120c] px-2.5 py-1.5 text-[#f0b9a4] hover:border-[#a8503a]">
-            ✕ pleacă de la masă
+          <button
+            onClick={leave}
+            className="min-h-[40px] rounded-lg border border-[#6b3a2a] bg-[#2a120c] px-2.5 py-1.5 text-[#f0b9a4] hover:border-[#a8503a]"
+          >
+            ✕ pleacă<span className="hidden sm:inline"> de la masă</span>
           </button>
         </div>
       </div>
@@ -177,9 +180,9 @@ export default function CarciumaPage() {
           )}
 
           {state?.phase === "done" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#140b04]/72 px-4 text-center">
-              <p className="font-display text-4xl text-[#ffd98e]">Cin cin!</p>
-              <p className="text-lg text-[#f0dcbb]">
+            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-[#140b04]/82 px-4 text-center">
+              <p className="font-display text-3xl text-[#ffd98e] sm:text-4xl">Cin cin!</p>
+              <p className="text-sm leading-snug text-[#f0dcbb] sm:text-lg">
                 {state.winnerName ? (
                   <>
                     <span className="font-semibold text-[#8fd9a8]">{state.winnerName}</span> a rămas singurul la masă.
@@ -191,6 +194,9 @@ export default function CarciumaPage() {
               <Link href="/" className="rounded-lg border border-[#8a5a30] bg-[#3a2512] px-4 py-2 text-sm text-[#ffe4ac] hover:border-[#c08850]">
                 înapoi la carciumă
               </Link>
+              {state.review.length > 0 && (
+                <span className="-mt-1 text-[0.7rem] text-[#9d7c56]">revizuirea întrebărilor e mai jos ↓</span>
+              )}
             </div>
           )}
         </div>
@@ -235,7 +241,7 @@ export default function CarciumaPage() {
                       <button
                         type="submit"
                         disabled={!openForMe || timeUp || !typed.trim()}
-                        className="rounded-lg border border-[#8a5a30] bg-[#3a2512] px-3 py-2 text-sm text-[#ffe4ac] hover:border-[#c08850] disabled:opacity-40"
+                        className="rounded-lg border border-[#8a5a30] bg-[#3a2512] px-3 py-2 text-sm text-[#ffe4ac] hover:border-[#c08850] disabled:opacity-40 min-h-[44px]"
                       >
                         trimite
                       </button>
@@ -250,7 +256,7 @@ export default function CarciumaPage() {
                             key={o.id}
                             onClick={() => void send({ selectedOptionId: o.id }, o.id)}
                             disabled={locked}
-                            className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-sm transition ${
+                            className={`flex min-h-[44px] items-start gap-2 rounded-xl border px-3 py-2 text-left text-sm transition ${
                               isPicked
                                 ? "border-[#e2a34a] bg-[#3a2a12] text-[#ffe4ac]"
                                 : locked
@@ -283,7 +289,8 @@ export default function CarciumaPage() {
                   </p>
                   {state.lastRound && (
                     <>
-                      {state.lastRound.mode === "rapide" && state.lastRound.answer != null && (
+                      {/* the truth, always — grilă option text or rapidă number */}
+                      {state.lastRound.answer != null && (
                         <p className="mb-2 rounded-lg bg-[#12241c] px-3 py-1.5 text-sm text-[#8fd9a8]">
                           Răspunsul corect: <strong>{state.lastRound.answer}</strong>
                         </p>
@@ -296,16 +303,22 @@ export default function CarciumaPage() {
                           const p = state.players.find((x) => x.id === row.playerId);
                           if (!p) return null;
                           return (
-                            <li key={row.playerId} className={`flex items-center gap-2 rounded-lg px-2 py-1 ${row.drank ? "bg-[#3a1c0e] text-[#ffd0a8]" : "bg-[#221606] text-[#c8b79c]"}`}>
-                              <span className="w-24 truncate">{p.name}</span>
+                            <li key={row.playerId} className={`flex min-w-0 items-center gap-2 rounded-lg px-2 py-1 ${row.drank ? "bg-[#3a1c0e] text-[#ffd0a8]" : "bg-[#221606] text-[#c8b79c]"}`}>
+                              <span className="w-[4.5rem] shrink-0 truncate sm:w-24">{p.name}</span>
                               {state.lastRound?.mode === "grila" ? (
-                                <span className={row.correct ? "text-[#8fd9a8]" : "text-[#c98b7a]"}>{row.correct ? "corect" : "greșit"}</span>
+                                <span className={`min-w-0 flex-1 truncate ${row.correct ? "text-[#8fd9a8]" : "text-[#c98b7a]"}`}>
+                                  {row.correct ? "✓" : "✗"} {row.answer ?? "—"}
+                                </span>
                               ) : (
-                                <span className="text-[#e0c9a6]">a răspuns în</span>
+                                <span className="min-w-0 flex-1 truncate text-[#e0c9a6]">
+                                  {row.answer ? `„${row.answer}”` : "—"} · {(row.ms / 1000).toFixed(1)}s
+                                </span>
                               )}
-                              <span className="text-[#8d755a]">{(row.ms / 1000).toFixed(1)}s</span>
-                              <span className="ml-auto font-semibold">{row.score}p</span>
-                              {row.drank && <span className="rounded bg-[#7a2f16] px-1.5 py-0.5 text-[0.65rem] uppercase tracking-wide text-[#ffd0a8]">bea</span>}
+                              {state.lastRound?.mode === "grila" && (
+                                <span className="shrink-0 text-[#8d755a]">{(row.ms / 1000).toFixed(1)}s</span>
+                              )}
+                              <span className="shrink-0 font-semibold">{row.score}p</span>
+                              {row.drank && <span className="shrink-0 rounded bg-[#7a2f16] px-1.5 py-0.5 text-[0.65rem] uppercase tracking-wide text-[#ffd0a8]">bea</span>}
                             </li>
                           );
                         })}
@@ -318,6 +331,69 @@ export default function CarciumaPage() {
           </aside>
         )}
       </div>
+
+      {/* Post-game review: every question of the sitting, the right answer and
+          what each patron actually said. Collapsed per round so a 20-round
+          evening does not become one endless scroll on a phone. */}
+      {state?.phase === "done" && state.review.length > 0 && (
+        <section className="mt-3">
+          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h2 className="font-display text-xl text-[#ffd98e]">Revizuire — ce s-a întrebat la masă</h2>
+            <span className="text-xs text-[#9d7c56]">{state.review.length} runde</span>
+          </div>
+          <div className="grid gap-2">
+            {state.review.map((r) => (
+              <details key={r.round} className="overflow-hidden rounded-xl border border-[#5b3d22] bg-[#1a1208] open:border-[#8a5a30]">
+                <summary className="flex min-h-[44px] cursor-pointer items-start gap-2 px-3 py-2 text-sm text-[#e8d7bd] transition hover:bg-[#221606]">
+                  <span className="mt-0.5 shrink-0 rounded bg-[#33220f] px-1.5 text-[0.7rem] font-bold text-[#e2b877]">{r.round + 1}</span>
+                  <span className="min-w-0 flex-1">{r.prompt}</span>
+                  <span
+                    className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider ${
+                      r.mode === "rapide" ? "bg-[#22303a] text-[#9ed2e0]" : "bg-[#33220f] text-[#e2b877]"
+                    }`}
+                  >
+                    {r.mode === "rapide" ? "rapidă" : "grilă"}
+                  </span>
+                </summary>
+                <div className="border-t border-[#3a2a1c] px-3 py-2">
+                  <p className="mb-2 text-xs text-[#9d7c56]">
+                    răspunsul corect:{" "}
+                    <strong className="text-[#8fd9a8]">{r.correctAnswer ?? "—"}</strong>
+                  </p>
+                  <ul className="grid gap-1 text-xs">
+                    {r.rows.map((row) => (
+                      <li
+                        key={row.playerId}
+                        className={`flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg px-2 py-1.5 ${
+                          row.drank ? "bg-[#3a1c0e] text-[#ffd0a8]" : "bg-[#221606] text-[#c8b79c]"
+                        }`}
+                      >
+                        <span className="w-[5.5rem] shrink-0 truncate font-semibold">{row.name}</span>
+                        <span
+                          className={`shrink-0 font-bold ${row.correct ? "text-[#8fd9a8]" : "text-[#c98b7a]"}`}
+                          aria-label={row.correct ? "corect" : "greșit"}
+                        >
+                          {row.correct ? "✓" : "✗"}
+                        </span>
+                        <span className={`min-w-0 flex-1 truncate ${row.correct ? "text-[#8fd9a8]" : "text-[#c98b7a]"}`}>
+                          {row.answer ?? "— (tăcere)"}
+                        </span>
+                        <span className="shrink-0 text-[#8d755a]">{(row.ms / 1000).toFixed(1)}s</span>
+                        <span className="shrink-0 font-semibold">{row.score}p</span>
+                        {row.drank && (
+                          <span className="shrink-0 rounded bg-[#7a2f16] px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wide text-[#ffd0a8]">
+                            bea
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

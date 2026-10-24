@@ -238,22 +238,22 @@ export default function Dashboard() {
     }
   };
 
+  // Small screens: the nav has to wrap instead of shoving buttons off the left
+  // edge (each one keeps a 40px-tall tap target).
+  const navBtn =
+    "font-cinzel text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.75rem] sm:text-[0.8rem] " +
+    "border border-[#1e3a34] rounded-lg px-2.5 sm:px-3.5 py-2 min-h-[40px] inline-flex items-center gap-1 bg-[#0c1a17] cursor-pointer";
+
   return (
     <div className="w-full max-w-[1380px] mx-auto flex flex-col gap-4 py-4">
       {/* Header */}
-      <header className="flex items-center justify-end gap-3">
-        <div className="flex items-center gap-3">
-          <a
-            href="/leaderboard"
-            className="font-cinzel text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.8rem] border border-[#1e3a34] rounded-lg px-3.5 py-2 bg-[#0c1a17]"
-          >
+      <header className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+          <a href="/leaderboard" className={navBtn}>
             👑 Clasament
           </a>
           {isAdmin && (
-            <a
-              href="/admin"
-              className="font-cinzel text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.8rem] border border-[#1e3a34] rounded-lg px-3.5 py-2 bg-[#0c1a17]"
-            >
+            <a href="/admin" className={navBtn}>
               Admin
             </a>
           )}
@@ -264,8 +264,9 @@ export default function Dashboard() {
                 setNameMsg(null);
                 setNewName(name);
               }}
-              className="font-cinzel text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.8rem] border border-[#1e3a34] rounded-lg px-3.5 py-2 bg-[#0c1a17] cursor-pointer"
+              className={navBtn}
               title="Schimbă numele"
+              aria-label="Schimbă numele"
             >
               ✏️
             </button>
@@ -278,31 +279,41 @@ export default function Dashboard() {
                 setCurPw("");
                 setNewPw("");
               }}
-              className="font-cinzel text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.8rem] border border-[#1e3a34] rounded-lg px-3.5 py-2 bg-[#0c1a17] cursor-pointer"
+              className={navBtn}
               title="Schimbă parola"
+              aria-label="Schimbă parola"
             >
               🔑
             </button>
           )}
           {name && (
-            <span className="font-cinzel text-[#9ec6c1] text-[0.85rem] tracking-wider border border-[#1e3a34] rounded-lg px-3.5 py-2 bg-[#0c1a17]">
-              {name}
+            <span className={`${navBtn} max-w-[9rem] cursor-default text-[#9ec6c1] tracking-wider`}>
+              <span className="truncate">{name}</span>
             </span>
           )}
           {isAdmin && (
             <button
               onClick={toggleSite}
-              className={`font-cinzel text-[0.8rem] border rounded-lg px-3.5 py-2 bg-[#0c1a17] cursor-pointer ${
-                mySiteOff ? "text-green-400 border-green-500/50 hover:brightness-125" : "text-[#8fb0ac] border-[#1e3a34] hover:text-red-400"
+              className={`${navBtn} ${
+                mySiteOff ? "text-green-400 border-green-500/50 hover:brightness-125" : "hover:text-red-400"
               }`}
               title={mySiteOff ? "Site oprit — pornește-l" : "Oprește site-ul (doar adminii îl mai văd)"}
+              aria-label={mySiteOff ? "Pornește site-ul" : "Oprește site-ul"}
             >
-              {mySiteOff ? "▶" : "⏻"}
+              {mySiteOff ? (
+                "▶"
+              ) : (
+                // inline SVG: the ⏻ glyph is a tofu box on Android fonts
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                  <path d="M12 3v9" />
+                  <path d="M6.4 6.4a8 8 0 1 0 11.2 0" />
+                </svg>
+              )}
             </button>
           )}
           <button
             onClick={logout}
-            className="bg-gradient-to-br from-[#2c514c] to-[#101f1c] border-2 border-[#4d7a76a0] rounded-lg text-[#e2eeeb] text-[0.8rem] font-cinzel px-3.5 py-2 hover:brightness-125 cursor-pointer"
+            className="bg-gradient-to-br from-[#2c514c] to-[#101f1c] border-2 border-[#4d7a76a0] rounded-lg text-[#e2eeeb] text-[0.75rem] sm:text-[0.8rem] font-cinzel px-3 sm:px-3.5 py-2 min-h-[40px] hover:brightness-125 cursor-pointer"
           >
             Ieșire
           </button>
@@ -403,16 +414,18 @@ export default function Dashboard() {
                   sendMessage();
                 }
               }}
-              placeholder="Mesaj… (Shift+Enter = linie nouă)"
+              placeholder="Mesaj…"
+              title="Shift+Enter = linie nouă"
               maxLength={2000}
               rows={Math.min(6, Math.max(1, chatInput.split("\n").length))}
-              className="flex-1 resize-none bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] text-[0.85rem] p-[0.6rem] outline-none focus:border-[#6f9c99] font-mono"
+              className="flex-1 resize-none bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] text-base sm:text-[0.85rem] p-[0.6rem] outline-none focus:border-[#6f9c99] font-mono"
             />
             <button
               onClick={sendMessage}
               disabled={sending || !chatInput.trim()}
-              className="bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c160] rounded-lg text-[#e2eeeb] px-3.5 hover:brightness-110 disabled:opacity-40 cursor-pointer"
+              className="bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c160] rounded-lg text-[#e2eeeb] px-3.5 min-w-[44px] hover:brightness-110 disabled:opacity-40 cursor-pointer"
               title="Trimite"
+              aria-label="Trimite mesajul"
             >
               ➤
             </button>
