@@ -4,6 +4,7 @@ import "./globals.css";
 import SiteHeader from "@/components/SiteHeader";
 import PresenceBeacon from "@/components/PresenceBeacon";
 import ChatDock from "@/components/ChatDock";
+import InvitesCenter from "@/components/InvitesCenter";
 
 const display = Jost({
   variable: "--font-display",
@@ -50,6 +51,8 @@ export default function RootLayout({
         {children}
         {/* general chat as a floating dock on the game screens */}
         <ChatDock />
+        {/* invitations to a tower or a carciuma table, wherever you are */}
+        <InvitesCenter />
       </body>
     </html>
   );

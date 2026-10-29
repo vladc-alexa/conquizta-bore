@@ -6,6 +6,7 @@
 // panel jumps into the tower only once the climb actually begins.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import InvitePlayers from "@/components/InvitePlayers";
 
 type OpenGame = {
   id: string;
@@ -225,6 +226,8 @@ export default function TowerLobbyPanel({ onUnauthorized, onClose }: { onUnautho
               Ai un loc la masă. <span className="text-[#e8c46a]">{mine.hostName}</span> pornește turnul.
             </div>
           )}
+
+          <InvitePlayers kind="tower" gameId={mine.id} seatedNames={mine.players} />
 
           <button
             onClick={() => leave(mine.id)}

@@ -43,6 +43,8 @@ model User {
   carciumaGamesAsHost CarciumaGame[]     @relation("CarciumaHost")
   carciumaSeats       CarciumaPlayer[]   @relation("CarciumaSeats")
   questionEdits       QuestionEdit[]
+  invitesSent         GameInvite[]       @relation("InviteFrom")
+  invitesReceived     GameInvite[]       @relation("InviteTo")
 
   @@index([lastSeenAt])
 }
@@ -378,4 +380,23 @@ model CarciumaAnswer {
 
   @@unique([gameId, round, playerId])
   @@index([gameId, round])
+}
+
+// An invitation to sit at someone's tower / carciuma table. Deliberately not a
+// FK to the room: the same table serves both games, so `kind` picks the target.
+model GameInvite {
+  id        String   @id @default(uuid()) @db.Uuid
+  kind      String   @db.VarChar(12) // tower | carciuma
+  gameId    String   @db.Uuid
+  fromId    String   @db.Uuid
+  fromName  String   @db.VarChar(32)
+  toId      String   @db.Uuid
+  status    String   @db.VarChar(10) @default("PENDING") // PENDING | ACCEPTED | DECLINED
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  from      User     @relation("InviteFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to        User     @relation("InviteTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@index([toId, status])
+  @@index([expiresAt])
 }

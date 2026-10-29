@@ -4,6 +4,7 @@
 // starts it; empty chairs are filled by locals who drink like professionals.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import InvitePlayers from "@/components/InvitePlayers";
 
 type OpenGame = { id: string; hostName: string; createdAt: string; joined: number; players: string[] };
 type Mine = {
@@ -250,6 +251,8 @@ export default function CarciumaLobbyPanel({
               Ai un scaun. <span className="text-[#e8c46a]">{mine.hostName}</span> pornește runda.
             </div>
           )}
+
+          <InvitePlayers kind="carciuma" gameId={mine.id} seatedNames={mine.players} />
 
           <button
             onClick={() => leave(mine.id)}
