@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
 import { DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
 import { normalizeMessage } from "@/lib/messageText";
+import { findMentionedNames } from "@/lib/mentions";
+import { chatNames } from "@/lib/chatNames";
 
 // The dashboard shows the last 100 messages — enough to follow the room
 // without scrollback nobody reads.
@@ -35,6 +37,13 @@ export async function GET(req: Request) {
   // full reads come newest-first; reverse to chronological. Deltas are already ascending.
   const messages = delta ? raw : raw.reverse();
 
+  // Annotate every message with who it @-mentions, so the client can highlight
+  // the name and tell the mentioned player they were pinged without re-parsing
+  // (and without a second round-trip for the roster).
+  const people = await chatNames();
+  const names = people.map((u) => u.name);
+  const byName = new Map(people.map((u) => [u.name.toLowerCase(), u]));
+
   return NextResponse.json({
     messages: messages.map((m) => ({
       id: m.id,
@@ -43,6 +52,10 @@ export async function GET(req: Request) {
       createdAt: m.createdAt,
       authorColor: m.user?.nameColor ?? DEFAULT_CHAT_COLOR,
       muted: m.user?.isMuted ?? false,
+      mentions: findMentionedNames(m.text, names).map((n) => {
+        const u = byName.get(n.toLowerCase());
+        return { id: u?.id ?? null, name: n };
+      }),
     })),
   });
 }

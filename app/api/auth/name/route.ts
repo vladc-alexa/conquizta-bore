@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
+import { invalidateChatNames } from "@/lib/chatNames";
 
 // POST /api/auth/name { name } — change your own displayName.
 export async function POST(req: Request) {
@@ -19,5 +20,7 @@ export async function POST(req: Request) {
   if (taken) return NextResponse.json({ error: "Numele e deja luat." }, { status: 409 });
 
   await prisma.user.update({ where: { id: session.sub }, data: { displayName: name } });
+  // the old name stops being pingable immediately, the new one works at once
+  invalidateChatNames();
   return NextResponse.json({ ok: true, name });
 }

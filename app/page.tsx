@@ -1,39 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { BLACK_CHAT_COLOR, BLACK_NAME_OUTLINE, CHAT_COLORS, DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
-import PromptText, { isArt } from "@/components/PromptText";
+import { useEffect, useState, useCallback } from "react";
 import TowerLobbyPanel from "@/components/TowerLobbyPanel";
 import CarciumaLobbyPanel from "@/components/CarciumaLobbyPanel";
 import PlayersPanel from "@/components/PlayersPanel";
-import { normalizeMessage } from "@/lib/messageText";
+import GeneralChat from "@/components/GeneralChat";
 
 type PanelKey = "tower" | "players" | "carciuma";
-
-function clockTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" });
-}
-
-interface ChatMessage {
-  id: string;
-  authorName: string;
-  text: string;
-  createdAt: string;
-  authorColor: string;
-  muted: boolean;
-}
 
 export default function Dashboard() {
   const [name, setName] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const lastChatAtRef = useRef<string | null>(null);
-  const [chatInput, setChatInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const [myColor, setMyColor] = useState<string | null>(null);
-  const [showColors, setShowColors] = useState(false);
+  // bumped after a rename / colour change so the chat card re-renders every bubble
+  const [chatRefresh, setChatRefresh] = useState(0);
   const [mySiteOff, setMySiteOff] = useState(false);
   // which dashboard panels the player folded away (kept in localStorage)
   const [closedPanels, setClosedPanels] = useState<Record<PanelKey, boolean>>({ tower: false, players: false, carciuma: false });
@@ -71,31 +50,6 @@ export default function Dashboard() {
   const [nameMsg, setNameMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [nameBusy, setNameBusy] = useState(false);
 
-  // full=true loads the last 100 messages and replaces state; full=false asks the API
-  // only for messages newer than our cursor and appends those we don't already have.
-  const loadChat = useCallback(async (full = false) => {
-    try {
-      const since = !full ? lastChatAtRef.current : null;
-      const res = await fetch(since ? `/api/chat?since=${encodeURIComponent(since)}` : "/api/chat");
-      if (!res.ok) return;
-      const data = await res.json();
-      const incoming: ChatMessage[] = data.messages ?? [];
-      if (since) {
-        setMessages((prev) => {
-          const seen = new Set(prev.map((m) => m.id));
-          const add = incoming.filter((m) => !seen.has(m.id));
-          return add.length ? [...prev, ...add] : prev;
-        });
-      } else {
-        setMessages(incoming);
-      }
-      const newest = incoming.length ? incoming[incoming.length - 1].createdAt : null;
-      if (newest) lastChatAtRef.current = newest;
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
@@ -103,70 +57,11 @@ export default function Dashboard() {
         if (d) {
           setName(d.name);
           setIsAdmin(!!d.isAdmin);
-          setMyColor(d.nameColor ?? DEFAULT_CHAT_COLOR);
           setMySiteOff(!!d.siteOff);
         }
       })
       .catch(() => {});
-    loadChat(true);
-    // 5s delta poll; a full resync every 30s so deletions/renames by others still land.
-    let tick = 0;
-    const chatTimer = setInterval(() => {
-      tick += 1;
-      loadChat(tick % 6 === 0);
-    }, 5000);
-    return () => clearInterval(chatTimer);
-  }, [loadChat]);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const sendMessage = async () => {
-    // normalize, not .trim(): trimming would shift row 1 of pasted ASCII art
-    const text = normalizeMessage(chatInput);
-    if (!text || sending) return;
-    setSending(true);
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-      if (res.ok) {
-        setChatInput("");
-        loadChat(true);
-      }
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const deleteMessage = async (id: string) => {
-    try {
-      const res = await fetch(`/api/admin/chat/${id}`, { method: "DELETE" });
-      if (res.ok) loadChat(true);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const setColor = async (hex: string) => {
-    try {
-      const res = await fetch("/api/auth/color", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ color: hex }),
-      });
-      if (res.ok) {
-        setMyColor(hex);
-        setShowColors(false);
-        loadChat(true);
-      }
-    } catch {
-      /* ignore */
-    }
-  };
+  }, []);
 
   const rename = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,7 +81,7 @@ export default function Dashboard() {
       setName(data.name);
       setNameMsg({ ok: true, text: "Numele a fost schimbat." });
       setShowName(false);
-      loadChat(true);
+      setChatRefresh((n) => n + 1);
     } catch {
       setNameMsg({ ok: false, text: "Eroare de rețea." });
     } finally {
@@ -321,116 +216,8 @@ export default function Dashboard() {
       </header>
 
       <div className="flex flex-col lg:flex-row gap-4 items-start">
-        {/* Left: Chat */}
-        <section className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full lg:w-[552px] shrink-0 flex flex-col h-[552px] lg:h-[calc(100vh-200px)] lg:min-h-[644px]">
-          <div className="flex items-center justify-between px-[1.15rem] py-[0.7rem] border-b border-[#1e3a3460] relative">
-            <h3 className="font-cinzel text-[#9ec6c1] text-[0.85rem] tracking-widest">Chat general</h3>
-            <div className="flex items-center gap-2">
-              {name && (
-                <button
-                  onClick={() => setShowColors((v) => !v)}
-                  className="text-[0.9rem] cursor-pointer hover:scale-110 transition-transform"
-                  title="Culoarea numelui tău"
-                >
-                  🎨
-                </button>
-              )}
-            </div>
-            {showColors && (
-              <div className="absolute right-3 top-11 z-20 bg-[#0c1a17] border-2 border-[#1e3a34] rounded-xl p-[0.7rem] flex flex-col gap-1.5 shadow-2xl">
-                <span className="text-[0.65rem] text-[#8fb0ac] uppercase tracking-wider">Culoarea numelui</span>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {CHAT_COLORS.map((c) => (
-                    <button
-                      key={c.hex}
-                      onClick={() => setColor(c.hex)}
-                      title={c.name}
-                      className={`w-8 h-8 rounded-full border-2 cursor-pointer hover:scale-110 transition-transform ${
-                        myColor === c.hex ? "border-[#9ec6c1] scale-110" : "border-[#1e3a34]"
-                      }`}
-                      style={{
-                        backgroundColor: c.hex,
-                        ...(c.hex === BLACK_CHAT_COLOR && { boxShadow: `inset 0 0 0 2px ${BLACK_NAME_OUTLINE}` }),
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="flex-1 overflow-y-auto p-3.5 flex flex-col gap-1.5">
-            {messages.length === 0 ? (
-              <div className="text-[#75938f] text-[0.75rem] text-center p-4">Niciun mesaj încă. Spune salut!</div>
-            ) : (
-              messages.map((m) => (
-                <div key={m.id} className="text-[0.9rem] leading-snug flex items-start gap-1 group">
-                  {/* art gets its own block under the name: a <pre> starts on the
-                      next line instead of visually splitting the first row off */}
-                  <div className={`flex-1 min-w-0 ${isArt(m.text) ? "flex flex-col" : "flex items-start gap-1"}`}>
-                    <span
-                    className="font-cinzel"
-                    style={{
-                      color: m.authorColor,
-                      textShadow:
-                        m.authorColor === BLACK_CHAT_COLOR
-                          ? `-1.5px -1.5px 0 ${BLACK_NAME_OUTLINE}, 1.5px -1.5px 0 ${BLACK_NAME_OUTLINE}, -1.5px 1.5px 0 ${BLACK_NAME_OUTLINE}, 1.5px 1.5px 0 ${BLACK_NAME_OUTLINE}, 0 -1.5px 0 ${BLACK_NAME_OUTLINE}, 0 1.5px 0 ${BLACK_NAME_OUTLINE}, -1.5px 0 0 ${BLACK_NAME_OUTLINE}, 1.5px 0 0 ${BLACK_NAME_OUTLINE}, 0 0 8px rgba(181,126,220,0.7)`
-                          : "0 1px 2px rgba(0,0,0,0.9)",
-                    }}
-                  >
-                    {m.authorName}
-                    {m.muted && <span className="text-[#75938f] text-[0.65rem] ml-1" title="mutat">🔇</span>}
-                    {isArt(m.text) ? ":" : ": "}
-                    </span>
-                    <span className="text-[#cbdcda] flex-1 min-w-0"><PromptText text={m.text} wrap /></span>
-                  </div>
-                  <span
-                    className="mt-0.5 shrink-0 text-[0.58rem] tabular-nums text-[#5d7a76] group-hover:text-[#8fb0ac]"
-                    title={new Date(m.createdAt).toLocaleString("ro-RO")}
-                  >
-                    {clockTime(m.createdAt)}
-                  </span>
-                  {isAdmin && (
-                    <button
-                      onClick={() => deleteMessage(m.id)}
-                      className="text-[#75938f] opacity-0 group-hover:opacity-100 hover:text-red-400 text-[0.7rem] cursor-pointer"
-                      title="Șterge mesajul"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-            <div ref={chatEndRef} />
-          </div>
-          <div className="p-[0.7rem] border-t border-[#1e3a3460] flex gap-2">
-            <textarea
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                // Enter sends, Shift+Enter breaks the line (art needs real newlines)
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-              placeholder="Mesaj…"
-              title="Shift+Enter = linie nouă"
-              maxLength={2000}
-              rows={Math.min(6, Math.max(1, chatInput.split("\n").length))}
-              className="flex-1 resize-none bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] text-base sm:text-[0.85rem] p-[0.6rem] outline-none focus:border-[#6f9c99] font-mono"
-            />
-            <button
-              onClick={sendMessage}
-              disabled={sending || !chatInput.trim()}
-              className="bg-gradient-to-br from-[#6f9c99] to-[#2c514c] border-2 border-[#9ec6c160] rounded-lg text-[#e2eeeb] px-3.5 min-w-[44px] hover:brightness-110 disabled:opacity-40 cursor-pointer"
-              title="Trimite"
-              aria-label="Trimite mesajul"
-            >
-              ➤
-            </button>
-          </div>
-        </section>
+        {/* Left: the general chat (shared component — same one docks in-game) */}
+        <GeneralChat refreshToken={chatRefresh} />
 
         {/* Center: La Carciuma up top, then the Turnul with the registered
             players roster to its right. Every panel folds away with ✕ and the
