@@ -33,6 +33,9 @@ export const RUNGS_PER_ROUND = 4;
 /** Visual height of the tower in rungs — the winner climbs all of them. */
 export const TOWER_HEIGHT = 36;
 export const TOWER_WAITING_TTL_MS = 10 * 60_000;
+/** An in-progress tower nobody has polled for this long is dead: seats in it stop
+ *  blocking the lobby, so a crashed tab can't lock a player out of Turnul. */
+export const TOWER_LIVE_MS = 15 * 60_000;
 
 const BOT_NAMES = [
   "Bogdan", "Ioana", "Mihai", "Roxana", "Andrei", "Elena", "Cristi", "Dana",
@@ -55,6 +58,30 @@ export function towerScore(isCorrect: boolean, elapsedMs: number): number {
 
 export function rungsFor(score: number): number {
   return Math.round((RUNGS_PER_ROUND * score) / 100);
+}
+
+/** Give up every OTHER tower seat before taking a new chair: waiting rooms lose
+ *  the seat (the host abandons the room), running climbs mark you as fallen.
+ *  Without this a live — or zombie — run in another tower disabled the lobby's
+ *  "Intră" button forever, with no way out but finishing that game. */
+export async function releaseOtherTowers(userId: string, keepGameId: string) {
+  await prisma.towerGame.updateMany({
+    where: { hostId: userId, status: "WAITING", NOT: { id: keepGameId } },
+    data: { status: "ABANDONED", completedAt: new Date() },
+  });
+  await prisma.towerPlayer.deleteMany({
+    where: { userId, gameId: { not: keepGameId }, game: { status: "WAITING" } },
+  });
+  const running = await prisma.towerPlayer.findMany({
+    where: { userId, eliminated: false, gameId: { not: keepGameId }, game: { status: "IN_PROGRESS" } },
+    select: { id: true, game: { select: { currentRound: true } } },
+  });
+  for (const p of running) {
+    await prisma.towerPlayer.update({
+      where: { id: p.id },
+      data: { eliminated: true, fellRound: p.game.currentRound + 1 },
+    });
+  }
 }
 
 export async function buildTowerPlan(): Promise<TowerEntry[]> {

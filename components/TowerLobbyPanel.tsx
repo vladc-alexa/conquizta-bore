@@ -259,7 +259,7 @@ export default function TowerLobbyPanel({ onUnauthorized, onClose }: { onUnautho
               </span>
               <button
                 onClick={() => join(g.id)}
-                disabled={busy !== null || !!mine}
+                disabled={busy !== null}
                 className="shrink-0 bg-gradient-to-br from-[#d9a441] to-[#7d5a1c] border-2 border-[#d9a44160] rounded-lg text-[#10201b] font-cinzel text-[0.78rem] px-3.5 py-1.5 hover:brightness-110 disabled:opacity-40 cursor-pointer"
               >
                 {busy === g.id ? "Intru…" : "Intră"}
@@ -268,6 +268,13 @@ export default function TowerLobbyPanel({ onUnauthorized, onClose }: { onUnautho
           ))
         )}
       </div>
+
+      {mine && (
+        <div className="text-[#75938f] text-[0.68rem] text-center leading-snug">
+          Intri în alt turn? Îți dai locul din{" "}
+          <span className="text-[#e8c46a]">{mine.hostName}</span> și cobori din tură.
+        </div>
+      )}
 
       {err && <div className="text-red-400 text-[0.75rem]">{err}</div>}
     </div>
