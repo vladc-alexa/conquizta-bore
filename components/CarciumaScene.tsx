@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import CarciumaTable from "@/components/CarciumaTable";
+
+/** tavern antics: each maps to a face/sprite animation and a line in SAY */
+const KINDS = ["burp", "hiccup", "toast", "laugh", "wipe"];
 
 export type ScenePlayer = {
   seat: number;
@@ -79,23 +82,40 @@ export default function CarciumaScene({
 }) {
   const faces = useMemo(() => assignFaces(players), [players]);
   const bySeat = useMemo(() => new Map(players.map((p) => [p.seat, p])), [players]);
-  const awake = players.filter((p) => !p.passedOut).length;
   const [action, setAction] = useState<{ seat: number; kind: string; text: string } | null>(null);
+
+  // The table state is re-polled every couple of seconds and hands us a fresh
+  // `players` array each time, so the antics timer must not depend on it or it
+  // gets torn down and restarted forever (and nobody ever speaks). Track the
+  // living roster in a ref and only restart when who is sitting/awake changes.
+  const playersRef = useRef(players);
+  playersRef.current = players;
+  const rosterKey = players
+    .map((p) => `${p.seat}${p.passedOut ? "z" : ""}`)
+    .sort()
+    .join(",");
 
   // tavern life: every so often somebody burps, hiccups or complains
   useEffect(() => {
-    if (!awake) return;
-    const timer = window.setInterval(() => {
-      const seats = players.filter((p) => !p.passedOut).map((p) => p.seat);
-      if (!seats.length) return;
-      const seat = seats[Math.floor(Math.random() * seats.length)];
-      const kinds = ["burp", "hiccup", "toast", "laugh", "wipe"];
-      const kind = kinds[Math.floor(Math.random() * kinds.length)];
-      setAction({ seat, kind, text: SAY[Math.floor(Math.random() * SAY.length)] });
-      window.setTimeout(() => setAction(null), 2600);
-    }, 7000 + Math.random() * 4000);
-    return () => window.clearInterval(timer);
-  }, [awake, players]);
+    let sayTimer = 0;
+    let hideTimer = 0;
+    const tick = () => {
+      const seats = playersRef.current.filter((p) => !p.passedOut).map((p) => p.seat);
+      if (seats.length) {
+        const seat = seats[Math.floor(Math.random() * seats.length)];
+        const kind = KINDS[Math.floor(Math.random() * KINDS.length)];
+        setAction({ seat, kind, text: SAY[Math.floor(Math.random() * SAY.length)] });
+        window.clearTimeout(hideTimer);
+        hideTimer = window.setTimeout(() => setAction(null), 2600);
+      }
+      sayTimer = window.setTimeout(tick, 7000 + Math.random() * 4000);
+    };
+    sayTimer = window.setTimeout(tick, 4000 + Math.random() * 3000);
+    return () => {
+      window.clearTimeout(sayTimer);
+      window.clearTimeout(hideTimer);
+    };
+  }, [rosterKey]);
 
   return (
     <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border-2 border-[#5b3d22] bg-[#120a04]">
@@ -197,7 +217,12 @@ function Patron({
         : "cq-idle";
 
   return (
-    <div className="absolute" style={{ left: cfg.left, bottom: cfg.bottom, width: cfg.width, zIndex: cfg.z }}>
+    // whoever is talking jumps the queue: the bubble lives inside this box, so
+    // without the boost a nearer patron (or the table) paints over the words
+    <div
+      className="absolute"
+      style={{ left: cfg.left, bottom: cfg.bottom, width: cfg.width, zIndex: acted ? 50 : cfg.z }}
+    >
       <div className={cls} style={{ animationDelay: cfg.delay }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
