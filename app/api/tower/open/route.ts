@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
-import { TOWER_PLAYERS, TOWER_WAITING_TTL_MS } from "@/lib/tower";
+import { TOWER_PLAYERS, TOWER_WAITING_TTL_MS, TOWER_LIVE_MS } from "@/lib/tower";
 
 // GET /api/tower/open -> open tower rooms anyone can join, with the names of the
 // players already seated (the lobby shows the table filling up), plus my own room
@@ -37,7 +37,8 @@ export async function GET() {
 
   // my table: a room I'm seated in wins over a running match
   const myRoom = await prisma.towerGame.findFirst({
-    where: { status: "WAITING", players: { some: { userId: me } } },
+    // same freshness rule as the public list: an abandoned waiting room is gone
+    where: { status: "WAITING", createdAt: { gt: cutoff }, players: { some: { userId: me } } },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -48,7 +49,14 @@ export async function GET() {
   const myRun = myRoom
     ? null
     : await prisma.towerGame.findFirst({
-        where: { status: "IN_PROGRESS", players: { some: { userId: me } } },
+        where: {
+          status: "IN_PROGRESS",
+          // a run nobody has touched in a while is a zombie: everyone walked away
+          // (or the tab died mid-climb) and it must not hold a seat hostage
+          updatedAt: { gt: new Date(Date.now() - TOWER_LIVE_MS) },
+          // once you've fallen you have no climb to go back to
+          players: { some: { userId: me, eliminated: false } },
+        },
         orderBy: { createdAt: "desc" },
         select: {
           id: true,

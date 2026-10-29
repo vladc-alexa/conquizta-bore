@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
-import { TOWER_PLAYERS } from "@/lib/tower";
+import { TOWER_PLAYERS, releaseOtherTowers } from "@/lib/tower";
 
 // POST /api/tower/[id]/join -> take the next free seat. The tower does NOT start
 // itself when the last chair is taken: everyone waits in the lobby and the host
@@ -24,6 +24,9 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   }
   const me = await prisma.user.findUnique({ where: { id: session.sub }, select: { displayName: true } });
   if (!me?.displayName) return NextResponse.json({ error: "fără nume" }, { status: 400 });
+
+  // taking a chair here means letting go of any other tower you're sitting in
+  await releaseOtherTowers(session.sub, id);
 
   const taken = new Set(game.players.map((p) => p.seat));
   let seat = 0;
