@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { signSession, sessionCookie } from "@/lib/session";
+import { invalidateChatNames } from "@/lib/chatNames";
 
 // Simple in-memory throttle: max 5 sign-ups per IP per hour. Best-effort
 // (resets on deploy, per-replica) — enough to stop scripted spam.
@@ -89,6 +90,8 @@ export async function POST(req: Request) {
       data: { displayName, email, passwordHash: hashPassword(password) },
       select: { id: true, displayName: true },
     });
+    // a brand-new player must be @-mentionable on the very next chat poll
+    invalidateChatNames();
 
     const token = await signSession({
       sub: user.id,

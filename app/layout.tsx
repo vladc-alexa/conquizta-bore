@@ -3,6 +3,7 @@ import { Jost, Lato } from "next/font/google";
 import "./globals.css";
 import SiteHeader from "@/components/SiteHeader";
 import PresenceBeacon from "@/components/PresenceBeacon";
+import ChatDock from "@/components/ChatDock";
 
 const display = Jost({
   variable: "--font-display",
@@ -47,6 +48,8 @@ export default function RootLayout({
         <SiteHeader />
         <PresenceBeacon />
         {children}
+        {/* general chat as a floating dock on the game screens */}
+        <ChatDock />
       </body>
     </html>
   );
