@@ -152,14 +152,17 @@ export default function CarciumaPage() {
           />
 
           {state?.phase === "lobby" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#140b04]/70 backdrop-blur-[1px]">
+            <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-[#140b04]/70 backdrop-blur-[1px]">
               <p className="font-display text-3xl text-[#ffd98e]">Masa se deschide…</p>
               <p className="text-sm text-[#e6cfae]">{state.players.length}/5 scaune ocupate · gazda apasă „Începe”</p>
             </div>
           )}
 
+          {/* The "X bea!" card outranks every patron (z 1-3) and the patron who is
+              talking right now (z 50), so the round's message is never hidden
+              behind a head. */}
           {state?.phase === "table" && nextIn > 0 && (
-            <div className="pointer-events-none absolute inset-x-0 top-[26%] flex justify-center">
+            <div className="pointer-events-none absolute inset-x-0 top-[26%] z-[60] flex justify-center">
               <div className="rounded-xl border-2 border-[#8a5a30] bg-[#1d1208]/95 px-5 py-3 text-center shadow-lg">
                 {state.lastRound?.drinkerName ? (
                   <>
@@ -180,7 +183,7 @@ export default function CarciumaPage() {
           )}
 
           {state?.phase === "done" && (
-            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-[#140b04]/82 px-4 text-center">
+            <div className="absolute inset-0 z-[70] flex flex-col items-center justify-center gap-3 bg-[#140b04]/82 px-4 text-center">
               <p className="font-display text-3xl text-[#ffd98e] sm:text-4xl">Cin cin!</p>
               <p className="text-sm leading-snug text-[#f0dcbb] sm:text-lg">
                 {state.winnerName ? (
