@@ -470,6 +470,18 @@ export default function TowerGamePage() {
                     {h.mode === "rapide" ? " ⚡" : ""}
                   </span>
                   <span className="min-w-0 truncate">{artPreview(h.prompt)}</span>
+                  {state.status === "COMPLETED" &&
+                    (reported.has(h.questionId) ? (
+                      <span className="shrink-0 text-[0.68rem] text-[#8fd9a8]">✓ raportată</span>
+                    ) : (
+                      <button
+                        onClick={() => reportQuestion(h.questionId)}
+                        title="Raportează întrebarea — iese din joc și ajunge la moderare"
+                        className="shrink-0 text-[#c98b6b] hover:text-[#e8a98b] text-[0.68rem] border border-[#3a2a24] rounded px-1.5 py-0.5 bg-[#160f0d] cursor-pointer"
+                      >
+                        ⚠ raportează
+                      </button>
+                    ))}
                   <span className="text-[#8fd9a8] shrink-0">→ {h.reveal}</span>
                   {best && <span className="shrink-0 text-[#9ec6c1]">{best.name}</span>}
                   {mineGain && (
@@ -477,19 +489,6 @@ export default function TowerGamePage() {
                       tu +{mineGain.rungs}▲
                       {h.mode === "rapide" && mineGain.ms > 0 ? ` · ${(mineGain.ms / 1000).toFixed(1)}s` : ""}
                     </span>
-                  )}
-                  {state.status === "COMPLETED" && (
-                    reported.has(h.questionId) ? (
-                      <span className="shrink-0 text-[#8fd9a8] text-[0.7rem]">✓ raportată</span>
-                    ) : (
-                      <button
-                        onClick={() => reportQuestion(h.questionId)}
-                        title="Raportează întrebarea — iese din joc și ajunge la moderare"
-                        className="shrink-0 ml-auto text-[#c98b6b] hover:text-[#e8a98b] text-[0.7rem] border border-[#3a2a24] rounded px-1.5 py-0.5 bg-[#160f0d] cursor-pointer"
-                      >
-                        ⚠ raportează
-                      </button>
-                    )
                   )}
                 </li>
               );

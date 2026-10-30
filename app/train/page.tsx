@@ -447,7 +447,22 @@ export default function TrainPage() {
                       <span className="text-[0.75rem] text-[#75938f]">#{i + 1}</span>
                       <span className="text-[0.85rem]">{r.isCorrect ? "✔" : "✖"}</span>
                     </div>
-                    <div className="text-[0.9rem] text-[#cbdcda] leading-snug"><PromptText text={r.prompt} /></div>
+                    <div className="text-[0.9rem] text-[#cbdcda] leading-snug">
+                      <PromptText text={r.prompt} />
+                      {/* flag sits at the end of the question itself, not on the
+                          far edge of the card */}
+                      {reported.has(r.id) ? (
+                        <span className="ml-2 align-middle text-[0.68rem] text-[#8fb0ac]">Raportată ✓</span>
+                      ) : (
+                        <button
+                          onClick={() => void reportQuestion(r.id)}
+                          className="ml-2 align-middle text-[0.68rem] text-red-400/90 border border-red-500/40 rounded px-1.5 py-0.5 hover:bg-red-900/30 cursor-pointer"
+                          title="Raportează întrebarea — iese din joc până o verifică un editor"
+                        >
+                          ⚠ Raportează
+                        </button>
+                      )}
+                    </div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.8rem]">
                       <span className={r.isCorrect ? "text-green-400" : "text-red-400"}>
                         Ai răspuns: <strong>{r.myAnswer}</strong>
@@ -455,19 +470,6 @@ export default function TrainPage() {
                       {!r.isCorrect && (
                         <span className="text-[#9ec6c1]">Corect: <strong>{r.correctAnswer}</strong></span>
                       )}
-                      <span className="ml-auto">
-                        {reported.has(r.id) ? (
-                          <span className="text-[0.7rem] text-[#8fb0ac]">Raportată ✓</span>
-                        ) : (
-                          <button
-                            onClick={() => void reportQuestion(r.id)}
-                            className="text-[0.7rem] text-red-400/90 border border-red-500/40 rounded px-2 py-0.5 hover:bg-red-900/30 cursor-pointer"
-                            title="Raportează întrebarea — iese din joc până o verifică un editor"
-                          >
-                            ⚠ Raportează
-                          </button>
-                        )}
-                      </span>
                     </div>
                   </div>
                 ))}

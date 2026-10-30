@@ -365,6 +365,8 @@ export type CarciumaState = {
   /** question-by-question recap of the whole sitting — filled only once the table is done */
   review: {
     round: number;
+    /** needed so the recap can flag a broken question */
+    questionId: string;
     prompt: string;
     mode: "grila" | "rapide";
     /** the option text for a grilă, the number as a string for a rapidă */
@@ -496,6 +498,7 @@ function buildCarciumaReview(input: {
     return [
       {
         round,
+        questionId: entry.questionId,
         prompt: entry.prompt,
         mode: entry.mode,
         correctAnswer: entry.mode === "grila" ? optionText(entry.correctOptionId) : String(entry.answer),
