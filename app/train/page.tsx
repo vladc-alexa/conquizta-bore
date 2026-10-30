@@ -75,6 +75,9 @@ export default function TrainPage() {
   }
   const [review, setReview] = useState<ReviewItem[]>([]);
   const [showReview, setShowReview] = useState(false);
+  // questions the player flagged from the review list (one flag per question)
+  const [reported, setReported] = useState<Set<string>>(new Set());
+  const [reportErr, setReportErr] = useState("");
 
   // today's training standing, filled after the run is saved
   const [standing, setStanding] = useState<{
@@ -214,6 +217,28 @@ export default function TrainPage() {
     advanceRef.current = setTimeout(nextQuestion, isCorrect ? 550 : 1200);
   };
 
+  // A bad question in the recap can be flagged right there: the API unpublishes
+  // it so it stops showing up in games until an admin checks it.
+  const reportQuestion = async (qid: string) => {
+    if (reported.has(qid)) return;
+    setReportErr("");
+    try {
+      const r = await fetch(`/api/questions/${qid}/report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: "raportată din antrenament" }),
+      });
+      if (r.ok || r.status === 409) {
+        setReported((prev) => new Set(prev).add(qid));
+        return;
+      }
+      const d = await r.json().catch(() => ({}));
+      setReportErr(d.error || "Nu am putut raporta întrebarea.");
+    } catch {
+      setReportErr("Eroare de rețea.");
+    }
+  };
+
   const startRun = async () => {
     setPhase("loading");
     setLoadError("");
@@ -225,6 +250,8 @@ export default function TrainPage() {
     servedRef.current = 0;
     setReview([]);
     setShowReview(false);
+    setReported(new Set());
+    setReportErr("");
     setStanding(null);
     setFeedback(null);
     setInputValue("");
@@ -408,6 +435,7 @@ export default function TrainPage() {
                   ✕
                 </button>
               </div>
+              {reportErr && <div className="px-5 py-2 text-[0.75rem] text-red-400 border-b border-red-500/30 bg-red-900/20">{reportErr}</div>}
               <div className="overflow-y-auto p-4 flex flex-col gap-2">
                 {review.length === 0 && <div className="text-[#75938f] text-[0.8rem] text-center p-4">Nicio întrebare jucată.</div>}
                 {review.map((r, i) => (
@@ -427,6 +455,19 @@ export default function TrainPage() {
                       {!r.isCorrect && (
                         <span className="text-[#9ec6c1]">Corect: <strong>{r.correctAnswer}</strong></span>
                       )}
+                      <span className="ml-auto">
+                        {reported.has(r.id) ? (
+                          <span className="text-[0.7rem] text-[#8fb0ac]">Raportată ✓</span>
+                        ) : (
+                          <button
+                            onClick={() => void reportQuestion(r.id)}
+                            className="text-[0.7rem] text-red-400/90 border border-red-500/40 rounded px-2 py-0.5 hover:bg-red-900/30 cursor-pointer"
+                            title="Raportează întrebarea — iese din joc până o verifică un editor"
+                          >
+                            ⚠ Raportează
+                          </button>
+                        )}
+                      </span>
                     </div>
                   </div>
                 ))}
