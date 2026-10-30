@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Arena from "./Arena";
-import PromptText from "@/components/PromptText";
+import PromptText, { artPreview } from "@/components/PromptText";
+import { useAutoFocus, useNumberKeys } from "@/components/useAnswerKeys";
 
 type AnswerRow = { userId: string; isCorrect: boolean; elapsedMs: number; score: number | null; mine: boolean };
 type HistoryRow = {
@@ -141,6 +142,20 @@ export default function DuelMatch() {
   const sent = localSent || !!state?.myAnswered;
   const canAnswer =
     state?.status === "IN_PROGRESS" && state?.mode != null && !sent && (timeLeft == null || timeLeft > 0);
+
+  // keys 1-4 pick an option; the rapidă input is focused per question
+  useNumberKeys(
+    canAnswer && state?.mode === "grila"
+      ? (i) => {
+          const opt = state?.options?.[i];
+          if (!opt) return;
+          setSelected(opt.id);
+          void send({ selectedOptionId: opt.id });
+        }
+      : null,
+    4,
+  );
+  const rapidRef = useAutoFocus<HTMLInputElement>(canAnswer && state?.mode === "rapide", state?.round);
 
   async function send(payload: Record<string, unknown>) {
     setLocalSent(true);
@@ -505,7 +520,7 @@ export default function DuelMatch() {
                                 className="accent-[#6f9c99]"
                                 title="Varianta corectă"
                               />
-                              <span className="text-[0.72rem] text-[#6f9c99] w-3">{String.fromCharCode(65 + i)}.</span>
+                              <span className="text-[0.72rem] text-[#6f9c99] w-8 shrink-0">{i + 1}·{String.fromCharCode(65 + i)}.</span>
                               <input
                                 value={o.text}
                                 onChange={(e) =>
@@ -644,7 +659,11 @@ export default function DuelMatch() {
                   }}
                   className={`${cls} rounded-xl text-left p-3.5 text-[0.95rem] cursor-pointer disabled:cursor-default transition-all`}
                 >
-                  <span className="font-cinzel text-[#6f9c99] mr-2">{String.fromCharCode(65 + i)}.</span>
+                  <span className="font-cinzel mr-2 text-[#6f9c99]">
+                    <span className="mr-1.5 rounded border border-[#1e3a34] bg-[#0c1a17] px-1 text-[0.72rem] tabular-nums">{i + 1}</span>
+                    <span className="text-[#6f9c99] mr-1.5">{i + 1}·</span>
+                    {String.fromCharCode(65 + i)}.
+                  </span>
                   {opt.text}
                 </button>
               );
@@ -653,6 +672,7 @@ export default function DuelMatch() {
         ) : (
           <div className="flex gap-2">
             <input
+              ref={rapidRef}
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && canAnswer && typed.trim() && void send({ answer: typed.trim() })}

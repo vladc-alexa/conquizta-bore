@@ -5,6 +5,7 @@
 // you got right. Results land in the "Antrenament" tab on the clasament page.
 
 import { useEffect, useRef, useState } from "react";
+import { useNumberKeys } from "@/components/useAnswerKeys";
 import PromptText, { artPreview } from "@/components/PromptText";
 import { trainPoints } from "@/lib/trainStats";
 
@@ -227,6 +228,18 @@ export default function TrainPage() {
     // enough to actually read the reveal
     advanceRef.current = setTimeout(nextQuestion, isCorrect ? 550 : 1200);
   };
+
+  // 1-4 answer the grilă options — same handler the mouse uses
+  const pickOption = (i: number) => {
+    if (phase !== "playing" || feedback) return;
+    const cur = queueRef.current[idxRef.current];
+    if (!cur || cur.mode !== "grila") return;
+    const opt = (cur as GrilaQuestion).options[i];
+    if (!opt) return;
+    setSelectedOption(i);
+    submit(i === (cur as GrilaQuestion).correctIndex, { selectedOptionId: opt.id, answer: opt.text });
+  };
+  useNumberKeys(phase === "playing" && !feedback ? pickOption : null, 4);
 
   // A bad question in the recap can be flagged right there: the API unpublishes
   // it so it stops showing up in games until an admin checks it.
@@ -555,16 +568,16 @@ export default function TrainPage() {
               return (
                 <button
                   key={opt.id}
-                  onClick={() => {
-                    if (feedback) return;
-                    setSelectedOption(i);
-                    const ok = i === (q as GrilaQuestion).correctIndex;
-                    submit(ok, { selectedOptionId: opt.id, answer: opt.text });
-                  }}
+                  onClick={() => pickOption(i)}
                   disabled={!!feedback}
                   className={`text-left rounded-lg px-3.5 py-3 text-[0.98rem] leading-snug transition-all cursor-pointer disabled:cursor-default ${cls}`}
                 >
-                  <span className="font-cinzel text-[#6f9c99] mr-2">{String.fromCharCode(65 + i)}.</span>
+                  <span className="font-cinzel mr-2 text-[#6f9c99]">
+                    <span className="mr-1.5 rounded border border-[#1e3a34] bg-[#0c1a17] px-1 text-[0.72rem] tabular-nums">
+                      {i + 1}
+                    </span>
+                    {String.fromCharCode(65 + i)}.
+                  </span>
                   {opt.text}
                   {feedback && i === (q as GrilaQuestion).correctIndex && (
                     <span className="ml-2 align-middle text-[0.72rem] font-bold uppercase tracking-wider text-[#8ff0b0]">✔ corect</span>

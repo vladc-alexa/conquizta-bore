@@ -4,6 +4,7 @@
 // round (grilă: pick a letter; rapidă: type the number), watch who has to
 // drink. The art + random tavern antics live in CarciumaScene.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAutoFocus, useNumberKeys } from "@/components/useAnswerKeys";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import CarciumaScene from "@/components/CarciumaScene";
@@ -116,6 +117,22 @@ export default function CarciumaPage() {
   const msLeft = state?.question && state.startedAt ? Math.max(0, state.startedAt + state.windowMs - now) : 0;
   const secs = Math.ceil(msLeft / 1000);
   const timeUp = !!state?.question && msLeft <= 0;
+  // keys 1-4 pick a grilă option; the numeric box keeps focus per question
+  const canPick = !!state?.question && state.question.mode !== "rapide" && openForMe && !timeUp && !picked && !busy;
+  useNumberKeys(
+    canPick
+      ? (i) => {
+          const o = state?.question && state.question.mode !== "rapide" ? state.question.options[i] : undefined;
+          if (o) void send({ selectedOptionId: o.id }, o.id);
+        }
+      : null,
+    4,
+  );
+  const rapidRef = useAutoFocus<HTMLInputElement>(
+    !!state?.question && state.question.mode === "rapide" && openForMe && !timeUp && !picked,
+    state?.question?.id,
+  );
+
   const nextIn = state ? Math.max(0, Math.ceil(state.startsInMs / 1000)) : 0;
   const isRapide = state?.question?.mode === "rapide";
 
@@ -253,8 +270,8 @@ export default function CarciumaPage() {
                       <input
                         value={typed}
                         onChange={(e) => setTyped(e.target.value)}
+                        ref={rapidRef}
                         inputMode="numeric"
-                        autoFocus
                         disabled={!openForMe || timeUp}
                         placeholder="scrie numărul…"
                         className="min-w-0 flex-1 rounded-lg border border-[#5b3d22] bg-[#241708] px-3 py-2.5 text-base text-[#f0dcbb] outline-none focus:border-[#c08850] disabled:opacity-50"
@@ -285,7 +302,10 @@ export default function CarciumaPage() {
                                   : "border-[#5b3d22] bg-[#241708] text-[#e8d7bd] hover:border-[#c08850] hover:bg-[#33220f]"
                             }`}
                           >
-                            <span className="shrink-0 rounded bg-[#3a2a16] px-2 py-0.5 text-[0.78rem] font-bold text-[#e2b877]">{LETTERS[i]}</span>
+                            <span className="shrink-0 rounded bg-[#3a2a16] px-2 py-0.5 text-[0.78rem] font-bold text-[#e2b877]">
+                              <span className="mr-1 tabular-nums opacity-80">{i + 1}</span>
+                              {LETTERS[i]}
+                            </span>
                             <span>{o.text}</span>
                           </button>
                         );
