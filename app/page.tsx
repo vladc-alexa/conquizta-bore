@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import TowerLobbyPanel from "@/components/TowerLobbyPanel";
 import CarciumaLobbyPanel from "@/components/CarciumaLobbyPanel";
 import GeneralChat from "@/components/GeneralChat";
+import PlayersPanel from "@/components/PlayersPanel";
 import Brand from "@/components/Brand";
 
 type PanelKey = "tower" | "carciuma" | "train";
@@ -235,12 +236,11 @@ export default function Dashboard() {
       </header>
 
       <div className="flex flex-col lg:flex-row gap-4 items-start">
-        {/* Two halves: the general chat on the left, the three game boxes
-            stacked on the right — all three sharing one card style. The roster
-            moved to the clasament page. */}
+        {/* Three lanes: chat | the three game boxes (half width, so the roster
+            fits beside them) | who is online right now. */}
         <GeneralChat refreshToken={chatRefresh} />
 
-        <div className="w-full flex-1 min-w-0 flex flex-col gap-3 lg:max-h-[calc(100vh-130px)] lg:overflow-y-auto lg:pb-1">
+        <div className="w-full lg:w-[392px] shrink-0 flex flex-col gap-3 lg:max-h-[calc(100vh-130px)] lg:overflow-y-auto lg:pb-1">
           {closedPanels.train ? (
             <button
               onClick={() => setPanelClosed("train", false)}
@@ -310,6 +310,11 @@ export default function Dashboard() {
             </section>
           )}
         </div>
+
+        {/* Who is online — back on the dashboard, beside the games. */}
+        <section className="w-full lg:flex-1 lg:min-w-[260px] bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-[1.15rem] flex flex-col gap-2.5 lg:h-[calc(100vh-130px)] overflow-hidden">
+          <PlayersPanel />
+        </section>
       </div>
 
       {/* change-password modal */}

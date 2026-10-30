@@ -18,6 +18,8 @@ export default function CarciumaPage() {
   const [state, setState] = useState<CarciumaState | null>(null);
   const [err, setErr] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
+  // questions already flagged from the post-game recap
+  const [reported, setReported] = useState<Set<string>>(new Set());
   const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -89,6 +91,20 @@ export default function CarciumaPage() {
     },
     [busy, id, load, picked, state?.question]
   );
+
+  const reportQuestion = async (qid: string) => {
+    if (reported.has(qid)) return;
+    try {
+      const r = await fetch(`/api/questions/${qid}/report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: "raportată din cârciumă" }),
+      });
+      if (r.ok || r.status === 409) setReported((prev) => new Set(prev).add(qid));
+    } catch {
+      /* the player can try again from the next recap */
+    }
+  };
 
   async function leave() {
     await fetch(`/api/carciuma/${id}/leave`, { method: "POST" }).catch(() => {});
@@ -351,14 +367,31 @@ export default function CarciumaPage() {
         <section className="mt-3">
           <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <h2 className="font-display text-xl text-[#ffd98e]">Revizuire — ce s-a întrebat la masă</h2>
-            <span className="text-xs text-[#9d7c56]">{state.review.length} runde</span>
+            <span className="text-xs text-[#9d7c56]">{state.review.length === 1 ? "1 rundă" : `${state.review.length} runde`}</span>
           </div>
           <div className="grid gap-2">
             {state.review.map((r) => (
               <details key={r.round} className="overflow-hidden rounded-xl border border-[#5b3d22] bg-[#1a1208] open:border-[#8a5a30]">
                 <summary className="flex min-h-[44px] cursor-pointer items-start gap-2 px-3 py-2 text-sm text-[#e8d7bd] transition hover:bg-[#221606]">
                   <span className="mt-0.5 shrink-0 rounded bg-[#33220f] px-1.5 text-[0.7rem] font-bold text-[#e2b877]">{r.round + 1}</span>
-                  <span className="min-w-0 flex-1">{r.prompt}</span>
+                  <span className="min-w-0 flex-1">
+                    {r.prompt}
+                    {reported.has(r.questionId) ? (
+                      <span className="ml-2 align-middle text-[0.65rem] text-[#8fd9a8]">raportată ✓</span>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void reportQuestion(r.questionId);
+                        }}
+                        title="Raportează întrebarea — iese din joc până o verifică un editor"
+                        className="ml-2 align-middle rounded border border-[#7a3a2a] bg-[#2a1310] px-1.5 py-0.5 text-[0.65rem] text-[#f0a08a] hover:border-[#a8503a]"
+                      >
+                        ⚠ raportează
+                      </button>
+                    )}
+                  </span>
                   <span
                     className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider ${
                       r.mode === "rapide" ? "bg-[#22303a] text-[#9ed2e0]" : "bg-[#33220f] text-[#e2b877]"

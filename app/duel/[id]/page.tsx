@@ -433,7 +433,20 @@ export default function DuelMatch() {
                       {h.winnerId === me.id ? "✔ câștigată" : h.winnerId ? "✖ pierdută" : "– egal"}
                     </span>
                   </div>
-                  <div className="text-[0.88rem] text-[#cbdcda] leading-snug"><PromptText text={view.prompt} /></div>
+                  <div className="text-[0.88rem] text-[#cbdcda] leading-snug">
+                    <PromptText text={view.prompt} />
+                    {reported.has(h.questionId) ? (
+                      <span className="ml-2 align-middle text-[0.68rem] text-[#8fb0ac]">Raportată ✓</span>
+                    ) : (
+                      <button
+                        onClick={() => void reportQuestion(h.questionId)}
+                        className="ml-2 align-middle text-[0.68rem] text-red-400/90 border border-red-500/40 rounded px-1.5 py-0.5 hover:bg-red-900/30 cursor-pointer"
+                        title="Raportează întrebarea (iese din joc până e verificată)"
+                      >
+                        ⚠ Raportează
+                      </button>
+                    )}
+                  </div>
                   {/* the round's answer on its own green band — it used to be a
                       fragment of grey text inside the stats line */}
                   <div className="rounded-lg border border-[#8fd9a8]/40 bg-[#0f2a20] px-2.5 py-1.5">
@@ -465,17 +478,6 @@ export default function DuelMatch() {
                         title="Editează întrebarea aici"
                       >
                         {isOpen ? "✕ Închide" : "✏️ Editează"}
-                      </button>
-                    )}
-                    {reported.has(h.questionId) ? (
-                      <span className="text-[0.7rem] text-[#8fb0ac]">Raportată ✓</span>
-                    ) : (
-                      <button
-                        onClick={() => void reportQuestion(h.questionId)}
-                        className="text-[0.7rem] text-red-400/90 border border-red-500/40 rounded px-2 py-0.5 hover:bg-red-900/30 cursor-pointer"
-                        title="Raportează întrebarea (iese din joc până e verificată)"
-                      >
-                        ⚠ Raportează
                       </button>
                     )}
                   </div>
