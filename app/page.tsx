@@ -3,11 +3,10 @@
 import { useEffect, useState, useCallback } from "react";
 import TowerLobbyPanel from "@/components/TowerLobbyPanel";
 import CarciumaLobbyPanel from "@/components/CarciumaLobbyPanel";
-import PlayersPanel from "@/components/PlayersPanel";
 import GeneralChat from "@/components/GeneralChat";
 import Brand from "@/components/Brand";
 
-type PanelKey = "tower" | "players" | "carciuma";
+type PanelKey = "tower" | "carciuma" | "train";
 
 export default function Dashboard() {
   const [name, setName] = useState<string | null>(null);
@@ -16,7 +15,7 @@ export default function Dashboard() {
   const [chatRefresh, setChatRefresh] = useState(0);
   const [mySiteOff, setMySiteOff] = useState(false);
   // which dashboard panels the player folded away (kept in localStorage)
-  const [closedPanels, setClosedPanels] = useState<Record<PanelKey, boolean>>({ tower: false, players: false, carciuma: false });
+  const [closedPanels, setClosedPanels] = useState<Record<PanelKey, boolean>>({ tower: false, carciuma: false, train: false });
   const setPanelClosed = useCallback((key: PanelKey, closed: boolean) => {
     setClosedPanels((prev) => {
       const next = { ...prev, [key]: closed };
@@ -145,7 +144,7 @@ export default function Dashboard() {
       {/* Header: the wordmark rides in the same row as the buttons — it used to
           sit on its own row above them and pushed the dashboard past one
           screen, which is what forced a page scrollbar. */}
-      <header className="flex items-center justify-between gap-3">
+      <header className="flex flex-wrap items-center gap-2 sm:gap-3">
         <a
           href="/"
           className="shrink-0 leading-none hover:brightness-125 transition-[filter]"
@@ -154,6 +153,15 @@ export default function Dashboard() {
         >
           <Brand size={21} />
         </a>
+        {/* Gluma zilei sits between the wordmark and the buttons, on the same
+            row — it used to eat a whole card in the right rail. */}
+        <div
+          className="order-3 sm:order-none w-full sm:w-auto sm:flex-1 sm:max-w-[520px] min-w-0 sm:mx-2 rounded-lg border border-[#1e3a34] bg-[#0c1a17]/80 px-3 py-1.5 flex items-baseline gap-2"
+          title="Gluma zilei"
+        >
+          <span className="shrink-0 text-[0.7rem] font-cinzel tracking-widest text-[#75938f]">😂 GLUMA ZILEI</span>
+          <span className="min-w-0 truncate font-cinzel text-[0.82rem] text-[#cbdcda]">„Tu! Tu esti gluma!”</span>
+        </div>
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <a href="/leaderboard" className={navBtn}>
             👑 Clasament
@@ -227,72 +235,81 @@ export default function Dashboard() {
       </header>
 
       <div className="flex flex-col lg:flex-row gap-4 items-start">
-        {/* Left: the general chat (shared component — same one docks in-game) */}
+        {/* Two halves: the general chat on the left, the three game boxes
+            stacked on the right — all three sharing one card style. The roster
+            moved to the clasament page. */}
         <GeneralChat refreshToken={chatRefresh} />
 
-        {/* Center: La Carciuma up top, then the Turnul with the registered
-            players roster to its right. Every panel folds away with ✕ and the
-            choice is remembered per browser. */}
-        <div className="w-full flex-1 min-w-0 flex flex-col gap-4">
+        <div className="w-full flex-1 min-w-0 flex flex-col gap-3 lg:h-[calc(100vh-130px)] lg:min-h-[672px]">
+          {closedPanels.train ? (
+            <button
+              onClick={() => setPanelClosed("train", false)}
+              className="w-full rounded-2xl border-2 border-dashed border-[#1e3a34] bg-[#0c1a17]/70 px-3 py-4 text-left text-[0.8rem] text-[#8fb0ac] hover:border-[#3f615c] hover:text-[#9ec6c1] cursor-pointer"
+            >
+              🏋️ Train e închis — <span className="underline">deschide-l</span>
+            </button>
+          ) : (
+            <section className="flex-1 min-h-0 bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">🏋️ Train</h3>
+                <button
+                  onClick={() => setPanelClosed("train", true)}
+                  className="text-[#75938f] hover:text-[#9ec6c1] cursor-pointer text-[0.85rem]"
+                  title="Închide"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-[#8fb0ac] text-[0.8rem] leading-snug">
+                2 minute, cât mai multe corecte. Mix de grilă și rapidă.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href="/train"
+                  className="flex-1 min-w-[140px] text-center bg-gradient-to-br from-[#8fd9a8] to-[#3f8f63] border-2 border-[#8fd9a880] rounded-lg text-[#08201a] font-cinzel text-[0.9rem] tracking-wider p-2.5 hover:brightness-110 active:translate-y-px"
+                >
+                  ▶ Pornește 2 minute
+                </a>
+                <a
+                  href="/leaderboard?tab=train"
+                  className="text-[0.75rem] text-[#8fb0ac] hover:text-[#9ec6c1] border border-[#1e3a34] rounded-lg bg-[#0c1a17] px-2.5 py-2"
+                >
+                  🏆 Rezultate
+                </a>
+              </div>
+              <p className="mt-auto pt-1 text-[0.72rem] leading-relaxed text-[#5f7f7b]">
+                2 grilă : 1 rapidă · cronometrul nu stă · fiecare run intră în
+                 clasamentul de antrenament
+              </p>
+            </section>
+          )}
+
           {closedPanels.carciuma ? (
             <button
               onClick={() => setPanelClosed("carciuma", false)}
-              className="w-full rounded-2xl border-2 border-dashed border-[#4a2f12] bg-[#150e06]/80 px-3 py-4 text-left text-[0.8rem] text-[#c8a274] hover:border-[#7d4f16] hover:text-[#e2b877] cursor-pointer"
+              className="w-full rounded-2xl border-2 border-dashed border-[#1e3a34] bg-[#0c1a17]/70 px-3 py-4 text-left text-[0.8rem] text-[#8fb0ac] hover:border-[#3f615c] hover:text-[#9ec6c1] cursor-pointer"
             >
               🍺 La Carciuma e închisă — <span className="underline">deschide-o</span>
             </button>
           ) : (
-            <section className="bg-gradient-to-br from-[#2a1a0b] to-[#150e06] border-2 border-[#4a2f12] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
+            <section className="flex-1 min-h-0 bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
               <CarciumaLobbyPanel onUnauthorized={() => { window.location.href = "/login"; }} onClose={() => setPanelClosed("carciuma", true)} />
             </section>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-4 items-stretch">
-            {closedPanels.tower ? (
-              <button
-                onClick={() => setPanelClosed("tower", false)}
-                className="flex-1 rounded-2xl border-2 border-dashed border-[#1e3a34] bg-[#0c1a17]/70 px-3 py-4 text-left text-[0.8rem] text-[#8fb0ac] hover:border-[#3f615c] hover:text-[#9ec6c1] cursor-pointer"
-              >
-                🏰 Turnul e închis — <span className="underline">deschide-l</span>
-              </button>
-            ) : (
-              <section className="flex-1 min-w-0 bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
-                <TowerLobbyPanel onUnauthorized={() => { window.location.href = "/login"; }} onClose={() => setPanelClosed("tower", true)} />
-              </section>
-            )}
-
-            {closedPanels.players ? (
-              <button
-                onClick={() => setPanelClosed("players", false)}
-                className="sm:w-[196px] shrink-0 rounded-2xl border-2 border-dashed border-[#1e3a34] bg-[#0c1a17]/70 px-3 py-4 text-[0.78rem] text-[#8fb0ac] hover:border-[#3f615c] hover:text-[#9ec6c1] cursor-pointer"
-              >
-                👥 Jucătorii — <span className="underline">arată</span>
-              </button>
-            ) : (
-              <aside className="sm:w-[196px] shrink-0 bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-[0.95rem] flex flex-col">
-                <PlayersPanel onClose={() => setPanelClosed("players", true)} />
-              </aside>
-            )}
-          </div>
-
+          {closedPanels.tower ? (
+            <button
+              onClick={() => setPanelClosed("tower", false)}
+              className="w-full rounded-2xl border-2 border-dashed border-[#1e3a34] bg-[#0c1a17]/70 px-3 py-4 text-left text-[0.8rem] text-[#8fb0ac] hover:border-[#3f615c] hover:text-[#9ec6c1] cursor-pointer"
+            >
+              🏰 Turnul e închis — <span className="underline">deschide-l</span>
+            </button>
+          ) : (
+            <section className="flex-1 min-h-0 bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
+              <TowerLobbyPanel onUnauthorized={() => { window.location.href = "/login"; }} onClose={() => setPanelClosed("tower", true)} />
+            </section>
+          )}
         </div>
-
-        {/* Right rail */}
-        <section className="w-full lg:w-[300px] shrink-0 flex flex-col gap-4">
-          <a
-            href="/train"
-            className="bg-gradient-to-br from-[#9ec6c1] to-[#6f9c99] border-2 border-[#9ec6c180] rounded-2xl shadow-2xl text-center p-[1.45rem] hover:brightness-110 active:translate-y-px"
-          >
-            <div className="font-cinzel text-[#0c1a17] text-[1.1rem] tracking-widest">🏋️ Train</div>
-            <div className="text-[#122420] text-[0.8rem] mt-1 font-bold">VREI SA TI-O MASORI?</div>
-          </a>
-
-
-          <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-[1.15rem] flex flex-col gap-2">
-            <h3 className="font-cinzel text-[#9ec6c1] text-[0.85rem] tracking-widest">😂 Gluma zilei</h3>
-            <p className="text-[#cbdcda] text-[0.9rem] leading-relaxed font-cinzel">„Tu! Tu esti gluma!”</p>
-          </div>
-        </section>
       </div>
 
       {/* change-password modal */}

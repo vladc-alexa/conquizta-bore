@@ -45,6 +45,7 @@ model User {
   questionEdits       QuestionEdit[]
   invitesSent         GameInvite[]       @relation("InviteFrom")
   invitesReceived     GameInvite[]       @relation("InviteTo")
+  trainRuns           TrainRun[]
 
   @@index([lastSeenAt])
 }
@@ -369,7 +370,7 @@ model CarciumaAnswer {
   round               Int
   questionId          String         @db.Uuid
   selectedOptionId    String?        @db.Uuid
-  answerText          String?  @db.VarChar(40)
+  answerText          String?        @db.VarChar(40)
   isCorrect           Boolean        @default(false)
   score               Int            @default(0)
   elapsedMilliseconds Int            @default(0)
@@ -391,7 +392,7 @@ model GameInvite {
   fromId    String   @db.Uuid
   fromName  String   @db.VarChar(32)
   toId      String   @db.Uuid
-  status    String   @db.VarChar(10) @default("PENDING") // PENDING | ACCEPTED | DECLINED
+  status    String   @default("PENDING") @db.VarChar(10) // PENDING | ACCEPTED | DECLINED
   createdAt DateTime @default(now())
   expiresAt DateTime
   from      User     @relation("InviteFrom", fields: [fromId], references: [id], onDelete: Cascade)
@@ -399,4 +400,18 @@ model GameInvite {
 
   @@index([toId, status])
   @@index([expiresAt])
+}
+
+// One finished 2-minute training blitz. `correct` is the score that ranks the
+// training tab; `total` is how many questions were actually served.
+model TrainRun {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  correct   Int
+  total     Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
 }
