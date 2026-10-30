@@ -5,6 +5,7 @@ import TowerLobbyPanel from "@/components/TowerLobbyPanel";
 import CarciumaLobbyPanel from "@/components/CarciumaLobbyPanel";
 import PlayersPanel from "@/components/PlayersPanel";
 import GeneralChat from "@/components/GeneralChat";
+import Brand from "@/components/Brand";
 
 type PanelKey = "tower" | "players" | "carciuma";
 
@@ -140,9 +141,19 @@ export default function Dashboard() {
     "border border-[#1e3a34] rounded-lg px-2.5 sm:px-3.5 py-2 min-h-[40px] inline-flex items-center gap-1 bg-[#0c1a17] cursor-pointer";
 
   return (
-    <div className="w-full max-w-[1380px] mx-auto flex flex-col gap-4 py-4">
-      {/* Header */}
-      <header className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+    <div className="w-full max-w-[1380px] mx-auto flex flex-col gap-3 py-1">
+      {/* Header: the wordmark rides in the same row as the buttons — it used to
+          sit on its own row above them and pushed the dashboard past one
+          screen, which is what forced a page scrollbar. */}
+      <header className="flex items-center justify-between gap-3">
+        <a
+          href="/"
+          className="shrink-0 leading-none hover:brightness-125 transition-[filter]"
+          title="Pagina principală"
+          aria-label="ST0NE QUIZ — pagina principală"
+        >
+          <Brand size={21} />
+        </a>
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <a href="/leaderboard" className={navBtn}>
             👑 Clasament

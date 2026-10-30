@@ -292,7 +292,15 @@ export default function TrainPage() {
   // ---------- mode selection ----------
   if (mode === null) {
     return (
-      <div className="w-full max-w-3xl mx-auto flex flex-col gap-5 py-6">
+      <div className="w-full max-w-3xl mx-auto flex flex-col gap-5 py-4">
+        {/* the global wordmark is hidden on game screens, so the way home
+            lives here */}
+        <a
+          href="/"
+          className="self-start text-[#8fb0ac] hover:text-[#9ec6c1] text-[0.85rem] font-cinzel border border-[#1e3a34] rounded-lg px-3 py-1.5 bg-[#0c1a17]"
+        >
+          ← Înapoi
+        </a>
         <h1 className="text-center !mb-0">Antrenament</h1>
         {loadError && (
           <div className="text-red-400 text-[0.85rem] text-center border border-red-500/40 bg-red-900/20 rounded-lg px-3 py-2">
@@ -493,7 +501,7 @@ export default function TrainPage() {
               if (feedback) {
                 const isCorrectOpt = i === (q as GrilaQuestion).correctIndex;
                 const isSelected = i === selectedOption;
-                if (isCorrectOpt) cls = "bg-green-900/30 border-green-500/60 text-[#e2eeeb]";
+                if (isCorrectOpt) cls = "bg-green-800/40 border-green-400 ring-2 ring-green-400/60 text-[#eafbf0] font-semibold";
                 else if (isSelected) cls = "bg-red-900/30 border-red-500/60 text-[#e2eeeb]";
                 else cls = "bg-[#050d0b] border-[#16302b] opacity-60";
               }
@@ -509,6 +517,11 @@ export default function TrainPage() {
                 >
                   <span className="font-cinzel text-[#6f9c99] mr-2">{String.fromCharCode(65 + i)}.</span>
                   {opt.text}
+                  {feedback && i === (q as GrilaQuestion).correctIndex && (
+                    <span className="ml-2 align-middle text-[0.72rem] font-bold uppercase tracking-wider text-[#8ff0b0]">
+                      ✔ corect
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -570,12 +583,21 @@ export default function TrainPage() {
                 {feedback.state === "correct" ? "Corect!" : feedback.state === "wrong" ? "Greșit!" : "Timp expirat!"}
               </div>
             ) : null}
-            <div className="text-[0.85rem] text-[#c2d4d2]">
-              Răspuns corect: <strong className="text-[#9ec6c1]">{feedback.reveal}</strong>
-              {feedback.elapsed != null && (
-                <span className="ml-3">Timp: <strong className="text-[#9ec6c1]">{(feedback.elapsed / 1000).toFixed(3).replace(".", ",")}s</strong></span>
-              )}
+            {/* the reveal is the point of the screen — loud band, big type,
+                so nobody has to hunt for what the right answer was */}
+            <div className="mt-2 flex flex-col items-center gap-0.5 rounded-lg border-2 border-[#8ff0b0]/45 bg-[#08241a]/85 px-3 py-2">
+              <span className="text-[0.7rem] uppercase tracking-[0.2em] text-[#8ff0b0]/80">
+                Răspunsul corect
+              </span>
+              <span className="font-cinzel text-[1.45rem] leading-snug break-words text-[#b6f7cd]">
+                {feedback.reveal || "—"}
+              </span>
             </div>
+            {feedback.elapsed != null && (
+              <div className="mt-2 text-[0.85rem] text-[#c2d4d2]">
+                Timp: <strong className="text-[#9ec6c1]">{(feedback.elapsed / 1000).toFixed(3).replace(".", ",")}s</strong>
+              </div>
+            )}
           </div>
         )}
       </div>

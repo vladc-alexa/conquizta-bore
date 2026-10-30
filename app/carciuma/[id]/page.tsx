@@ -143,7 +143,9 @@ export default function CarciumaPage() {
 
       {err && <p className="mb-2 rounded-lg border border-[#7a3a2a] bg-[#2a1310] px-3 py-2 text-sm text-[#f2b7a4]">{err}</p>}
 
-      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_390px]">
+      {/* Question panel is 50% wider than it used to be (390 → 585px). The
+          scene shrinks with the column, so the table art gives up the space. */}
+      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_585px]">
         <div className="relative overflow-hidden rounded-2xl border-2 border-[#4b2d17] bg-[#2a170b] shadow-[0_18px_50px_rgba(0,0,0,0.55)]">
           <CarciumaScene
             players={scenePlayers}
@@ -163,11 +165,11 @@ export default function CarciumaPage() {
               behind a head. */}
           {state?.phase === "table" && nextIn > 0 && (
             <div className="pointer-events-none absolute inset-x-0 top-[26%] z-[60] flex justify-center">
-              <div className="rounded-xl border-2 border-[#8a5a30] bg-[#1d1208]/95 px-5 py-3 text-center shadow-lg">
+              <div className="rounded-xl border-2 border-[#8a5a30] bg-[#1d1208]/95 px-4 py-2.5 text-center shadow-lg">
                 {state.lastRound?.drinkerName ? (
                   <>
-                    <p className="font-display text-xl text-[#ffd98e]">„{state.lastRound.drinkerName} bea!”</p>
-                    <p className="text-xs text-[#cfae82]">
+                    <p className="font-display text-lg text-[#ffd98e]">„{state.lastRound.drinkerName} bea!”</p>
+                    <p className="text-[0.7rem] text-[#cfae82]">
                       {(() => {
                         const p = state.players.find((x) => x.id === state.lastRound?.drinkerId);
                         return p ? `${p.name} — ${p.drinks}/3 pahare` : "";
@@ -175,9 +177,9 @@ export default function CarciumaPage() {
                     </p>
                   </>
                 ) : (
-                  <p className="font-display text-lg text-[#ffd98e]">Se mai toarnă…</p>
+                  <p className="font-display text-base text-[#ffd98e]">Se mai toarnă…</p>
                 )}
-                <p className="mt-1 text-[0.7rem] uppercase tracking-wider text-[#9d7c56]">runda următoare în {nextIn}s</p>
+                <p className="mt-1 text-[0.65rem] uppercase tracking-wider text-[#9d7c56]">runda următoare în {nextIn}s</p>
               </div>
             </div>
           )}
@@ -207,18 +209,18 @@ export default function CarciumaPage() {
         {/* the round panel: beside the table on desktop, so it is never below the fold */}
         {state?.phase === "table" && (
           <aside className="flex flex-col gap-2 lg:sticky lg:top-2">
-            <section className="rounded-2xl border border-[#5b3d22] bg-[#1a1208] p-3">
+            <section className="rounded-2xl border border-[#5b3d22] bg-[#1a1208] p-4">
               {state.question && nextIn === 0 ? (
                 <>
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className={`rounded px-1.5 py-0.5 text-[0.62rem] font-bold uppercase tracking-wider ${isRapide ? "bg-[#22303a] text-[#9ed2e0]" : "bg-[#33220f] text-[#e2b877]"}`}>
+                  <div className="mb-2.5 flex items-center justify-between gap-2">
+                    <span className={`rounded px-2 py-0.5 text-[0.7rem] font-bold uppercase tracking-wider ${isRapide ? "bg-[#22303a] text-[#9ed2e0]" : "bg-[#33220f] text-[#e2b877]"}`}>
                       {isRapide ? "rapidă" : "grilă"}
                     </span>
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${secs <= 5 ? "bg-[#5a1f14] text-[#ffb59c]" : "bg-[#24301f] text-[#b9e0a6]"}`}>
+                    <span className={`rounded-full px-2.5 py-1 text-sm font-semibold ${secs <= 5 ? "bg-[#5a1f14] text-[#ffb59c]" : "bg-[#24301f] text-[#b9e0a6]"}`}>
                       {secs}s
                     </span>
                   </div>
-                  <p className="mb-2 text-[0.95rem] leading-snug text-[#f0dcbb]">{state.question.prompt}</p>
+                  <p className="mb-2.5 text-[1.15rem] leading-snug text-[#f7e8ce]">{state.question.prompt}</p>
                   <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-[#2c1c0e]">
                     <div className="h-full rounded-full bg-[#e2a34a] transition-[width] duration-150" style={{ width: `${Math.max(0, Math.min(100, (msLeft / state.windowMs) * 100))}%` }} />
                   </div>
@@ -239,7 +241,7 @@ export default function CarciumaPage() {
                         autoFocus
                         disabled={!openForMe || timeUp}
                         placeholder="scrie numărul…"
-                        className="min-w-0 flex-1 rounded-lg border border-[#5b3d22] bg-[#241708] px-3 py-2 text-sm text-[#f0dcbb] outline-none focus:border-[#c08850] disabled:opacity-50"
+                        className="min-w-0 flex-1 rounded-lg border border-[#5b3d22] bg-[#241708] px-3 py-2.5 text-base text-[#f0dcbb] outline-none focus:border-[#c08850] disabled:opacity-50"
                       />
                       <button
                         type="submit"
@@ -250,7 +252,7 @@ export default function CarciumaPage() {
                       </button>
                     </form>
                   ) : (
-                    <div className="grid gap-2">
+                    <div className="grid gap-2.5">
                       {state.question.options.map((o, i) => {
                         const isPicked = picked === o.id;
                         const locked = !openForMe || timeUp;
@@ -259,7 +261,7 @@ export default function CarciumaPage() {
                             key={o.id}
                             onClick={() => void send({ selectedOptionId: o.id }, o.id)}
                             disabled={locked}
-                            className={`flex min-h-[44px] items-start gap-2 rounded-xl border px-3 py-2 text-left text-sm transition ${
+                            className={`flex min-h-[54px] items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-[1rem] leading-snug transition ${
                               isPicked
                                 ? "border-[#e2a34a] bg-[#3a2a12] text-[#ffe4ac]"
                                 : locked
@@ -267,7 +269,7 @@ export default function CarciumaPage() {
                                   : "border-[#5b3d22] bg-[#241708] text-[#e8d7bd] hover:border-[#c08850] hover:bg-[#33220f]"
                             }`}
                           >
-                            <span className="mt-0.5 shrink-0 rounded bg-[#3a2a16] px-1.5 text-[0.7rem] font-bold text-[#e2b877]">{LETTERS[i]}</span>
+                            <span className="shrink-0 rounded bg-[#3a2a16] px-2 py-0.5 text-[0.78rem] font-bold text-[#e2b877]">{LETTERS[i]}</span>
                             <span>{o.text}</span>
                           </button>
                         );
@@ -275,7 +277,7 @@ export default function CarciumaPage() {
                     </div>
                   )}
 
-                  <p className="mt-2 text-xs text-[#9d7c56]">
+                  <p className="mt-2.5 text-[0.8rem] text-[#9d7c56]">
                     {me?.passedOut
                       ? "Ai căzut sub masă — urmărești de pe podea."
                       : state.myAnswered || picked
@@ -292,13 +294,20 @@ export default function CarciumaPage() {
                   </p>
                   {state.lastRound && (
                     <>
-                      {/* the truth, always — grilă option text or rapidă number */}
+                      {/* the truth, always — grilă option text or rapidă number.
+                          Loud on purpose: between rounds this is the thing
+                          everyone is looking for. */}
                       {state.lastRound.answer != null && (
-                        <p className="mb-2 rounded-lg bg-[#12241c] px-3 py-1.5 text-sm text-[#8fd9a8]">
-                          Răspunsul corect: <strong>{state.lastRound.answer}</strong>
-                        </p>
+                        <div className="mb-2.5 rounded-xl border-2 border-[#8fd9a8]/50 bg-[#0f2a20] px-3 py-2 text-center">
+                          <p className="text-[0.65rem] uppercase tracking-[0.2em] text-[#8fd9a8]/85">
+                            ✔ Răspunsul corect
+                          </p>
+                          <p className="font-display text-2xl leading-tight break-words text-[#b9f5cd]">
+                            {state.lastRound.answer}
+                          </p>
+                        </div>
                       )}
-                      <ul className="grid gap-1 text-xs">
+                      <ul className="grid gap-1 text-[0.8rem]">
                         {(state.lastRound.mode === "rapide"
                           ? [...state.lastRound.rows].sort((a, b) => a.ms - b.ms)
                           : state.lastRound.rows
@@ -306,8 +315,8 @@ export default function CarciumaPage() {
                           const p = state.players.find((x) => x.id === row.playerId);
                           if (!p) return null;
                           return (
-                            <li key={row.playerId} className={`flex min-w-0 items-center gap-2 rounded-lg px-2 py-1 ${row.drank ? "bg-[#3a1c0e] text-[#ffd0a8]" : "bg-[#221606] text-[#c8b79c]"}`}>
-                              <span className="w-[4.5rem] shrink-0 truncate sm:w-24">{p.name}</span>
+                            <li key={row.playerId} className={`flex min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 ${row.drank ? "bg-[#3a1c0e] text-[#ffd0a8]" : "bg-[#221606] text-[#c8b79c]"}`}>
+                              <span className="w-[5rem] shrink-0 truncate sm:w-28">{p.name}</span>
                               {state.lastRound?.mode === "grila" ? (
                                 <span className={`min-w-0 flex-1 truncate ${row.correct ? "text-[#8fd9a8]" : "text-[#c98b7a]"}`}>
                                   {row.correct ? "✓" : "✗"} {row.answer ?? "—"}
