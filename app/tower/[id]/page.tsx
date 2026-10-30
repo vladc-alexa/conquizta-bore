@@ -212,7 +212,9 @@ export default function TowerGamePage() {
 
       {/* the board gets every pixel the side panel doesn't need: it used to be
           capped by max-w-6xl (≈700px even on a 1920 screen) */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(310px,340px)] gap-4 items-start">
+      {/* question column 50% wider (310–340px → 465–510px); the tower board is
+          container-query sized, so the art shrinks to fit the leftover width */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(465px,510px)] gap-4 items-start">
         <Tower players={state.players} rocks={state.rocks} />
 
         <div className="flex flex-col gap-3">
@@ -257,8 +259,13 @@ export default function TowerGamePage() {
           {(state.reveal != null || (state.canThrow && !myRock)) && state.phase !== "lobby" && state.phase !== "done" && (
             <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl p-3 flex flex-col gap-2">
               {state.reveal != null && (
-                <div className="text-[0.8rem] text-[#8fd9a8]">
-                  Răspuns corect: <span className="font-cinzel">{state.reveal}</span>
+                <div className="rounded-xl border-2 border-[#8fd9a8]/50 bg-[#0f2a20] px-3 py-2 text-center">
+                  <div className="text-[0.65rem] uppercase tracking-[0.2em] text-[#8fd9a8]/85">
+                    ✔ Răspunsul corect
+                  </div>
+                  <div className="font-cinzel text-[1.5rem] leading-tight break-words text-[#b9f5cd]">
+                    {state.reveal}
+                  </div>
                 </div>
               )}
               {state.canThrow && !myRock && (
@@ -309,7 +316,7 @@ export default function TowerGamePage() {
                   style={{ width: `${Math.max(0, Math.min(100, (msLeft / state.windowMs) * 100))}%` }}
                 />
               </div>
-              <p className="text-[#dfe7e5] text-[0.95rem] leading-snug"><PromptText text={state.question.prompt} /></p>
+              <p className="text-[#dfe7e5] text-[1.15rem] leading-snug"><PromptText text={state.question.prompt} /></p>
               {state.question.mode === "rapide" && (
                 <div className="flex flex-col gap-1.5">
                   <div className="text-[0.68rem] text-[#75938f] uppercase tracking-wider">
@@ -341,25 +348,35 @@ export default function TowerGamePage() {
               <div className="flex flex-col gap-1.5">
                 {state.question.options.map((o, i) => {
                   const isPicked = picked === o.id;
+                  // once the round closes the server sends the answer text —
+                  // match it back to the option so the truth is unmissable
+                  const isTruth = state.reveal != null && o.text === state.reveal;
                   return (
                     <button
                       key={o.id}
                       onClick={() => answer(o.id)}
                       disabled={!!picked || state.myAnswered}
-                      className={`text-left border-2 rounded-xl px-3 py-2 text-[0.85rem] transition ${
-                        isPicked
-                          ? "border-[#9ec6c1] bg-[#1b3330] text-[#e6f2ef]"
-                          : "border-[#1e3a34] bg-[#050d0b] text-[#cbdcda] hover:border-[#4d7a76]"
+                      className={`text-left border-2 rounded-xl px-3 py-3 text-[1rem] leading-snug transition ${
+                        isTruth
+                          ? "border-[#8fd9a8] ring-2 ring-[#8fd9a8]/50 bg-[#123024] text-[#eafbf0] font-semibold"
+                          : isPicked
+                            ? "border-[#9ec6c1] bg-[#1b3330] text-[#e6f2ef]"
+                            : "border-[#1e3a34] bg-[#050d0b] text-[#cbdcda] hover:border-[#4d7a76]"
                       } disabled:opacity-60`}
                     >
                       <span className="text-[#75938f] mr-2">{"ABCD"[i]}</span>
                       {o.text}
+                      {isTruth && (
+                        <span className="ml-2 text-[0.72rem] font-bold uppercase tracking-wider text-[#8ff0b0]">
+                          ✔ corect
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
               {feedback ? (
-                <div className={`text-[0.8rem] ${feedback.correct ? "text-[#8fd9a8]" : "text-[#c98b6b]"}`}>
+                <div className={`text-[0.95rem] font-semibold ${feedback.correct ? "text-[#8fd9a8]" : "text-[#c98b6b]"}`}>
                   {feedback.correct ? `Corect · +${feedback.rungs} trepte` : "Greșit · ai stat pe loc"}
                   {state.question.mode === "rapide" && feedback.ms > 0 && (
                     <span className="text-[#75938f]"> · răspuns în {(feedback.ms / 1000).toFixed(1)}s</span>

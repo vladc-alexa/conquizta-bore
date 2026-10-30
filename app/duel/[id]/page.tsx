@@ -434,8 +434,17 @@ export default function DuelMatch() {
                     </span>
                   </div>
                   <div className="text-[0.88rem] text-[#cbdcda] leading-snug"><PromptText text={view.prompt} /></div>
+                  {/* the round's answer on its own green band — it used to be a
+                      fragment of grey text inside the stats line */}
+                  <div className="rounded-lg border border-[#8fd9a8]/40 bg-[#0f2a20] px-2.5 py-1.5">
+                    <div className="text-[0.6rem] uppercase tracking-[0.18em] text-[#8fd9a8]/85">
+                      ✔ Răspunsul corect
+                    </div>
+                    <div className="font-cinzel text-[1.15rem] leading-snug break-words text-[#b9f5cd]">
+                      {view.reveal}
+                    </div>
+                  </div>
                   <div className="text-[0.78rem] text-[#8fb0ac]">
-                    Corect: <strong className="text-[#9ec6c1]">{view.reveal}</strong>
                     {h.answers.map((a, i) => (
                       <span key={i} className={a.mine ? "text-[#9ec6c1]" : "text-[#75938f]"}>
                         {" · "}
