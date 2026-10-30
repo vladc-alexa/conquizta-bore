@@ -240,7 +240,7 @@ export default function Dashboard() {
             moved to the clasament page. */}
         <GeneralChat refreshToken={chatRefresh} />
 
-        <div className="w-full flex-1 min-w-0 flex flex-col gap-3 lg:h-[calc(100vh-130px)] lg:min-h-[672px]">
+        <div className="w-full flex-1 min-w-0 flex flex-col gap-3 lg:max-h-[calc(100vh-130px)] lg:overflow-y-auto lg:pb-1">
           {closedPanels.train ? (
             <button
               onClick={() => setPanelClosed("train", false)}
@@ -249,7 +249,7 @@ export default function Dashboard() {
               🏋️ Train e închis — <span className="underline">deschide-l</span>
             </button>
           ) : (
-            <section className="flex-1 min-h-0 bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
+            <section className="shrink-0 overflow-hidden bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
               <div className="flex items-start justify-between gap-2">
                 <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">🏋️ Train</h3>
                 <button
@@ -292,7 +292,7 @@ export default function Dashboard() {
               🍺 La Carciuma e închisă — <span className="underline">deschide-o</span>
             </button>
           ) : (
-            <section className="flex-1 min-h-0 bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
+            <section className="shrink-0 overflow-hidden bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
               <CarciumaLobbyPanel onUnauthorized={() => { window.location.href = "/login"; }} onClose={() => setPanelClosed("carciuma", true)} />
             </section>
           )}
@@ -305,7 +305,7 @@ export default function Dashboard() {
               🏰 Turnul e închis — <span className="underline">deschide-l</span>
             </button>
           ) : (
-            <section className="flex-1 min-h-0 bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
+            <section className="shrink-0 overflow-hidden bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full p-[1.15rem] flex flex-col gap-2.5">
               <TowerLobbyPanel onUnauthorized={() => { window.location.href = "/login"; }} onClose={() => setPanelClosed("tower", true)} />
             </section>
           )}
