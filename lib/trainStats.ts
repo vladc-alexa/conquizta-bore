@@ -43,9 +43,25 @@ export function startOfLocalDay(now = new Date()): Date {
   return new Date(midnightLocal - offset);
 }
 
+// Scoring: a correct answer is worth a base 50 points plus up to 90 more for
+// speed — the whole bonus is gone after 8 seconds. Two players with the same
+// number of correct answers are then separated by how fast they were, which is
+// what the blitz is actually about (and it rewards a fast run over a slow
+// question-hog). Wrong answers and skips score nothing.
+export const TRAIN_BASE_POINTS = 50;
+export const TRAIN_SPEED_POINTS = 90;
+export const TRAIN_SPEED_WINDOW_MS = 8_000;
+
+export function trainPoints(elapsedMs: number): number {
+  if (!Number.isFinite(elapsedMs)) return TRAIN_BASE_POINTS;
+  const speed = Math.max(0, Math.min(1, 1 - elapsedMs / TRAIN_SPEED_WINDOW_MS));
+  return TRAIN_BASE_POINTS + Math.round(TRAIN_SPEED_POINTS * speed);
+}
+
 export type TrainRow = {
   id: string;
   name: string;
+  score: number;
   correct: number;
   total: number;
   at: string;
@@ -62,9 +78,10 @@ export async function trainStandings(
 ): Promise<{ rows: TrainRow[]; mine: (TrainRow & { rank: number }) | null }> {
   const runs = await prisma.trainRun.findMany({
     where: since ? { createdAt: { gte: since } } : {},
-    orderBy: [{ correct: "desc" }, { createdAt: "asc" }],
+    orderBy: [{ score: "desc" }, { correct: "desc" }, { createdAt: "asc" }],
     select: {
       id: true,
+      score: true,
       correct: true,
       total: true,
       createdAt: true,
@@ -80,6 +97,7 @@ export async function trainStandings(
     best.set(r.user.id, {
       id: r.id,
       name: r.user.displayName,
+      score: r.score,
       correct: r.correct,
       total: r.total,
       at: r.createdAt.toISOString(),
