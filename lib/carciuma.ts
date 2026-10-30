@@ -81,6 +81,9 @@ export async function fillCarciumaBots(gameId: string, count = CARCIUMA_SEATS): 
 }
 
 export async function startCarciuma(gameId: string): Promise<void> {
+  // Every empty chair is taken by a local, like the tower's start: the table is
+  // always a full five-seat tavern, and a solo host is never stuck waiting.
+  await fillCarciumaBots(gameId);
   const seated = await prisma.carciumaPlayer.count({ where: { gameId } });
   if (seated < CARCIUMA_MIN_PLAYERS) {
     throw new Error(`e nevoie de cel puțin ${CARCIUMA_MIN_PLAYERS} jucători la masă`);

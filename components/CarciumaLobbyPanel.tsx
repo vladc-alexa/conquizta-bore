@@ -237,13 +237,15 @@ export default function CarciumaLobbyPanel({
               </button>
               <button
                 onClick={() => start(mine.id)}
-                disabled={busy !== null || filled < MIN_PLAYERS}
+                disabled={busy !== null}
                 className="bg-gradient-to-br from-[#8fd9a8] to-[#3f8f63] border-2 border-[#8fd9a880] rounded-lg text-[#08201a] font-cinzel text-[0.95rem] tracking-wider p-2.5 hover:brightness-110 active:translate-y-px disabled:opacity-40 cursor-pointer"
               >
                 {busy === "start" ? "Pornesc…" : "▶ Începe băutura"}
               </button>
               <div className="text-[#75938f] text-[0.7rem] text-center leading-snug">
-                {filled < MIN_PLAYERS ? `Mai e nevoie de ${MIN_PLAYERS - filled} jucător — cheamă localnici sau așteaptă pe cineva.` : `${filled} la masă. Poți porni.`}
+                {filled < MIN_PLAYERS
+                  ? `${filled} la masă — dacă pornești acum, scaunele goale se umplu cu localnici.`
+                  : `${filled} la masă. Poți porni.`}
               </div>
             </>
           ) : (

@@ -24,6 +24,8 @@ export default function CarciumaPage() {
   const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
+  // lobby: seating locals and starting the sitting from the table itself
+  const [lobbyBusy, setLobbyBusy] = useState<null | "bots" | "start">(null);
   const [flashSeat, setFlashSeat] = useState<number | null>(null);
   const roundRef = useRef<number>(-1);
 
@@ -112,6 +114,48 @@ export default function CarciumaPage() {
     router.push("/");
   }
 
+  // Lobby: the host seats locals and starts straight from the table, without
+  // walking back to the dashboard panel.
+  async function callLocals(count: number) {
+    if (lobbyBusy) return;
+    setLobbyBusy("bots");
+    setErr("");
+    try {
+      const r = await fetch(`/api/carciuma/${id}/bots`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setErr(d.error || "N-am putut chema localnicii.");
+      }
+    } catch {
+      setErr("Eroare de rețea.");
+    } finally {
+      setLobbyBusy(null);
+      void load();
+    }
+  }
+
+  async function startTable() {
+    if (lobbyBusy) return;
+    setLobbyBusy("start");
+    setErr("");
+    try {
+      const r = await fetch(`/api/carciuma/${id}/start`, { method: "POST" });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setErr(d.error || "Masa nu a pornit.");
+      }
+    } catch {
+      setErr("Eroare de rețea.");
+    } finally {
+      setLobbyBusy(null);
+      void load();
+    }
+  }
+
   const me = state?.players.find((p) => p.mine) ?? null;
   const openForMe = !!state?.question && !state.myAnswered && !picked && !!me && !me.passedOut && state.startsInMs <= 0;
   const msLeft = state?.question && state.startedAt ? Math.max(0, state.startedAt + state.windowMs - now) : 0;
@@ -187,9 +231,51 @@ export default function CarciumaPage() {
           />
 
           {state?.phase === "lobby" && (
-            <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-[#140b04]/70 backdrop-blur-[1px]">
-              <p className="font-display text-3xl text-[#ffd98e]">Masa se deschide…</p>
-              <p className="text-sm text-[#e6cfae]">{state.players.length}/5 scaune ocupate · gazda apasă „Începe”</p>
+            <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-1.5 overflow-y-auto bg-[#140b04]/78 px-3 py-2 text-center backdrop-blur-[1px]">
+              <p className="font-display text-2xl leading-tight text-[#ffd98e] sm:text-3xl">Masa se deschide…</p>
+              <p className="text-[0.8rem] text-[#e6cfae] sm:text-sm">
+                {state.players.length}/{state.seats} scaune ocupate
+                {state.players.some((p) => p.isBot) && (
+                  <span className="text-[#9d7c56]"> · localnicii sunt la masă</span>
+                )}
+              </p>
+              {state.isHost ? (
+                <>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void callLocals(1)}
+                      disabled={!!lobbyBusy || state.players.length >= state.seats}
+                      className="min-h-[44px] rounded-lg border border-[#6b4a24] bg-[#2c1c0c] px-3 py-1.5 text-sm text-[#f0d6a4] transition hover:border-[#c08850] disabled:opacity-45"
+                    >
+                      {lobbyBusy === "bots" ? "chem…" : "🎲 +1 localnic"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void callLocals(state.seats)}
+                      disabled={!!lobbyBusy || state.players.length >= state.seats}
+                      className="min-h-[44px] rounded-lg border border-[#6b4a24] bg-[#2c1c0c] px-3 py-1.5 text-sm text-[#f0d6a4] transition hover:border-[#c08850] disabled:opacity-45"
+                    >
+                      🎲 umple masa
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void startTable()}
+                    disabled={!!lobbyBusy || state.players.length < 1}
+                    className="min-h-[42px] rounded-xl border-2 border-[#a8703a] bg-[#3a2512] px-4 py-1.5 font-display text-base text-[#ffe4ac] transition hover:border-[#e2a34a] disabled:opacity-45 sm:min-h-[46px] sm:px-5 sm:py-2 sm:text-lg"
+                  >
+                    {lobbyBusy === "start" ? "Pornesc…" : "▶ Începe băutura"}
+                  </button>
+                  <p className="max-w-[22rem] text-[0.65rem] leading-snug text-[#9d7c56] sm:text-[0.7rem]">
+                    poți porni și singur — scaunele goale le iau localnicii
+                  </p>
+                </>
+              ) : (
+                <p className="max-w-[20rem] text-[0.75rem] leading-snug text-[#9d7c56]">
+                  gazda cheamă localnicii și pornește masa
+                </p>
+              )}
             </div>
           )}
 
