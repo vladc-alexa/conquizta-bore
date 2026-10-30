@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Tower from "@/components/Tower";
 import PromptText, { artPreview } from "@/components/PromptText";
+import { useAutoFocus, useNumberKeys } from "@/components/useAnswerKeys";
 import type { TowerState } from "@/lib/tower";
 
 export default function TowerGamePage() {
@@ -170,6 +171,23 @@ export default function TowerGamePage() {
     router.push("/tower");
   }
 
+  // 1-4 pick an option; the rapidă box is focused on every new question
+  const canPick =
+    !!state?.question && state.question.mode !== "rapide" && state.phase !== "done" && state.phase !== "lobby" && !picked && !state?.myAnswered && !state.players.find((p) => p.mine)?.eliminated;
+  useNumberKeys(
+    canPick
+      ? (i) => {
+          const o = state?.question && state.question.mode !== "rapide" ? state.question.options[i] : undefined;
+          if (o) void answer(o.id);
+        }
+      : null,
+    4,
+  );
+  const rapidRef = useAutoFocus<HTMLInputElement>(
+    !!state?.question && state.question.mode === "rapide" && state.phase !== "done" && !picked && !state?.myAnswered,
+    state?.question?.id,
+  );
+
   if (!state) {
     return (
       <div className="w-full max-w-3xl text-center text-[#75938f] py-16">
@@ -179,6 +197,7 @@ export default function TowerGamePage() {
   }
 
   const me = state.players.find((p) => p.mine) ?? null;
+
   const champion = state.players.find((p) => p.id === state.winnerId) ?? null;
   const eliminated = state.players.find((p) => p.id === state.eliminatedId) ?? null;
   const ranked = [...state.players].sort((a, b) => b.rungs - a.rungs || b.score - a.score);
@@ -330,8 +349,8 @@ export default function TowerGamePage() {
                         if (e.key === "Enter") answerTyped();
                       }}
                       disabled={!!picked || state.myAnswered || !!me?.eliminated}
+                      ref={rapidRef}
                       inputMode="numeric"
-                      autoFocus
                       placeholder="răspunsul tău"
                       className="flex-1 min-w-0 bg-[#050d0b] border-2 border-[#1e3a34] focus:border-[#4d7a76] rounded-xl px-3 py-2 text-[0.95rem] text-[#e6f2ef] outline-none disabled:opacity-60 tabular-nums"
                     />
@@ -364,7 +383,7 @@ export default function TowerGamePage() {
                             : "border-[#1e3a34] bg-[#050d0b] text-[#cbdcda] hover:border-[#4d7a76]"
                       } disabled:opacity-60`}
                     >
-                      <span className="text-[#75938f] mr-2">{"ABCD"[i]}</span>
+                      <span className="text-[#75938f] mr-2"><span className="text-[#6f9c99]">{i + 1}·</span>{"ABCD"[i]}</span>
                       {o.text}
                       {isTruth && (
                         <span className="ml-2 text-[0.72rem] font-bold uppercase tracking-wider text-[#8ff0b0]">
