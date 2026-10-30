@@ -5,7 +5,8 @@
 // you got right. Results land in the "Antrenament" tab on the clasament page.
 
 import { useEffect, useRef, useState } from "react";
-import PromptText from "@/components/PromptText";
+import PromptText, { artPreview } from "@/components/PromptText";
+import { trainPoints } from "@/lib/trainStats";
 
 interface RapideQuestion {
   id: string;
@@ -23,12 +24,12 @@ interface GrilaQuestion {
 
 type Question = (RapideQuestion | GrilaQuestion) & { mode: "grila" | "rapide" };
 
-// 2 minutes is the game. `?t=<seconds>` shortens a run for smoke tests — it can
+// 90 seconds is the game. `?t=<seconds>` shortens a run for smoke tests — it can
 // only make your own run shorter, never score you more.
 const DURATION_MS = (() => {
-  if (typeof window === "undefined") return 120_000;
+  if (typeof window === "undefined") return 90_000;
   const s = Number(new URLSearchParams(window.location.search).get("t"));
-  return Number.isFinite(s) && s >= 5 && s <= 120 ? Math.floor(s) * 1000 : 120_000;
+  return Number.isFinite(s) && s >= 5 && s <= 90 ? Math.floor(s) * 1000 : 90_000;
 })();
 // enough questions for even a fast player: ~2.5s per question is 48 in two
 // minutes, so 40 grilă + 20 rapidă leaves headroom without a second fetch
@@ -61,6 +62,8 @@ export default function TrainPage() {
   const [idx, setIdx] = useState(0);
   const [correct, setCorrect] = useState(0);
   const [wrong, setWrong] = useState(0);
+  const [points, setPoints] = useState(0);
+  const [lastPoints, setLastPoints] = useState(0);
   const [timeLeft, setTimeLeft] = useState(DURATION_MS);
   const [feedback, setFeedback] = useState<{ state: "correct" | "wrong" | "skip"; reveal: string } | null>(null);
   const [inputValue, setInputValue] = useState("");
@@ -72,6 +75,7 @@ export default function TrainPage() {
     myAnswer: string;
     correctAnswer: string;
     isCorrect: boolean;
+    points: number;
   }
   const [review, setReview] = useState<ReviewItem[]>([]);
   const [showReview, setShowReview] = useState(false);
@@ -82,12 +86,13 @@ export default function TrainPage() {
   // today's training standing, filled after the run is saved
   const [standing, setStanding] = useState<{
     mine: { rank: number; correct: number } | null;
-    rows: { id: string; name: string; correct: number }[];
+    rows: { id: string; name: string; score: number; correct: number }[];
   } | null>(null);
 
   const queueRef = useRef<Question[]>([]);
   const idxRef = useRef(0);
   const correctRef = useRef(0);
+  const pointsRef = useRef(0);
   const servedRef = useRef(0);
   const answeredRef = useRef(false);
   const deadlineRef = useRef(0);
@@ -141,7 +146,7 @@ export default function TrainPage() {
       const res = await fetch("/api/train/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ correct: correctRef.current, total: servedRef.current }),
+        body: JSON.stringify({ score: pointsRef.current, correct: correctRef.current, total: servedRef.current }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -183,9 +188,14 @@ export default function TrainPage() {
     const elapsedMs = Math.max(0, Date.now() - questionStartRef.current);
     servedRef.current += 1;
 
+    // speed is the whole point: a correct answer pays 50 + up to 90 for pace
+    const pts = isCorrect ? trainPoints(elapsedMs) : 0;
     if (isCorrect) {
       correctRef.current += 1;
       setCorrect((c) => c + 1);
+      pointsRef.current += pts;
+      setPoints(pointsRef.current);
+      setLastPoints(pts);
     } else {
       setWrong((w) => w + 1);
     }
@@ -204,6 +214,7 @@ export default function TrainPage() {
           myAnswer: opts?.skipped ? "—" : myAnswer || "—",
           correctAnswer: revealFor(q),
           isCorrect,
+          points: pts,
         },
       ]);
     }
@@ -246,7 +257,10 @@ export default function TrainPage() {
     idxRef.current = 0;
     setCorrect(0);
     setWrong(0);
+    setPoints(0);
+    setLastPoints(0);
     correctRef.current = 0;
+    pointsRef.current = 0;
     servedRef.current = 0;
     setReview([]);
     setShowReview(false);
@@ -334,8 +348,8 @@ export default function TrainPage() {
         <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-7 flex flex-col gap-4 text-center">
           <h1 className="!mb-0">🏋️ Antrenament</h1>
           <p className="text-[#cbdcda] text-[1.05rem] leading-relaxed">
-            Ai <strong className="text-[#f0cf9a]">2 minute</strong> să răspunzi corect la cât mai multe
-            întrebări.
+            Ai <strong className="text-[#f0cf9a]">90 de secunde</strong> să aduni cât mai multe puncte:
+            fiecare răspuns corect ia 50 de puncte plus până la 90 după cât de repede răspunzi.
             <br />
             Mix de <strong className="text-[#9ec6c1]">2 grilă</strong> și{" "}
             <strong className="text-[#9ec6c1]">1 rapidă</strong>, fără pauză.
@@ -353,7 +367,7 @@ export default function TrainPage() {
             {phase === "loading" ? "Se încarcă…" : "▶ Pornește cronometrul"}
           </button>
           <div className="text-[#75938f] text-[0.8rem]">
-            Scorul tău zilei apare în <a href="/leaderboard?tab=train" className="underline hover:text-[#9ec6c1]">clasament</a>.
+            Scorul tău zilei apare în <a href="/leaderboard" className="underline hover:text-[#9ec6c1]">clasament</a>.
           </div>
         </div>
       </div>
@@ -363,18 +377,22 @@ export default function TrainPage() {
   // ---------- finished ----------
   if (phase === "finished") {
     const served = servedRef.current;
-    const score = correctRef.current;
-    const accuracy = served ? Math.round((score / served) * 100) : 0;
+    const correctCount = correctRef.current;
+    const score = pointsRef.current;
+    const accuracy = served ? Math.round((correctCount / served) * 100) : 0;
     return (
       <>
         <div className="w-full max-w-[560px] mx-auto bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-7 flex flex-col gap-4 text-center">
           <h2 className="font-cinzel text-[#9ec6c1] text-[1.35rem]">⏱ Timpul a expirat</h2>
-          <div className="font-cinzel text-[#f0cf9a] text-[3.4rem] leading-none">{score}</div>
+          <div className="font-cinzel text-[#f0cf9a] text-[3.4rem] leading-none tabular-nums">
+            {score}
+          </div>
           <div className="text-[#cbdcda] text-[0.95rem] leading-relaxed">
-            răspunsuri corecte în 2 minute
+            puncte în 90 de secunde
             <br />
             <span className="text-[#8fb0ac] text-[0.85rem]">
-              {served === 1 ? "1 întrebare jucată" : `${served} întrebări jucate`} · {accuracy}% precizie · {wrong}{wrong === 1 ? " greșită" : " greșite"}
+              {correctCount === 1 ? "1 răspuns corect" : `${correctCount} răspunsuri corecte`} din{" "}
+              {served === 1 ? "1 întrebare" : `${served} întrebări`} · {accuracy}% precizie
             </span>
           </div>
 
@@ -392,7 +410,7 @@ export default function TrainPage() {
                 <div key={r.id} className="flex items-center gap-2 text-[0.85rem]">
                   <span className="w-5 text-[#75938f]">{i + 1}.</span>
                   <span className="min-w-0 flex-1 truncate text-[#cbdcda]">{r.name}</span>
-                  <span className="text-[#9ec6c1] font-cinzel">{r.correct}</span>
+                  <span className="text-[#9ec6c1] font-cinzel tabular-nums">{r.score} p</span>
                 </div>
               ))}
             </div>
@@ -412,7 +430,7 @@ export default function TrainPage() {
               Recenzie ({review.length})
             </button>
             <a
-              href="/leaderboard?tab=train"
+              href="/leaderboard"
               className="flex-1 min-w-[130px] text-center bg-gradient-to-br from-[#2c514c] to-[#101f1c] border-2 border-[#4d7a76a0] rounded-lg text-[#e2eeeb] font-cinzel p-3 hover:brightness-125"
             >
               👑 Clasament
@@ -445,7 +463,7 @@ export default function TrainPage() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[0.75rem] text-[#75938f]">#{i + 1}</span>
-                      <span className="text-[0.85rem]">{r.isCorrect ? "✔" : "✖"}</span>
+                      <span className="text-[0.85rem]">{r.isCorrect ? `✔ +${r.points} p` : "✖"}</span>
                     </div>
                     <div className="text-[0.9rem] text-[#cbdcda] leading-snug">
                       <PromptText text={r.prompt} />
@@ -498,6 +516,7 @@ export default function TrainPage() {
         <div className="flex items-center gap-4">
           <span className="text-[0.75rem] text-[#75938f]">grilă + rapidă</span>
           <span className="font-cinzel text-[#8fd9a8] text-[1.05rem]">{correct} ✓</span>
+          <span className="font-cinzel text-[#f0cf9a] text-[1.05rem] tabular-nums">{points} p</span>
           <span
             className={`font-cinzel text-[1.6rem] leading-none tabular-nums ${urgent ? "text-red-400" : "text-[#f0cf9a]"}`}
           >

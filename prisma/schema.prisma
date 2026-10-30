@@ -409,6 +409,8 @@ model TrainRun {
   userId    String   @db.Uuid
   correct   Int
   total     Int
+  // speed-weighted points — this, not the raw count, is what the clasament ranks
+  score     Int      @default(0)
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

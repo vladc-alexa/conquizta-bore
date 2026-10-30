@@ -261,14 +261,14 @@ export default function Dashboard() {
                 </button>
               </div>
               <p className="text-[#8fb0ac] text-[0.8rem] leading-snug">
-                2 minute, cât mai multe corecte. Mix de grilă și rapidă.
+                90 de secunde, cât mai multe puncte. Mix de grilă și rapidă.
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <a
                   href="/train"
                   className="flex-1 min-w-[140px] text-center bg-gradient-to-br from-[#8fd9a8] to-[#3f8f63] border-2 border-[#8fd9a880] rounded-lg text-[#08201a] font-cinzel text-[0.9rem] tracking-wider p-2.5 hover:brightness-110 active:translate-y-px"
                 >
-                  ▶ Pornește 2 minute
+                  ▶ Pornește 90 de secunde
                 </a>
                 <a
                   href="/leaderboard?tab=train"
@@ -278,8 +278,8 @@ export default function Dashboard() {
                 </a>
               </div>
               <p className="mt-auto pt-1 text-[0.72rem] leading-relaxed text-[#5f7f7b]">
-                2 grilă : 1 rapidă · cronometrul nu stă · fiecare run intră în
-                 clasamentul de antrenament
+                2 grilă : 1 rapidă · punctele cresc cu viteza · cel mai bun run
+                al tău intră în clasament
               </p>
             </section>
           )}
