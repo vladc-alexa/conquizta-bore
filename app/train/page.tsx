@@ -5,7 +5,7 @@
 // you got right. Results land in the "Antrenament" tab on the clasament page.
 
 import { useEffect, useRef, useState } from "react";
-import { useNumberKeys } from "@/components/useAnswerKeys";
+import { useAutoFocus, useNumberKeys } from "@/components/useAnswerKeys";
 import PromptText, { artPreview } from "@/components/PromptText";
 import { trainPoints } from "@/lib/trainStats";
 
@@ -70,6 +70,15 @@ export default function TrainPage() {
   const [inputValue, setInputValue] = useState("");
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
 
+  // the question on screen, and the focus hook for its rapidă box. Both must be
+  // declared above the phase guards: the old focus-on-timeout fired before the
+  // (disabled) input was painted, which is why players had to click into it.
+  const current = queue[idx];
+  const rapidRef = useAutoFocus<HTMLInputElement>(
+    phase === "playing" && current?.mode === "rapide" && !feedback,
+    current?.id,
+  );
+
   interface ReviewItem {
     id: string;
     prompt: string;
@@ -99,7 +108,6 @@ export default function TrainPage() {
   const deadlineRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const advanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const sessionIdRef = useRef<string | null>(null);
   const questionStartRef = useRef(0);
 
@@ -179,7 +187,6 @@ export default function TrainPage() {
     setInputValue("");
     setSelectedOption(null);
     questionStartRef.current = Date.now();
-    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const submit = (isCorrect: boolean, opts?: { answer?: string; selectedOptionId?: string; skipped?: boolean }) => {
@@ -327,8 +334,7 @@ export default function TrainPage() {
       setPhase("playing");
       clearTimers();
       timerRef.current = setInterval(tick, 100);
-      setTimeout(() => inputRef.current?.focus(), 0);
-    } catch {
+      } catch {
       setPhase("idle");
       setLoadError("Nu am putut încărca întrebările. Verifică conexiunea.");
     }
@@ -513,7 +519,7 @@ export default function TrainPage() {
   }
 
   // ---------- playing ----------
-  const q = queue[idx];
+  const q = current;
   const isGrila = q?.mode === "grila";
   const urgent = timeLeft <= 15_000;
 
@@ -589,7 +595,7 @@ export default function TrainPage() {
         ) : (
           <div className="flex items-center gap-2">
             <input
-              ref={inputRef}
+              ref={rapidRef}
               type="text"
               inputMode="numeric"
               value={inputValue}
