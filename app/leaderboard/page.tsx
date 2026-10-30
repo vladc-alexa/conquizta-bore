@@ -1,13 +1,24 @@
 "use client";
 
-// Single clasament: the 90-second training blitz is the only ranked game.
-// Each player is shown with their best run — points (speed-weighted), how many
-// answers that run got right, and when it happened. "Azi" resets at Romanian
-// midnight; "Tot timpul" is the all-time best run.
+// Single clasament: the 90-second training blitz is the ranked game.
+// Each row shows the best run's points (speed-weighted) and, in brackets, the
+// old PRC rating — the number the site ranked on before the blitz existed. In
+// "Tot timpul" players who never ran a blitz keep their place through that
+// rating, so the board doesn't start empty on day one.
+// "Azi" resets at Romanian midnight.
 import { useCallback, useEffect, useState } from "react";
 
-type Row = { id: string; name: string; score: number; correct: number; total: number; at: string };
-type Mine = Row & { rank: number };
+type Row = {
+  id: string;
+  name: string;
+  points: number;
+  correct: number;
+  total: number;
+  at: string | null;
+  prc: number | null;
+  basis: "run" | "rating";
+};
+type Mine = Row & { rank: number | null };
 
 const card =
   "bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl";
@@ -17,8 +28,12 @@ const tabBtn = (on: boolean) =>
       ? "border-[#9ec6c1] bg-[#1a3a35] text-[#e2eeeb]"
       : "border-[#1e3a34] bg-[#0c1a17] text-[#8fb0ac] hover:text-[#9ec6c1]"
   }`;
+const GRID = "grid-cols-[2rem_minmax(0,1fr)_7rem_3.5rem_3rem]";
 
-function when(iso: string) {
+const num = (n: number) => n.toLocaleString("ro-RO");
+
+function when(iso: string | null) {
+  if (!iso) return "—";
   const d = new Date(iso);
   const today = new Date();
   const sameDay = d.toDateString() === today.toDateString();
@@ -57,7 +72,7 @@ export default function LeaderboardPage() {
   }, [period, load]);
 
   return (
-    <div className="w-full max-w-[720px] mx-auto flex flex-col gap-4 py-4">
+    <div className="w-full max-w-[760px] mx-auto flex flex-col gap-4 py-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <a
           href="/"
@@ -94,15 +109,22 @@ export default function LeaderboardPage() {
         </div>
 
         <p className="text-[0.75rem] text-[#75938f] leading-snug">
-          Fiecare jucător apare cu cel mai bun run al lui de 90 de secunde. Un răspuns corect ia 50 de
-          puncte plus până la 90 după cât de repede ai răspuns.
+          Punctele adună tot ce ai răspuns {period === "day" ? "azi" : "de când există jocul"} — blitz de
+          90 de secunde, cârciumă și turn. Un răspuns corect ia 50 de puncte plus până la 90 după cât
+          de repede ai răspuns. În paranteze e ratingul vechi (PRC); cine nu a jucat încă apare pe
+          locul lui din rating.
         </p>
 
         {mine && (
-          <div className="rounded-xl border border-[#8fd9a8]/40 bg-[#0f2a20] px-3 py-2 flex items-center gap-2 text-[0.85rem]">
+          <div className="rounded-xl border border-[#8fd9a8]/40 bg-[#0f2a20] px-3 py-2 flex flex-wrap items-center gap-2 text-[0.85rem]">
             <span className="text-[#8fd9a8] font-cinzel">locul tău</span>
-            <span className="text-[#b9f5cd] font-cinzel">#{mine.rank}</span>
-            <span className="ml-auto text-[#b9f5cd] font-cinzel tabular-nums">{mine.score} p</span>
+            <span className="text-[#b9f5cd] font-cinzel">{mine.rank ? `#${mine.rank}` : "—"}</span>
+            <span className="ml-auto text-[#b9f5cd] font-cinzel tabular-nums">
+              {mine.basis === "rating" ? "—" : `${num(mine.points)} p`}
+              {mine.prc != null && (
+                <span className="text-[#8fb0ac] font-normal text-[0.78rem]">{" "}({num(mine.prc)})</span>
+              )}
+            </span>
           </div>
         )}
 
@@ -128,10 +150,10 @@ export default function LeaderboardPage() {
 
         {rows.length > 0 && (
           <div className="flex flex-col">
-            <div className="grid grid-cols-[2rem_1fr_4.5rem_3.5rem_3rem] gap-2 text-[0.62rem] uppercase tracking-wider text-[#75938f] pb-1 border-b border-[#1e3a3450]">
+            <div className={`grid ${GRID} gap-2 text-[0.62rem] uppercase tracking-wider text-[#75938f] pb-1 border-b border-[#1e3a3450]`}>
               <span>#</span>
               <span>jucător</span>
-              <span className="text-right">puncte</span>
+              <span className="text-right">puncte (rating)</span>
               <span className="text-right">corecte</span>
               <span className="text-right">când</span>
             </div>
@@ -140,14 +162,23 @@ export default function LeaderboardPage() {
               return (
                 <div
                   key={r.id}
-                  className={`grid grid-cols-[2rem_1fr_4.5rem_3.5rem_3rem] gap-2 items-center py-1.5 border-b border-[#1e3a3430] text-[0.88rem] ${
+                  className={`grid ${GRID} gap-2 items-center py-1.5 border-b border-[#1e3a3430] text-[0.88rem] ${
                     isMe ? "text-[#b9f5cd]" : "text-[#cbdcda]"
                   }`}
                 >
                   <span className="font-cinzel text-[#75938f]">{i + 1}.</span>
                   <span className="min-w-0 truncate">{r.name}</span>
-                  <span className="text-right font-cinzel tabular-nums text-[#f0cf9a]">{r.score}</span>
-                  <span className="text-right text-[0.8rem] text-[#8fb0ac] tabular-nums">{r.correct}</span>
+                  <span className="text-right font-cinzel tabular-nums text-[#f0cf9a]">
+                    {r.basis === "rating" ? <span className="text-[#75938f]">—</span> : num(r.points)}
+                    {r.prc != null && (
+                      <span className="ml-1 text-[#75938f] font-normal text-[0.74rem]">
+                        {" "}({num(r.prc)})
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-right text-[0.8rem] text-[#8fb0ac] tabular-nums">
+                    {r.basis === "rating" ? "—" : r.correct}
+                  </span>
                   <span className="text-right text-[0.72rem] text-[#75938f]">{when(r.at)}</span>
                 </div>
               );

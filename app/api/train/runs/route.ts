@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
-import { startOfLocalDay, trainStandings } from "@/lib/trainStats";
+import { combinedStandings, invalidateStandings, startOfLocalDay } from "@/lib/trainStats";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +22,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "score, correct and total required" }, { status: 400 });
   }
 
+  invalidateStandings();
   await prisma.trainRun.create({
     data: {
       userId: session.sub,
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     },
   });
 
-  const { mine, rows } = await trainStandings(prisma, {
+  const { mine, rows } = await combinedStandings(prisma, {
     since: startOfLocalDay(),
     limit: 10,
     userId: session.sub,

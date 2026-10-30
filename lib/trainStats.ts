@@ -1,13 +1,23 @@
 import type { PrismaClient } from "@prisma/client";
 
-// Training-blitz standings helpers.
+// Clasament helpers.
 //
 // "Today" means today in Romania (the site's audience), not UTC: a run at 00:30
 // in Bucharest must land in the new day even though the server clock is still
 // on yesterday. Intl gives us the wall-clock parts for the zone; from those we
 // can rebuild the UTC instant of local midnight.
+//
+// Scoring is one formula everywhere: a correct answer is worth 50 points plus up
+// to 90 more depending on how fast it came (full bonus under 2 s, nothing left
+// at 8 s). Training runs store their own total; carciuma and tower answers are
+// scored from their stored response time, so every game feeds the same board.
 
 const TZ = "Europe/Bucharest";
+
+/** window in which the speed bonus decays to zero */
+export const SPEED_WINDOW_MS = 8_000;
+const BASE_POINTS = 50;
+const SPEED_POINTS = 90;
 
 function tzOffsetMs(date: Date, tz = TZ): number {
   const parts = Object.fromEntries(
@@ -39,23 +49,24 @@ function tzOffsetMs(date: Date, tz = TZ): number {
 export function startOfLocalDay(now = new Date()): Date {
   const offset = tzOffsetMs(now);
   const local = new Date(now.getTime() + offset);
-  const midnightLocal = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate());
-  return new Date(midnightLocal - offset);
+  const startLocal = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate());
+  return new Date(startLocal - offset);
 }
 
-// Scoring: a correct answer is worth a base 50 points plus up to 90 more for
-// speed — the whole bonus is gone after 8 seconds. Two players with the same
-// number of correct answers are then separated by how fast they were, which is
-// what the blitz is actually about (and it rewards a fast run over a slow
-// question-hog). Wrong answers and skips score nothing.
-export const TRAIN_BASE_POINTS = 50;
-export const TRAIN_SPEED_POINTS = 90;
-export const TRAIN_SPEED_WINDOW_MS = 8_000;
-
+/** Points for one correct answer, given how long it took. */
 export function trainPoints(elapsedMs: number): number {
-  if (!Number.isFinite(elapsedMs)) return TRAIN_BASE_POINTS;
-  const speed = Math.max(0, Math.min(1, 1 - elapsedMs / TRAIN_SPEED_WINDOW_MS));
-  return TRAIN_BASE_POINTS + Math.round(TRAIN_SPEED_POINTS * speed);
+  const speed = Math.max(0, Math.min(1, 1 - elapsedMs / SPEED_WINDOW_MS));
+  return BASE_POINTS + Math.round(SPEED_POINTS * speed);
+}
+
+// The board is polled by every open leaderboard tab, and the aggregates scan
+// three answer tables. Cache the ranked list for a few seconds; posting a run
+// invalidates it so the results screen never shows a pre-run rank.
+const CACHE_TTL_MS = 15_000;
+let cache: { key: string; at: number; rows: TrainRow[] } | null = null;
+
+export function invalidateStandings() {
+  cache = null;
 }
 
 export type TrainRow = {
@@ -67,46 +78,103 @@ export type TrainRow = {
   at: string;
 };
 
-/**
- * Best run per player since `since`, ranked by score. Someone who trains five
- * times keeps their best run — the tab answers "who is best today", not "who
- * played most". Ties go to whoever posted the score first.
- */
-export async function trainStandings(
-  prisma: PrismaClient,
-  { since, limit = 20, userId }: { since: Date | null; limit?: number; userId?: string },
-): Promise<{ rows: TrainRow[]; mine: (TrainRow & { rank: number }) | null }> {
-  const runs = await prisma.trainRun.findMany({
-    where: since ? { createdAt: { gte: since } } : {},
-    orderBy: [{ score: "desc" }, { correct: "desc" }, { createdAt: "asc" }],
-    select: {
-      id: true,
-      score: true,
-      correct: true,
-      total: true,
-      createdAt: true,
-      user: { select: { id: true, displayName: true, hideScore: true } },
-    },
-    take: 2000,
-  });
+type Aggregate = { id: string; score: number; correct: number; total: number; at: Date };
 
-  const best = new Map<string, TrainRow>();
-  for (const r of runs) {
-    if (r.user.hideScore) continue;
-    if (best.has(r.user.id)) continue; // already the best run for this player
-    best.set(r.user.id, {
+/** SQL expression for one correct answer's points on the same scale as trainPoints. */
+const PTS = `(${BASE_POINTS} + round(${SPEED_POINTS} * greatest(0, least(1, 1 - coalesce(%TIME%, 8000)::float8 / ${SPEED_WINDOW_MS}))))`;
+
+/**
+ * Everything a player has scored: finished training runs, every carciuma answer
+ * and every tower answer. Ranked by points; `since` limits to a window (today).
+ */
+export async function combinedStandings(
+  prisma: PrismaClient,
+  opts: { since: Date | null; limit?: number; userId?: string },
+): Promise<{ rows: TrainRow[]; mine: TrainRow | null }> {
+  const since = opts.since ?? new Date(0);
+  const limit = opts.limit ?? 50;
+  const rows = await rankAll(prisma, since);
+  const mine = opts.userId ? (rows.find((r) => r.id === opts.userId) ?? null) : null;
+  return { rows: rows.slice(0, limit), mine };
+}
+
+/** Full ranked list (every player with at least one answer) for a time window. */
+async function rankAll(prisma: PrismaClient, since: Date): Promise<TrainRow[]> {
+  const key = since.toISOString();
+  if (cache && cache.key === key && Date.now() - cache.at < CACHE_TTL_MS) return cache.rows;
+
+  const runs = await prisma.$queryRawUnsafe<Aggregate[]>(
+    `SELECT "userId" AS id, sum("score")::int AS score, sum("correct")::int AS correct,
+            sum("total")::int AS total, max("createdAt") AS at
+       FROM "TrainRun" WHERE "createdAt" >= $1 GROUP BY 1`,
+    since,
+  );
+
+  const carciuma = await prisma.$queryRawUnsafe<Aggregate[]>(
+    `SELECT p."userId" AS id,
+            sum(CASE WHEN a."isCorrect" THEN ${PTS.replace("%TIME%", 'a."elapsedMilliseconds"')} ELSE 0 END)::int AS score,
+            count(*) FILTER (WHERE a."isCorrect")::int AS correct,
+            count(*)::int AS total,
+            max(a."createdAt") AS at
+       FROM "CarciumaAnswer" a JOIN "CarciumaPlayer" p ON p.id = a."playerId"
+      WHERE p."userId" IS NOT NULL AND a."createdAt" >= $1
+      GROUP BY 1`,
+    since,
+  );
+
+  const tower = await prisma.$queryRawUnsafe<Aggregate[]>(
+    `SELECT p."userId" AS id,
+            sum(CASE WHEN a."isCorrect" THEN ${PTS.replace("%TIME%", 'a."elapsedMilliseconds"')} ELSE 0 END)::int AS score,
+            count(*) FILTER (WHERE a."isCorrect")::int AS correct,
+            count(*)::int AS total,
+            max(a."answeredAt") AS at
+       FROM "TowerAnswer" a JOIN "TowerPlayer" p ON p.id = a."playerId"
+      WHERE p."userId" IS NOT NULL AND a."answeredAt" >= $1
+      GROUP BY 1`,
+    since,
+  );
+
+  const merged = new Map<string, Aggregate>();
+  for (const part of [runs, carciuma, tower]) {
+    for (const row of part) {
+      if (!row.id) continue;
+      const prev = merged.get(row.id);
+      if (!prev) {
+        merged.set(row.id, { ...row, at: new Date(row.at) });
+        continue;
+      }
+      merged.set(row.id, {
+        id: row.id,
+        score: prev.score + row.score,
+        correct: prev.correct + row.correct,
+        total: prev.total + row.total,
+        at: new Date(Math.max(prev.at.getTime(), new Date(row.at).getTime())),
+      });
+    }
+  }
+
+  const ranked = [...merged.values()]
+    .filter((r) => r.total > 0 || r.score > 0)
+    .sort((a, b) => b.score - a.score || b.correct - a.correct);
+
+  const ids = ranked.map((r) => r.id);
+  const users = await prisma.user.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, displayName: true, hideScore: true },
+  });
+  const byId = new Map(users.map((u) => [u.id, u]));
+
+  const rows: TrainRow[] = ranked
+    .filter((r) => byId.has(r.id) && !byId.get(r.id)!.hideScore)
+    .map((r) => ({
       id: r.id,
-      name: r.user.displayName,
+      name: byId.get(r.id)!.displayName,
       score: r.score,
       correct: r.correct,
       total: r.total,
-      at: r.createdAt.toISOString(),
-    });
-  }
+      at: r.at.toISOString(),
+    }));
 
-  const ranked = [...best.values()];
-  const rows = ranked.slice(0, limit);
-  const myRow = userId ? ranked.findIndex((r) => best.get(userId)?.id === r.id) : -1;
-  const mine = userId && myRow >= 0 ? { ...ranked[myRow], rank: myRow + 1 } : null;
-  return { rows, mine };
+  cache = { key: since.toISOString(), at: Date.now(), rows };
+  return rows;
 }
