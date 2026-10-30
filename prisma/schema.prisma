@@ -172,14 +172,19 @@ model TowerAnswer {
 }
 
 model ChatMessage {
-  id         String   @id @default(uuid()) @db.Uuid
-  userId     String?  @db.Uuid
-  authorName String   @db.VarChar(32)
-  text       String   @db.VarChar(2000)
-  createdAt  DateTime @default(now())
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String?   @db.Uuid
+  authorName String    @db.VarChar(32)
+  text       String    @db.VarChar(2000)
+  createdAt  DateTime  @default(now())
+  editedAt   DateTime?
+  replyToId  String?   @db.Uuid
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  replyTo    ChatMessage?  @relation("ChatReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies    ChatMessage[] @relation("ChatReplies")
 
   @@index([createdAt])
+  @@index([replyToId])
 }
 
 model Category {

@@ -28,7 +28,10 @@ const tabBtn = (on: boolean) =>
       ? "border-[#9ec6c1] bg-[#1a3a35] text-[#e2eeeb]"
       : "border-[#1e3a34] bg-[#0c1a17] text-[#8fb0ac] hover:text-[#9ec6c1]"
   }`;
-const GRID = "grid-cols-[2rem_minmax(0,1fr)_7rem_3.5rem_3rem]";
+// mobile: no room for "când" — drop that column below sm so the board never
+// overflows the card on a phone. Rating goes under the points on narrow screens.
+const GRID =
+  "grid-cols-[1.3rem_minmax(0,1fr)_4.4rem_2.4rem] sm:grid-cols-[2rem_minmax(0,1fr)_7rem_3.5rem_3rem]";
 
 const num = (n: number) => n.toLocaleString("ro-RO");
 
@@ -88,7 +91,7 @@ export default function LeaderboardPage() {
         </a>
       </div>
 
-      <div className={`${card} p-4 flex flex-col gap-3`}>
+      <div className={`${card} p-3 sm:p-4 flex flex-col gap-3`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="font-cinzel text-[#9ec6c1] text-[1.15rem] tracking-widest">👑 Clasament</h1>
           <div className="flex items-center gap-1.5">
@@ -108,11 +111,9 @@ export default function LeaderboardPage() {
           </div>
         </div>
 
-        <p className="text-[0.75rem] text-[#75938f] leading-snug">
-          Punctele adună tot ce ai răspuns {period === "day" ? "azi" : "de când există jocul"} — blitz de
-          90 de secunde, cârciumă și turn. Un răspuns corect ia 50 de puncte plus până la 90 după cât
-          de repede ai răspuns. În paranteze e ratingul vechi (PRC); cine nu a jucat încă apare pe
-          locul lui din rating.
+        <p className="text-[0.72rem] sm:text-[0.75rem] text-[#75938f] leading-snug">
+          Puncte = răspunsuri corecte {period === "day" ? "azi" : "de când există jocul"} (blitz 90s,
+          cârciumă, turn), mai rapid = mai multe. În paranteze e ratingul vechi (PRC).
         </p>
 
         {mine && (
@@ -150,36 +151,39 @@ export default function LeaderboardPage() {
 
         {rows.length > 0 && (
           <div className="flex flex-col">
-            <div className={`grid ${GRID} gap-2 text-[0.62rem] uppercase tracking-wider text-[#75938f] pb-1 border-b border-[#1e3a3450]`}>
+            <div className={`grid ${GRID} gap-1.5 sm:gap-2 text-[0.58rem] sm:text-[0.62rem] uppercase tracking-wider text-[#75938f] pb-1 border-b border-[#1e3a3450]`}>
               <span>#</span>
               <span>jucător</span>
-              <span className="text-right">puncte (rating)</span>
-              <span className="text-right">corecte</span>
-              <span className="text-right">când</span>
+              <span className="text-right">puncte<span className="hidden sm:inline"> (rating)</span></span>
+              <span className="text-right">
+                <span className="sm:hidden">✓</span>
+                <span className="hidden sm:inline">corecte</span>
+              </span>
+              <span className="text-right hidden sm:block">când</span>
             </div>
             {rows.map((r, i) => {
               const isMe = mine?.id === r.id;
               return (
                 <div
                   key={r.id}
-                  className={`grid ${GRID} gap-2 items-center py-1.5 border-b border-[#1e3a3430] text-[0.88rem] ${
+                  className={`grid ${GRID} gap-1.5 sm:gap-2 items-center py-1.5 border-b border-[#1e3a3430] text-[0.82rem] sm:text-[0.88rem] ${
                     isMe ? "text-[#b9f5cd]" : "text-[#cbdcda]"
                   }`}
                 >
                   <span className="font-cinzel text-[#75938f]">{i + 1}.</span>
                   <span className="min-w-0 truncate">{r.name}</span>
-                  <span className="text-right font-cinzel tabular-nums text-[#f0cf9a]">
+                  <span className="text-right font-cinzel tabular-nums text-[#f0cf9a] leading-tight">
                     {r.basis === "rating" ? <span className="text-[#75938f]">—</span> : num(r.points)}
                     {r.prc != null && (
-                      <span className="ml-1 text-[#75938f] font-normal text-[0.74rem]">
-                        {" "}({num(r.prc)})
+                      <span className="block text-[#75938f] font-normal text-[0.66rem] sm:text-[0.72rem]">
+                        ({num(r.prc)})
                       </span>
                     )}
                   </span>
                   <span className="text-right text-[0.8rem] text-[#8fb0ac] tabular-nums">
                     {r.basis === "rating" ? "—" : r.correct}
                   </span>
-                  <span className="text-right text-[0.72rem] text-[#75938f]">{when(r.at)}</span>
+                  <span className="text-right text-[0.72rem] text-[#75938f] hidden sm:block">{when(r.at)}</span>
                 </div>
               );
             })}

@@ -24,8 +24,10 @@ export async function GET(req: Request) {
     authorName: true,
     text: true,
     createdAt: true,
+    editedAt: true,
     userId: true,
     user: { select: { nameColor: true, isMuted: true } },
+    replyTo: { select: { id: true, authorName: true, text: true } },
   } as const;
 
   const raw = await prisma.chatMessage.findMany({
@@ -48,8 +50,11 @@ export async function GET(req: Request) {
     messages: messages.map((m) => ({
       id: m.id,
       authorName: m.authorName,
+      authorId: m.userId,
       text: m.text,
       createdAt: m.createdAt,
+      editedAt: m.editedAt,
+      replyTo: m.replyTo,
       authorColor: m.user?.nameColor ?? DEFAULT_CHAT_COLOR,
       muted: m.user?.isMuted ?? false,
       mentions: findMentionedNames(m.text, names).map((n) => {
@@ -80,8 +85,20 @@ export async function POST(req: Request) {
   if (!text) {
     return NextResponse.json({ error: "Mesajul nu poate fi gol." }, { status: 400 });
   }
+  // WhatsApp-style reply: only accept a parent that still exists (a reply can
+  // outlive nothing — the FK would 500 otherwise).
+  const replyToId = typeof body?.replyToId === "string" && body.replyToId ? body.replyToId : null;
+  if (replyToId) {
+    const parent = await prisma.chatMessage.findUnique({ where: { id: replyToId }, select: { id: true } });
+    if (!parent) return NextResponse.json({ error: "Mesajul la care răspunzi nu mai există." }, { status: 400 });
+  }
   const msg = await prisma.chatMessage.create({
-    data: { userId: session.sub, authorName: user.displayName, text: text.slice(0, 2000) },
+    data: {
+      userId: session.sub,
+      authorName: user.displayName,
+      text: text.slice(0, 2000),
+      replyToId,
+    },
     select: { id: true, authorName: true, text: true, createdAt: true },
   });
   return NextResponse.json({ message: msg });

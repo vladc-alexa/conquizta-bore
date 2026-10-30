@@ -26,8 +26,11 @@ type Mention = { id: string | null; name: string };
 interface ChatMessage {
   id: string;
   authorName: string;
+  authorId?: string | null;
   text: string;
   createdAt: string;
+  editedAt?: string | null;
+  replyTo?: { id: string; authorName: string; text: string } | null;
   authorColor: string;
   muted: boolean;
   mentions?: Mention[];
@@ -37,6 +40,12 @@ type RosterPlayer = { id: string; name: string; color: string | null; online: bo
 
 function clockTime(iso: string) {
   return new Date(iso).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" });
+}
+
+// one flat line for reply quotes (newlines / ASCII art would blow the bubble up)
+function oneLine(t: string) {
+  const s = t.replace(/\s+/g, " ").trim();
+  return s.length > 90 ? `${s.slice(0, 90)}…` : s;
 }
 
 const DOCK_KEY = "bore.chatdock.open";
@@ -59,6 +68,14 @@ export default function GeneralChat({
   const [chatInput, setChatInput] = useState("");
   const [sending, setSending] = useState(false);
   const [chatError, setChatError] = useState("");
+  // WhatsApp-style reply: the message we're quoting (null = plain message)
+  const [replyTo, setReplyTo] = useState<{ id: string; authorName: string; text: string } | null>(null);
+  // inline edit: the message being rewritten, with its draft text
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  // a quoted message clicked from a reply gets flashed so the eye finds it
+  const [flashId, setFlashId] = useState<string | null>(null);
+  const rowRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const [showColors, setShowColors] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -273,11 +290,12 @@ export default function GeneralChat({
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, replyToId: replyTo?.id ?? null }),
       });
       if (res.ok) {
         setChatInput("");
         setMention(null);
+        setReplyTo(null);
         loadChat(true);
       } else {
         const d = await res.json().catch(() => ({}));
@@ -296,6 +314,65 @@ export default function GeneralChat({
       if (res.ok) loadChat(true);
     } catch {
       /* ignore */
+    }
+  };
+
+  // ---- reply (WhatsApp-style) ----
+  const startReply = (m: ChatMessage) => {
+    setReplyTo({ id: m.id, authorName: m.authorName, text: m.text });
+    setEditing(null);
+    setMention(null);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  // jump to the quoted message and flash it for a moment
+  const jumpTo = (id: string) => {
+    const el = rowRefs.current.get(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setFlashId(id);
+  };
+
+  useEffect(() => {
+    if (!flashId) return;
+    const t = setTimeout(() => setFlashId(null), 1600);
+    return () => clearTimeout(t);
+  }, [flashId]);
+
+  // ---- inline edit ----
+  const startEdit = (m: ChatMessage) => {
+    setEditing({ id: m.id, text: m.text });
+    setReplyTo(null);
+    setMention(null);
+    setChatError("");
+  };
+
+  const saveEdit = async () => {
+    if (!editing || savingEdit) return;
+    const text = normalizeMessage(editing.text);
+    if (!text) {
+      setChatError("Mesajul nu poate fi gol.");
+      return;
+    }
+    setSavingEdit(true);
+    setChatError("");
+    try {
+      const res = await fetch(`/api/chat/${editing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (res.ok) {
+        setEditing(null);
+        loadChat(true);
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setChatError(d.error || "Mesajul nu a putut fi editat.");
+      }
+    } catch {
+      setChatError("Eroare de rețea.");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -355,56 +432,141 @@ export default function GeneralChat({
       {messages.length === 0 ? (
         <div className="text-[#75938f] text-[0.75rem] text-center p-4">Niciun mesaj încă. Spune salut!</div>
       ) : (
-        messages.map((m) => (
-          <div
-            key={m.id}
-            data-mention={pinged(m) ? "1" : undefined}
-            className={`text-[0.98rem] leading-relaxed flex items-start gap-1 group rounded-md ${
-              pinged(m) ? "border-l-2 border-[#ffd98e] bg-[#ffd98e12] pl-1.5 py-0.5" : ""
-            }`}
-          >
-            {/* art gets its own block under the name: a <pre> starts on the
-                next line instead of visually splitting the first row off */}
-            <div className={`flex-1 min-w-0 ${isArt(m.text) ? "flex flex-col" : "flex items-start gap-1"}`}>
-              <span
-                className="font-cinzel"
-                style={{
-                  color: m.authorColor,
-                  textShadow:
-                    m.authorColor === BLACK_CHAT_COLOR
-                      ? `-1.5px -1.5px 0 ${BLACK_NAME_OUTLINE}, 1.5px -1.5px 0 ${BLACK_NAME_OUTLINE}, -1.5px 1.5px 0 ${BLACK_NAME_OUTLINE}, 1.5px 1.5px 0 ${BLACK_NAME_OUTLINE}, 0 -1.5px 0 ${BLACK_NAME_OUTLINE}, 0 1.5px 0 ${BLACK_NAME_OUTLINE}, -1.5px 0 0 ${BLACK_NAME_OUTLINE}, 1.5px 0 0 ${BLACK_NAME_OUTLINE}, 0 0 8px rgba(181,126,220,0.7)`
-                      : "0 1px 2px rgba(0,0,0,0.9)",
-                }}
-              >
-                {m.authorName}
-                {m.muted && (
-                  <span className="text-[#75938f] text-[0.65rem] ml-1" title="mutat">
-                    🔇
-                  </span>
-                )}
-                {isArt(m.text) ? ":" : ": "}
-              </span>
-              <span className="text-[#cbdcda] flex-1 min-w-0">
-                <ChatText text={m.text} names={names} />
-              </span>
-            </div>
-            <span
-              className="mt-0.5 shrink-0 text-[0.58rem] tabular-nums text-[#5d7a76] group-hover:text-[#8fb0ac]"
-              title={new Date(m.createdAt).toLocaleString("ro-RO")}
+        messages.map((m) => {
+          const isMine = !!me && m.authorId === me.id;
+          const canEdit = !!me && !me.isMuted && (isMine || me.isAdmin);
+          const isEditing = editing?.id === m.id;
+          const isFlashing = flashId === m.id;
+          return (
+            <div
+              key={m.id}
+              ref={(el) => {
+                rowRefs.current.set(m.id, el);
+              }}
+              data-mention={pinged(m) ? "1" : undefined}
+              className={`text-[0.98rem] leading-relaxed flex items-start gap-1 group rounded-md transition-colors ${
+                pinged(m) ? "border-l-2 border-[#ffd98e] bg-[#ffd98e12] pl-1.5 py-0.5" : ""
+              } ${isFlashing ? "ring-2 ring-[#ffd98e]/70 bg-[#ffd98e14]" : ""}`}
             >
-              {clockTime(m.createdAt)}
-            </span>
-            {me?.isAdmin && (
-              <button
-                onClick={() => deleteMessage(m.id)}
-                className="text-[#75938f] opacity-0 group-hover:opacity-100 hover:text-red-400 text-[0.7rem] cursor-pointer"
-                title="Șterge mesajul"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        ))
+              {/* art gets its own block under the name: a <pre> starts on the
+                  next line instead of visually splitting the first row off */}
+              <div className="flex-1 min-w-0 flex flex-col">
+                {m.replyTo && (
+                  <button
+                    type="button"
+                    onClick={() => jumpTo(m.replyTo!.id)}
+                    className="mb-0.5 flex w-full min-w-0 items-baseline gap-1.5 rounded border-l-2 border-[#6f9c99] bg-[#122420] px-2 py-1 text-left text-[0.72rem] leading-snug text-[#8fb0ac] hover:bg-[#16302b] cursor-pointer"
+                    title="Vezi mesajul citat"
+                  >
+                    <span className="shrink-0 font-cinzel text-[#9ec6c1]">{m.replyTo.authorName}</span>
+                    <span className="min-w-0 truncate">{oneLine(m.replyTo.text)}</span>
+                  </button>
+                )}
+                {isEditing ? (
+                  <div className="flex flex-col gap-1 my-1">
+                    <textarea
+                      autoFocus
+                      value={editing.text}
+                      onChange={(e) => setEditing({ id: editing.id, text: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          setEditing(null);
+                        }
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          void saveEdit();
+                        }
+                      }}
+                      maxLength={2000}
+                      rows={Math.min(6, Math.max(2, editing.text.split("\n").length))}
+                      className="w-full resize-none bg-[#050d0b] border-2 border-[#6f9c99] rounded-lg text-[#cbdcda] text-base sm:text-[0.95rem] p-2 outline-none focus:border-[#9ec6c1] font-mono"
+                      aria-label="Editează mesajul"
+                    />
+                    <div className="flex items-center gap-1.5 text-[0.72rem]">
+                      <button
+                        onClick={() => void saveEdit()}
+                        disabled={savingEdit}
+                        className="rounded border border-[#8fd9a8]/60 bg-[#1a3a35] px-2 py-0.5 font-cinzel text-[#b9f5cd] cursor-pointer hover:brightness-125 disabled:opacity-40"
+                      >
+                        {savingEdit ? "Salvez…" : "Salvează"}
+                      </button>
+                      <button
+                        onClick={() => setEditing(null)}
+                        className="rounded border border-[#1e3a34] px-2 py-0.5 text-[#8fb0ac] cursor-pointer hover:text-[#cbdcda]"
+                      >
+                        Anulează
+                      </button>
+                      <span className="text-[#5d7a76]">Enter = salvează · Esc = anulează</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={isArt(m.text) ? "flex flex-col" : "flex items-start gap-1"}>
+                    <span
+                      className="font-cinzel shrink-0"
+                      style={{
+                        color: m.authorColor,
+                        textShadow:
+                          m.authorColor === BLACK_CHAT_COLOR
+                            ? `-1.5px -1.5px 0 ${BLACK_NAME_OUTLINE}, 1.5px -1.5px 0 ${BLACK_NAME_OUTLINE}, -1.5px 1.5px 0 ${BLACK_NAME_OUTLINE}, 1.5px 1.5px 0 ${BLACK_NAME_OUTLINE}, 0 -1.5px 0 ${BLACK_NAME_OUTLINE}, 0 1.5px 0 ${BLACK_NAME_OUTLINE}, -1.5px 0 0 ${BLACK_NAME_OUTLINE}, 1.5px 0 0 ${BLACK_NAME_OUTLINE}, 0 0 8px rgba(181,126,220,0.7)`
+                            : "0 1px 2px rgba(0,0,0,0.9)",
+                      }}
+                    >
+                      {m.authorName}
+                      {m.muted && (
+                        <span className="text-[#75938f] text-[0.65rem] ml-1" title="mutat">
+                          🔇
+                        </span>
+                      )}
+                      {isArt(m.text) ? ":" : ": "}
+                    </span>
+                    <span className="text-[#cbdcda] flex-1 min-w-0">
+                      <ChatText text={m.text} names={names} />
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="mt-0.5 flex shrink-0 flex-col items-end gap-0.5">
+                <span
+                  className="text-[0.58rem] tabular-nums text-[#5d7a76] group-hover:text-[#8fb0ac]"
+                  title={new Date(m.createdAt).toLocaleString("ro-RO")}
+                >
+                  {clockTime(m.createdAt)}
+                  {m.editedAt && <span className="ml-1 text-[#5d7a76]">· editat</span>}
+                </span>
+                <div className="flex items-center gap-1 opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => startReply(m)}
+                    className="text-[#75938f] hover:text-[#9ec6c1] text-[0.7rem] cursor-pointer"
+                    title="Răspunde"
+                    aria-label={`Răspunde lui ${m.authorName}`}
+                  >
+                    ↩
+                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => startEdit(m)}
+                      className="text-[#75938f] hover:text-[#ffd98e] text-[0.7rem] cursor-pointer"
+                      title="Editează mesajul"
+                      aria-label="Editează mesajul"
+                    >
+                      ✎
+                    </button>
+                  )}
+                  {me?.isAdmin && (
+                    <button
+                      onClick={() => deleteMessage(m.id)}
+                      className="text-[#75938f] hover:text-red-400 text-[0.7rem] cursor-pointer"
+                      title="Șterge mesajul"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })
       )}
       <div ref={chatEndRef} />
     </div>
@@ -413,6 +575,23 @@ export default function GeneralChat({
   const composer = (
     <div className="p-[0.7rem] border-t border-[#1e3a3460] flex flex-col gap-1.5">
       {chatError && <div className="text-[0.72rem] text-red-400">{chatError}</div>}
+      {replyTo && (
+        <div className="flex items-center gap-2 rounded-lg border-l-2 border-[#ffd98e] bg-[#122420] px-2 py-1 text-[0.72rem]">
+          <div className="min-w-0 flex-1">
+            <span className="block font-cinzel text-[#ffd98e]">Răspunzi la {replyTo.authorName}</span>
+            <span className="block truncate text-[#8fb0ac]">{oneLine(replyTo.text)}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReplyTo(null)}
+            className="shrink-0 text-[#75938f] hover:text-[#cbdcda] cursor-pointer px-1"
+            title="Renunță la răspuns"
+            aria-label="Renunță la răspuns"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       <div className="flex gap-2">
         <div className="relative flex-1">
           {/* @-autocomplete: sits above the composer, thumb-friendly in the dock */}
@@ -454,7 +633,7 @@ export default function GeneralChat({
             onKeyDown={onComposerKey}
             onClick={(e) => syncMention(chatInput, e.currentTarget.selectionStart ?? chatInput.length)}
             onBlur={() => setMention(null)}
-            placeholder="Mesaj… (@ mențiune)"
+            placeholder={replyTo ? `Răspunde lui ${replyTo.authorName}…` : "Mesaj… (@ mențiune)"}
             title="Shift+Enter = linie nouă · @ = menționează un jucător"
             maxLength={2000}
             rows={Math.min(6, Math.max(1, chatInput.split("\n").length))}
