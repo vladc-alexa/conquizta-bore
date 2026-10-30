@@ -359,7 +359,7 @@ export default function GeneralChat({
           <div
             key={m.id}
             data-mention={pinged(m) ? "1" : undefined}
-            className={`text-[0.9rem] leading-snug flex items-start gap-1 group rounded-md ${
+            className={`text-[0.98rem] leading-relaxed flex items-start gap-1 group rounded-md ${
               pinged(m) ? "border-l-2 border-[#ffd98e] bg-[#ffd98e12] pl-1.5 py-0.5" : ""
             }`}
           >
@@ -458,7 +458,7 @@ export default function GeneralChat({
             title="Shift+Enter = linie nouă · @ = menționează un jucător"
             maxLength={2000}
             rows={Math.min(6, Math.max(1, chatInput.split("\n").length))}
-            className="w-full resize-none bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] text-base sm:text-[0.85rem] p-[0.6rem] outline-none focus:border-[#6f9c99] font-mono"
+            className="w-full resize-none bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] text-base sm:text-[0.95rem] p-[0.65rem] outline-none focus:border-[#6f9c99] font-mono"
           />
         </div>
         <button
@@ -498,7 +498,7 @@ export default function GeneralChat({
 
   if (!dock) {
     return (
-      <section className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full lg:w-[552px] shrink-0 flex flex-col h-[552px] lg:h-[calc(100vh-200px)] lg:min-h-[644px]">
+      <section className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full lg:w-[600px] shrink-0 flex flex-col h-[560px] lg:h-[calc(100vh-130px)] lg:min-h-[672px]">
         <div className="flex items-center justify-between px-[1.15rem] py-[0.7rem] border-b border-[#1e3a3460] relative">
           <h3 className="font-cinzel text-[#9ec6c1] text-[0.85rem] tracking-widest">Chat general</h3>
           <div className="flex items-center gap-2">

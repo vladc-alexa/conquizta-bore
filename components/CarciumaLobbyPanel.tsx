@@ -159,11 +159,11 @@ export default function CarciumaLobbyPanel({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="font-cinzel text-[#f0cf9a] text-[0.9rem] tracking-widest">🍺 La Carciuma</h3>
+        <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">🍺 La Carciuma</h3>
         <div className="flex items-center gap-2">
-          <span className="text-[#9d7c56] text-[0.65rem]">5 SCAUNE · 3 PAHARE</span>
+          <span className="text-[#75938f] text-[0.65rem]">5 SCAUNE · 3 PAHARE</span>
           {onClose && (
-            <button onClick={onClose} title="Închide carciuma" className="text-[#9d7c56] hover:text-[#e2b877] cursor-pointer">
+            <button onClick={onClose} title="Închide carciuma" className="text-[#75938f] hover:text-[#9ec6c1] cursor-pointer">
               ✕
             </button>
           )}
@@ -174,21 +174,21 @@ export default function CarciumaLobbyPanel({
         <button
           onClick={create}
           disabled={busy !== null}
-          className="bg-gradient-to-br from-[#c98b3f] to-[#7d4f16] border-2 border-[#e2b87760] rounded-xl text-[#1a1208] font-cinzel text-[0.95rem] tracking-wider p-3 hover:brightness-110 active:translate-y-px disabled:opacity-60 cursor-pointer"
+          className="bg-gradient-to-br from-[#c98b3f] to-[#7d4f16] border-2 border-[#9ec6c160] rounded-xl text-[#0c1a17] font-cinzel text-[0.95rem] tracking-wider p-3 hover:brightness-110 active:translate-y-px disabled:opacity-60 cursor-pointer"
         >
           {busy === "create" ? "Se deschide masa…" : "➕ Deschide o masă"}
         </button>
       )}
 
       {mine && (
-        <div className="bg-[#150e06] border-2 border-[#4a2f12] rounded-xl p-3 flex flex-col gap-2.5">
+        <div className="bg-[#0c1a17] border-2 border-[#1e3a34] rounded-xl p-3 flex flex-col gap-2.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[0.68rem] uppercase tracking-wider text-[#9d7c56]">
+            <span className="text-[0.68rem] uppercase tracking-wider text-[#75938f]">
               Masa · {filled}/{SEATS}
             </span>
             <span
               className={`text-[0.65rem] uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                live ? "text-[#8fd9a8] border-[#2f5b48] bg-[#0f211a]" : "text-[#e8c46a] border-[#4a3a1c] bg-[#1a1509]"
+                live ? "text-[#8fd9a8] border-[#2f5b48] bg-[#0f211a]" : "text-[#8fb0ac] border-[#1e3a34] bg-[#0c1a17]"
               }`}
             >
               {live ? "la masă" : "se strâng băutorii"}
@@ -202,11 +202,11 @@ export default function CarciumaLobbyPanel({
                 <div
                   key={i}
                   className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[0.78rem] ${
-                    name ? "bg-[#211606] border-[#6b451f]" : "bg-[#0b0702] border-dashed border-[#33220f]"
+                    name ? "bg-[#0c1a17] border-[#1e3a34]" : "bg-[#050d0b] border-dashed border-[#16302b]"
                   }`}
                 >
-                  <span className={name ? "text-[#e2b877]" : "text-[#5d4830]"}>{name ? "●" : "○"}</span>
-                  <span className={`min-w-0 truncate ${name ? "text-[#f0dcbb]" : "text-[#8d755a] italic"}`}>{name ?? "scaun liber 🪑"}</span>
+                  <span className={name ? "text-[#9ec6c1]" : "text-[#3f615c]"}>{name ? "●" : "○"}</span>
+                  <span className={`min-w-0 truncate ${name ? "text-[#cbdcda]" : "text-[#5f7f7b] italic"}`}>{name ?? "scaun liber 🪑"}</span>
                 </div>
               );
             })}
@@ -215,7 +215,7 @@ export default function CarciumaLobbyPanel({
           {live ? (
             <a
               href={`/carciuma/${mine.id}`}
-              className="text-center bg-gradient-to-br from-[#c98b3f] to-[#7d4f16] border-2 border-[#e2b87760] rounded-lg text-[#1a1208] font-cinzel text-[0.88rem] p-2.5 hover:brightness-110"
+              className="text-center bg-gradient-to-br from-[#c98b3f] to-[#7d4f16] border-2 border-[#9ec6c160] rounded-lg text-[#0c1a17] font-cinzel text-[0.88rem] p-2.5 hover:brightness-110"
             >
               ▶ Înapoi la masă
             </a>
@@ -224,14 +224,14 @@ export default function CarciumaLobbyPanel({
               <button
                 onClick={() => callBots(mine.id)}
                 disabled={busy !== null || filled >= SEATS}
-                className="bg-[#1d1208] border-2 border-[#6b451f] rounded-lg text-[#e8c46a] font-cinzel text-[0.82rem] tracking-wide p-2 hover:brightness-125 disabled:opacity-40 cursor-pointer"
+                className="bg-[#0c1a17] border-2 border-[#1e3a34] rounded-lg text-[#8fb0ac] font-cinzel text-[0.82rem] tracking-wide p-2 hover:brightness-125 disabled:opacity-40 cursor-pointer"
               >
                 {busy === "bots" ? "+1…" : "🎲 +1 localnic"}
               </button>
               <button
                 onClick={() => callBots(mine.id, SEATS)}
                 disabled={busy !== null || filled >= SEATS}
-                className="bg-[#1d1208] border-2 border-[#6b451f] rounded-lg text-[#e8c46a] font-cinzel text-[0.82rem] tracking-wide p-2 hover:brightness-125 disabled:opacity-40 cursor-pointer"
+                className="bg-[#0c1a17] border-2 border-[#1e3a34] rounded-lg text-[#8fb0ac] font-cinzel text-[0.82rem] tracking-wide p-2 hover:brightness-125 disabled:opacity-40 cursor-pointer"
               >
                 {filled >= SEATS ? "Masa e plină" : `🎲 Umple masa (${SEATS - filled})`}
               </button>
@@ -242,13 +242,13 @@ export default function CarciumaLobbyPanel({
               >
                 {busy === "start" ? "Pornesc…" : "▶ Începe băutura"}
               </button>
-              <div className="text-[#9d7c56] text-[0.7rem] text-center leading-snug">
+              <div className="text-[#75938f] text-[0.7rem] text-center leading-snug">
                 {filled < MIN_PLAYERS ? `Mai e nevoie de ${MIN_PLAYERS - filled} jucător — cheamă localnici sau așteaptă pe cineva.` : `${filled} la masă. Poți porni.`}
               </div>
             </>
           ) : (
-            <div className="text-[#9d7c56] text-[0.72rem] text-center leading-snug">
-              Ai un scaun. <span className="text-[#e8c46a]">{mine.hostName}</span> pornește runda.
+            <div className="text-[#75938f] text-[0.72rem] text-center leading-snug">
+              Ai un scaun. <span className="text-[#8fb0ac]">{mine.hostName}</span> pornește runda.
             </div>
           )}
 
@@ -257,38 +257,38 @@ export default function CarciumaLobbyPanel({
           <button
             onClick={() => leave(mine.id)}
             disabled={busy !== null}
-            className="text-[0.72rem] text-[#9d7c56] hover:text-[#e08b6b] disabled:opacity-50 cursor-pointer"
+            className="text-[0.72rem] text-[#75938f] hover:text-[#e08b6b] disabled:opacity-50 cursor-pointer"
           >
             {hosting ? "✕ Închide masa" : "✕ Dă-ți scaunul liber"}
           </button>
         </div>
       )}
 
-      <div className="flex items-center justify-between text-[0.7rem] text-[#9d7c56] pt-1">
+      <div className="flex items-center justify-between text-[0.7rem] text-[#75938f] pt-1">
         <span className="uppercase tracking-wider">Mese deschise</span>
-        <button onClick={load} className="hover:text-[#e2b877] cursor-pointer" title="Reîmprospătează">
+        <button onClick={load} className="hover:text-[#9ec6c1] cursor-pointer" title="Reîmprospătează">
           ⟳
         </button>
       </div>
 
       <div className="flex flex-col gap-1.5">
         {games.length === 0 ? (
-          <div className="text-[#8d755a] text-[0.78rem] text-center p-4 border border-dashed border-[#33220f] rounded-xl">
+          <div className="text-[#5f7f7b] text-[0.78rem] text-center p-4 border border-dashed border-[#16302b] rounded-xl">
             {mine ? "Nicio altă masă deschisă." : "Carciuma e goală. Deschide tu masa."}
           </div>
         ) : (
           games.map((g) => (
-            <div key={g.id} className="flex items-center justify-between gap-2 bg-[#0b0702] border border-[#33220f] rounded-xl p-2 pl-3">
+            <div key={g.id} className="flex items-center justify-between gap-2 bg-[#050d0b] border border-[#16302b] rounded-xl p-2 pl-3">
               <span className="min-w-0">
-                <span className="font-cinzel text-[#f0dcbb] text-[0.85rem] truncate block">{g.hostName}</span>
-                <span className="text-[#8d755a] text-[0.65rem] truncate block">
+                <span className="font-cinzel text-[#cbdcda] text-[0.85rem] truncate block">{g.hostName}</span>
+                <span className="text-[#5f7f7b] text-[0.65rem] truncate block">
                   {g.players.length ? g.players.join(", ") : "nimeni"} · {g.joined}/{SEATS} · {ago(g.createdAt)}
                 </span>
               </span>
               <button
                 onClick={() => join(g.id)}
                 disabled={busy !== null}
-                className="shrink-0 bg-gradient-to-br from-[#c98b3f] to-[#7d4f16] border-2 border-[#e2b87760] rounded-lg text-[#1a1208] font-cinzel text-[0.78rem] px-3.5 py-1.5 hover:brightness-110 disabled:opacity-40 cursor-pointer"
+                className="shrink-0 bg-gradient-to-br from-[#c98b3f] to-[#7d4f16] border-2 border-[#9ec6c160] rounded-lg text-[#0c1a17] font-cinzel text-[0.78rem] px-3.5 py-1.5 hover:brightness-110 disabled:opacity-40 cursor-pointer"
               >
                 {busy === g.id ? "Intru…" : "Ia loc"}
               </button>

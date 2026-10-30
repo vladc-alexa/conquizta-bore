@@ -70,7 +70,7 @@ export default function PlayersPanel({ onClose }: { onClose?: () => void }) {
         {showOffline ? "▾ ascunde jucătorii offline" : `▸ arată jucătorii offline (${offlineList.length})`}
       </button>
 
-      <div className={`overflow-y-auto pr-0.5 ${open ? "max-h-[268px]" : "max-h-0 overflow-hidden"}`}>
+      <div className={`overflow-y-auto pr-0.5 ${open ? "max-h-[min(62vh,560px)]" : "max-h-0 overflow-hidden"}`}>
         <ul className="flex flex-col gap-1">
           {shown.map((p) => (
             <li
