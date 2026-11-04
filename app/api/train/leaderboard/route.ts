@@ -20,19 +20,27 @@ type Row = {
   basis: "run" | "rating";
 };
 
-// GET /api/train/leaderboard                -> today's board (Romanian day)
-// GET /api/train/leaderboard?period=all     -> all-time board, old ratings included
+type Sort = "points" | "rating";
+
+// GET /api/train/leaderboard                     -> today's board, by points
+// GET /api/train/leaderboard?period=all          -> all-time board, by points
+// GET /api/train/leaderboard?period=all&sort=rating -> all-time board, by PRC rating
 //
-// All-time is a union: players who ran the 90s blitz are ranked by their best
-// run's points, and players who never ran it keep their place through the old
-// PRC rating (which is what the site ranked on before the blitz existed). That
-// way nobody vanishes from the board the day the new game shipped.
+// Points aggregate every game (90s blitz runs, cârciumă answers, tower answers —
+// see lib/trainStats.ts), so the all-time board is a whole-site total. The PRC
+// rating is the older number the site ranked on before the blitz existed; it is
+// only computed for the quiz sessions, but it is what legacy players still hold.
+// `sort` picks which of the two decides the order; the other one is still shown,
+// so switching the toggle never hides information.
 export async function GET(req: Request) {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const session = await verifySession(token);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const period = new URL(req.url).searchParams.get("period") === "all" ? "all" : "day";
+  const params = new URL(req.url).searchParams;
+  const period = params.get("period") === "all" ? "all" : "day";
+  // today's board is a points board only — a rating says nothing about one day
+  const sort: Sort = period === "all" && params.get("sort") === "rating" ? "rating" : "points";
   const since = period === "day" ? startOfLocalDay() : null;
   const { rows: trainRows, mine: trainMine } = await combinedStandings(prisma, {
     since,
@@ -58,7 +66,6 @@ export async function GET(req: Request) {
     // only accounts that still exist and don't hide their score
     const users = await prisma.user.findMany({ select: { id: true, displayName: true, hideScore: true } });
     const byId = new Map(users.map((u) => [u.id, u]));
-    rows = rows.filter((r) => byId.has(r.id) && !byId.get(r.id)!.hideScore);
 
     const seen = new Set(rows.map((r) => r.id));
     const legacy: Row[] = [];
@@ -78,12 +85,18 @@ export async function GET(req: Request) {
       });
     }
 
-    // A run outranks a legacy rating only when it exists; otherwise the old
-    // rating is the value that decides the place.
-    const key = (r: Row) => (r.points > 0 ? r.points : (r.prc ?? 0));
-    rows = [...rows, ...legacy].sort(
-      (a, b) => key(b) - key(a) || b.correct - a.correct || a.name.localeCompare(b.name),
-    );
+    rows = [...rows, ...legacy];
+
+    rows = rows.filter((r) => byId.has(r.id) && !byId.get(r.id)!.hideScore);
+
+    // Two orders over the same rows. Players missing the active measure fall to
+    // the bottom (never dropped) and keep a stable order among themselves.
+    const byPoints = (a: Row, b: Row) =>
+      b.points - a.points || b.correct - a.correct || (b.prc ?? 0) - (a.prc ?? 0) || a.name.localeCompare(b.name);
+    const byRating = (a: Row, b: Row) =>
+      (b.prc ?? -1) - (a.prc ?? -1) || b.points - a.points || a.name.localeCompare(b.name);
+
+    rows = rows.sort(sort === "rating" ? byRating : byPoints);
   }
 
   rows = rows.slice(0, 50);
@@ -96,5 +109,5 @@ export async function GET(req: Request) {
         ? { ...trainMine, prc: prcOf(session.sub), basis: "run" as const, rank: null }
         : null;
 
-  return NextResponse.json({ period, dayStart: since?.toISOString() ?? null, rows, mine });
+  return NextResponse.json({ period, sort, dayStart: since?.toISOString() ?? null, rows, mine });
 }
