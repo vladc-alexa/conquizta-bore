@@ -1,21 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { Jost, Lato } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import SiteHeader from "@/components/SiteHeader";
 import PresenceBeacon from "@/components/PresenceBeacon";
 import ChatDock from "@/components/ChatDock";
 import InvitesCenter from "@/components/InvitesCenter";
 
-const display = Jost({
+// Self-hosted (was next/font/google): the Coolify/nixpacks image has no
+// reliable path to fonts.googleapis.com at build time, and Turbopack then
+// failed the whole build on "next/font/google queries have exactly one entry".
+// Files are the latin-subset woff2 taken verbatim from Google Fonts.
+const display = localFont({
+  src: [{ path: "./fonts/jost-latin.woff2", weight: "300 500", style: "normal" }],
   variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
+  display: "swap",
 });
 
-const lato = Lato({
+const lato = localFont({
+  src: [
+    { path: "./fonts/lato-400-latin.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/lato-700-latin.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-lato",
-  subsets: ["latin"],
-  weight: ["400", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
