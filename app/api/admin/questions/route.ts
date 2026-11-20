@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isError, requireEditor } from "@/lib/admin";
 
-// GET /api/admin/questions?search=&status=reported|published|disabled|all&limit=50&offset=0
+// GET /api/admin/questions?search=&status=reported|quarantined|published|disabled|all&limit=50&offset=0
 // Question browser (admins + editors): id, prompt, options, correct answer,
 // publish state, report count. Default status = "reported": the review queue,
 // populated only by player reports (reporting a question also unpublishes it).
@@ -38,7 +38,13 @@ export async function GET(req: Request) {
     where.OR = or;
   }
   if (status === "published") where.isPublished = true;
-  if (status === "disabled") where.isPublished = false;
+  // Quarantined rows are also unpublished; keep the two buckets apart so
+  // "dezactivate" stays "the editor took it down on purpose".
+  if (status === "disabled") {
+    where.isPublished = false;
+    where.quarantinedAt = null;
+  }
+  if (status === "quarantined") where.quarantinedAt = { not: null };
 
   // status="reported": rank questions by report count, then page over that order.
   let reportedIds: string[] | null = null;
@@ -80,7 +86,7 @@ export async function GET(req: Request) {
     GROUP BY 1
     ORDER BY n DESC`;
 
-  const [questions, reportCounts, total, shapeRows] = await Promise.all([
+  const [questions, reportCounts, total, shapeRows, quarantined] = await Promise.all([
     prisma.question.findMany({
       where,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -90,6 +96,8 @@ export async function GET(req: Request) {
         id: true,
         prompt: true,
         isPublished: true,
+        quarantinedAt: true,
+        quarantineReason: true,
         createdAt: true,
         options: { select: { id: true, text: true, isCorrect: true } },
       },
@@ -104,6 +112,7 @@ export async function GET(req: Request) {
              count(*)::int AS n
       FROM "Question" q
       GROUP BY 1, 2`,
+    prisma.question.count({ where: { quarantinedAt: { not: null } } }),
   ]);
 
   const counts = {
@@ -124,6 +133,8 @@ export async function GET(req: Request) {
     id: q.id,
     prompt: q.prompt,
     isPublished: q.isPublished,
+    quarantinedAt: q.quarantinedAt,
+    quarantineReason: q.quarantineReason,
     createdAt: q.createdAt,
     correctAnswer: q.options.find((o) => o.isCorrect)?.text ?? null,
     options: q.options.map((o) => ({ id: o.id, text: o.text, isCorrect: o.isCorrect })),
@@ -141,5 +152,14 @@ export async function GET(req: Request) {
     list.sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
   }
 
-  return NextResponse.json({ questions: list, counts, total, offset, limit, editors, editorId: editorId || null });
+  return NextResponse.json({
+    questions: list,
+    counts,
+    quarantined,
+    total,
+    offset,
+    limit,
+    editors,
+    editorId: editorId || null,
+  });
 }

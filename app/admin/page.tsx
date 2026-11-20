@@ -30,11 +30,20 @@ interface AdminQuestion {
   id: string;
   prompt: string;
   isPublished: boolean;
+  quarantinedAt: string | null;
+  quarantineReason: string | null;
   correctAnswer: string | null;
   options: { id: string; text: string; isCorrect: boolean }[];
   reportCount: number;
   lastEdit: { editorId: string | null; editorName: string; action: EditAction; at: string } | null;
 }
+
+// why a question sits in quarantine, in the admins' words (mirrors lib/questionTriage.ts)
+const QUARANTINE_LABEL: Record<string, string> = {
+  unvetted: "nejucată încă",
+  "low-accuracy": "prea grea / greșită",
+  reported: "raportată",
+};
 
 // kind of change, in the words the admins use
 const ACTION_LABEL: Record<EditAction, string> = {
@@ -60,7 +69,9 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
   const [qSearch, setQSearch] = useState("");
-  const [qStatus, setQStatus] = useState<"reported" | "all" | "published" | "disabled">("reported");
+  const [qStatus, setQStatus] = useState<"reported" | "quarantined" | "all" | "published" | "disabled">(
+    "reported"
+  );
   const [qLoading, setQLoading] = useState(false);
   const [qHasMore, setQHasMore] = useState(false);
   const [qTotal, setQTotal] = useState(0);
@@ -221,6 +232,29 @@ export default function AdminPage() {
     if (res.ok) {
       const data = await res.json();
       setQuestions((list) => list.map((x) => (x.id === q.id ? { ...x, isPublished: data.isPublished } : x)));
+    }
+  };
+
+  const triageQuestion = async (q: AdminQuestion, action: "quarantine" | "restore") => {
+    const res = await fetch(`/api/admin/questions/${q.id}/quarantine`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setQuestions((list) =>
+        list.map((x) =>
+          x.id === q.id
+            ? {
+                ...x,
+                isPublished: data.isPublished,
+                quarantinedAt: data.quarantined ? new Date().toISOString() : null,
+                quarantineReason: data.quarantined ? "reported" : null,
+              }
+            : x
+        )
+      );
     }
   };
 
@@ -590,6 +624,7 @@ export default function AdminPage() {
               className="bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] text-[0.8rem] p-2 outline-none cursor-pointer"
             >
               <option value="reported">Raportate</option>
+              <option value="quarantined">Carantină</option>
               <option value="all">Toate</option>
               <option value="published">Publicate</option>
               <option value="disabled">Dezactivate</option>
@@ -772,7 +807,14 @@ export default function AdminPage() {
                             ⚠ {q.reportCount} raportări
                           </span>
                         )}
-                        {q.isPublished ? (
+                        {q.quarantinedAt ? (
+                          <span
+                            className="text-[0.65rem] text-amber-300 border border-amber-400/40 bg-amber-900/20 rounded px-1.5 py-0.5"
+                            title={`În carantină din ${new Date(q.quarantinedAt).toLocaleDateString("ro-RO")}`}
+                          >
+                            carantină · {QUARANTINE_LABEL[q.quarantineReason ?? ""] ?? "în carantină"}
+                          </span>
+                        ) : q.isPublished ? (
                           <span className="text-[0.65rem] text-green-400 border border-green-500/40 rounded px-1.5 py-0.5">publicată</span>
                         ) : (
                           <span className="text-[0.65rem] text-[#75938f] border border-[#1e3a34] rounded px-1.5 py-0.5">dezactivată</span>
@@ -800,6 +842,21 @@ export default function AdminPage() {
                         title="Editează întrebarea"
                       >
                         ✏️ Editează
+                      </button>
+                      <button
+                        onClick={() => triageQuestion(q, q.quarantinedAt ? "restore" : "quarantine")}
+                        className={`text-[0.72rem] border rounded-lg px-2.5 py-1.5 cursor-pointer hover:brightness-110 ${
+                          q.quarantinedAt
+                            ? "text-green-400 border-green-500/40 hover:bg-green-900/30"
+                            : "text-amber-300 border-amber-400/40 hover:bg-amber-900/30"
+                        }`}
+                        title={
+                          q.quarantinedAt
+                            ? "Repune în joc (publică) și șterge marcajul de carantină"
+                            : "Scoate din rotație pentru verificare, fără a o șterge"
+                        }
+                      >
+                        {q.quarantinedAt ? "↩ Scoate din carantină" : "⏸ Carantină"}
                       </button>
                       <button
                         onClick={() => toggleQuestion(q)}

@@ -172,14 +172,14 @@ model TowerAnswer {
 }
 
 model ChatMessage {
-  id         String    @id @default(uuid()) @db.Uuid
-  userId     String?   @db.Uuid
-  authorName String    @db.VarChar(32)
-  text       String    @db.VarChar(2000)
-  createdAt  DateTime  @default(now())
+  id         String        @id @default(uuid()) @db.Uuid
+  userId     String?       @db.Uuid
+  authorName String        @db.VarChar(32)
+  text       String        @db.VarChar(2000)
+  createdAt  DateTime      @default(now())
   editedAt   DateTime?
-  replyToId  String?   @db.Uuid
-  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  replyToId  String?       @db.Uuid
+  user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   replyTo    ChatMessage?  @relation("ChatReplies", fields: [replyToId], references: [id], onDelete: SetNull)
   replies    ChatMessage[] @relation("ChatReplies")
 
@@ -197,20 +197,27 @@ model Category {
 }
 
 model Question {
-  id             String             @id @default(uuid()) @db.Uuid
-  categoryId     String?            @db.Uuid
-  prompt         String
-  explanation    String?
-  difficulty     Int                @default(1)
-  isPublished    Boolean            @default(false)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  category       Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  options        QuestionOption[]
-  sessionAnswers SessionAnswer[]
-  userStats      UserQuestionStat[]
-  reports        QuestionReport[]
-  edits          QuestionEdit[]
+  id               String             @id @default(uuid()) @db.Uuid
+  categoryId       String?            @db.Uuid
+  language         String             @default("ro") @db.VarChar(2)
+  prompt           String
+  explanation      String?
+  difficulty       Int                @default(1)
+  isPublished      Boolean            @default(false)
+  // Set by the triage pipeline (lib/questionTriage.ts) when a question is pulled
+  // out of rotation for review: never played, suspiciously low accuracy, or
+  // reported. Quarantined rows always have isPublished=false, so every game
+  // path excludes them without extra filters.
+  quarantinedAt    DateTime?
+  quarantineReason String?            @db.VarChar(24)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  category         Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  options          QuestionOption[]
+  sessionAnswers   SessionAnswer[]
+  userStats        UserQuestionStat[]
+  reports          QuestionReport[]
+  edits            QuestionEdit[]
 
   @@index([categoryId, isPublished])
 }
