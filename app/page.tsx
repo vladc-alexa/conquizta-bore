@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import Link from "next/link";
+import { LanguageSwitcher, useI18n } from "@/lib/i18n";
+import { InviteToast } from "@/components/MatchLobby";
 
 interface ChatMessage {
   id: string;
@@ -15,18 +18,22 @@ interface LeaderRow {
   accuracy: number;
 }
 
+// Preserved localStorage key so existing players keep their PRC records
 const PRC_BEST_KEY = "conquizta_bore_prc_best";
 const PRC_SECONDS = 30;
 
 export default function Dashboard() {
+  const { lang, t } = useI18n();
   const [name, setName] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [sending, setSending] = useState(false);
+  const [bankCount, setBankCount] = useState<number>(560);
+  const [activeTab, setActiveTab] = useState<"home" | "chat" | "ranks" | "prc">("home");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // PRC sprint state
+  // PRC sprint state (preserves existing players' PRC records)
   const [prcActive, setPrcActive] = useState(false);
   const [prcTarget, setPrcTarget] = useState(0);
   const [prcInput, setPrcInput] = useState("");
@@ -37,6 +44,7 @@ export default function Dashboard() {
   const [prcDone, setPrcDone] = useState(false);
   const prcTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const prcInputRef = useRef<HTMLInputElement>(null);
+  const prcSectionRef = useRef<HTMLDivElement>(null);
 
   const loadLeaderboard = useCallback(async () => {
     try {
@@ -65,13 +73,17 @@ export default function Dashboard() {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setName(d.name))
       .catch(() => {});
+    fetch(`/api/questions?meta=1&lang=${lang}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.totalCount && setBankCount(d.totalCount))
+      .catch(() => {});
     loadChat();
     loadLeaderboard();
     const best = parseInt(localStorage.getItem(PRC_BEST_KEY) || "0", 10);
     if (!isNaN(best)) setPrcBest(best);
     const chatTimer = setInterval(loadChat, 5000);
     return () => clearInterval(chatTimer);
-  }, [loadChat, loadLeaderboard]);
+  }, [lang, loadChat, loadLeaderboard]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -148,131 +160,437 @@ export default function Dashboard() {
     }
   }, [prcTimeLeft, prcActive, prcCount]);
 
+  const openPrcSection = () => {
+    setActiveTab("prc");
+    setTimeout(() => {
+      prcSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  };
+
+  const heroName = name || "Champion";
+
   return (
-    <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 py-4">
-      {/* Header */}
-      <header className="flex items-center justify-between gap-3">
-        <h1 className="!mb-0 text-[1.3rem]">ConQuizta – Bore</h1>
-        <div className="flex items-center gap-3">
-          {name && (
-            <span className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-wider border border-[#7a4e22] rounded-lg px-3 py-1.5 bg-[#2a1608]">
-              {name}
+    <div className="arena-backdrop min-h-screen w-full flex flex-col justify-between pb-24 lg:pb-20">
+      <InviteToast />
+      {/* ================= TOP ROYAL HUD BAR ================= */}
+      <header className="w-full max-w-[1440px] mx-auto px-3 sm:px-6 pt-3 pb-1 flex flex-wrap items-center justify-between gap-3 z-20">
+        {/* Player Avatar Medallion (keeps existing player account name & PRC record) */}
+        <div className="flex items-center gap-3 royal-panel rounded-2xl px-3 py-2 pr-4">
+          <div className="relative shrink-0">
+            <div className="w-12 h-12 rounded-full border-2 border-[#f2c86b] overflow-hidden shadow-[0_0_16px_rgba(242,200,107,0.45)] bg-[#1c1420]">
+              <img
+                src="/art/avatar-knight.jpg"
+                alt="Hero avatar"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <span className="absolute -bottom-1 -left-1 px-1.5 h-5 rounded-full bg-gradient-to-b from-[#f7d277] to-[#9c6419] border border-[#fff2c2] text-[#1a0f05] font-cinzel font-extrabold text-[0.62rem] flex items-center justify-center shadow">
+              ⚡{prcBest}
             </span>
-          )}
+          </div>
+          <div className="min-w-[120px]">
+            <div className="flex items-center gap-1.5">
+              <span className="font-cinzel font-bold text-[#ffefc8] text-sm tracking-wide truncate max-w-[140px]">
+                {heroName}
+              </span>
+              <span className="text-[#f5c85c] text-xs">👑</span>
+            </div>
+            <div className="text-[0.68rem] text-[#cbb07e]">
+              {t("prcRecord")} <strong className="text-[#ffe28a]">{prcBest}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Center Gilded Crest Banner: STONE QUIZ (clean title, tagline removed) */}
+        <div className="order-3 xl:order-2 w-full xl:w-auto flex flex-col items-center text-center my-1 xl:my-0 bg-[#120d19]/78 backdrop-blur-[2px] border border-[#b68635]/65 rounded-2xl px-8 py-2.5 shadow-xl">
+          <h1 className="font-cinzel font-extrabold text-2xl sm:text-3xl lg:text-4xl tracking-[0.16em] gold-title leading-none">
+            {t("brandTitle")}
+          </h1>
+        </div>
+
+        {/* Right Bank Badge + Language Switcher + Sign Out */}
+        <div className="order-2 xl:order-3 flex items-center gap-2 sm:gap-2.5 flex-wrap justify-end">
+          <div className="hidden md:flex items-center gap-2 royal-panel rounded-xl px-3 py-1.5 text-xs font-cinzel">
+            <span className="flex items-center gap-1 text-[#ffd977] font-bold">
+              <span>📚</span> {bankCount}
+            </span>
+          </div>
+
+          <LanguageSwitcher />
+
           <button
             onClick={logout}
-            className="bg-gradient-to-br from-[#7a4010] to-[#3d2010] border-2 border-[#c88040a0] rounded-lg text-[#f5e8c0] text-[0.8rem] font-cinzel px-3 py-1.5 hover:brightness-125 cursor-pointer"
+            className="royal-panel hover:border-[#f5cd71] rounded-xl px-3 py-1.5 text-xs font-cinzel font-bold tracking-wider text-[#f7e1b0] hover:text-white cursor-pointer transition-all"
           >
-            Ieșire
+            {t("logout")}
           </button>
         </div>
       </header>
 
-      <div className="flex flex-col lg:flex-row gap-4 items-start">
-        {/* Left: Chat */}
-        <section className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full lg:w-[480px] shrink-0 flex flex-col h-[480px] lg:h-[calc(100vh-200px)] lg:min-h-[560px]">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#7a4e2260]">
-            <h3 className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-widest">Chat general</h3>
-            <span className="text-[#a07848] text-[0.7rem]">{messages.length} mesaje</span>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5">
-            {messages.length === 0 ? (
-              <div className="text-[#a07848] text-[0.75rem] text-center p-4">Niciun mesaj încă. Spune salut!</div>
-            ) : (
-              messages.map((m) => (
-                <div key={m.id} className="text-[0.8rem] leading-snug">
-                  <span className="font-cinzel text-[#c87030]">{m.authorName}:</span>{" "}
-                  <span className="text-[#e8d8b0]">{m.text}</span>
+      {/* ================= MAIN ARENA GRID ================= */}
+      <main className="w-full max-w-[1440px] mx-auto px-3 sm:px-6 mt-3 flex-1 grid grid-cols-1 lg:grid-cols-[190px_1fr_300px] gap-4 items-start z-10">
+        {/* ---- LEFT NAVIGATION RAIL (Medieval Sidebar — Gluma Zilei removed) ---- */}
+        <aside className="hidden lg:flex flex-col gap-2 royal-panel rounded-2xl p-2.5">
+          {(
+            [
+              { id: "home", icon: "🏰", label: t("navHome"), tab: "home" as const },
+              { id: "duel", icon: "⚔️", label: t("navDuel"), href: "/fight" },
+              { id: "siege", icon: "🔥", label: t("navSiege"), href: "/siege" },
+              { id: "turnul", icon: "🗼", label: t("navTurnul"), href: "/turnul" },
+              { id: "train", icon: "🎓", label: t("navTrain"), href: "/train" },
+              { id: "ranks", icon: "🏆", label: t("navLeaderboard"), tab: "ranks" as const },
+              { id: "chat", icon: "💬", label: t("navChat"), tab: "chat" as const },
+              { id: "prc", icon: "⚡", label: t("navPrc"), tab: "prc" as const },
+            ] as const
+          ).map((item) => {
+            const isActive = "tab" in item && item.tab === activeTab;
+            const cls = `flex items-center gap-3 px-3.5 py-3 rounded-xl font-cinzel text-xs font-bold tracking-wider transition-all border ${
+              isActive
+                ? "btn-crimson border-[#f5cd71]"
+                : "bg-[#14101b]/75 border-[#7a5828]/50 text-[#e7d4ae] hover:border-[#d6a247] hover:bg-[#23192c]/90 hover:text-[#fff3d2]"
+            }`;
+            if ("href" in item) {
+              return (
+                <Link key={item.id} href={item.href} className={cls}>
+                  <span className="text-base">{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              );
+            }
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  if (item.tab === "prc") openPrcSection();
+                  else setActiveTab(item.tab);
+                }}
+                className={`${cls} text-left cursor-pointer`}
+              >
+                <span className="text-base">{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </aside>
+
+        {/* ---- CENTER STAGE: 4 ILLUSTRATED MODE CARDS + TRAINING BANNER + CHAT & CLASAMENT ---- */}
+        <section className="flex flex-col gap-4">
+          {/* 4 Ornate Medieval Mode Cards */}
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3.5">
+            {/* Card 1: QUIZ FIGHTER (1 vs 1 Trivia Street Fighter) */}
+            <Link href="/fight" className="mode-card group aspect-[3/4] flex flex-col justify-end">
+              <img
+                src="/art/card-duel.jpg"
+                alt={t("cardDuelTitle")}
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#09060b] via-[#120a14]/35 to-transparent" />
+              <span className="absolute top-2.5 right-2.5 bg-gradient-to-r from-[#c81d25] to-[#e06a1e] border border-[#ffdf85] text-[#fff8e0] font-cinzel font-extrabold text-[0.6rem] tracking-widest px-2 py-0.5 rounded-full shadow-lg animate-gold-glow">
+                ★ {t("cardDuelTag")}
+              </span>
+              <div className="relative z-10 p-3.5 text-center">
+                <div className="font-cinzel font-extrabold text-base sm:text-lg tracking-wider gold-title">
+                  {t("cardDuelTitle")}
                 </div>
-              ))
-            )}
-            <div ref={chatEndRef} />
-          </div>
-          <div className="p-2.5 border-t border-[#7a4e2260] flex gap-2">
-            <input
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              placeholder="Mesaj…"
-              maxLength={500}
-              className="flex-1 bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[0.85rem] p-2 outline-none focus:border-[#c87030]"
-            />
+                <div className="text-[0.72rem] text-[#f3dfb4] font-semibold mt-0.5">
+                  {t("cardDuelSub")}
+                </div>
+              </div>
+            </Link>
+
+            {/* Card 2: ASEDIUL CASTELULUI / TOWER SIEGE (Right next to Quiz Fighter!) */}
+            <Link href="/siege" className="mode-card group aspect-[3/4] flex flex-col justify-end">
+              <img
+                src="/art/card-siege.jpg"
+                alt={t("cardSiegeTitle")}
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#09060b] via-[#1c0c08]/35 to-transparent" />
+              <span className="absolute top-2.5 right-2.5 bg-gradient-to-r from-[#c81d25] to-[#e06a1e] border border-[#ffdf85] text-[#fff8e0] font-cinzel font-extrabold text-[0.6rem] tracking-widest px-2 py-0.5 rounded-full shadow-lg animate-gold-glow">
+                🔥 {t("cardSiegeTag")}
+              </span>
+              <div className="relative z-10 p-3.5 text-center">
+                <div className="font-cinzel font-extrabold text-base sm:text-lg tracking-wider gold-title">
+                  {t("cardSiegeTitle")}
+                </div>
+                <div className="text-[0.72rem] text-[#f3dfb4] font-semibold mt-0.5">
+                  {t("cardSiegeSub")}
+                </div>
+              </div>
+            </Link>
+
+            {/* Card 3: TURNUL (Upgraded Multiplayer 2–6 Players) */}
+            <Link href="/turnul" className="mode-card group aspect-[3/4] flex flex-col justify-end">
+              <img
+                src="/art/card-crown.jpg"
+                alt={t("cardTurnulTitle")}
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#09060b] via-[#140a1e]/35 to-transparent" />
+              <span className="absolute top-2.5 left-2.5 bg-[#120d1c]/85 border border-[#e3b559]/75 text-[#ffe399] font-cinzel font-bold text-[0.6rem] tracking-wider px-2 py-0.5 rounded-full">
+                👥 {t("cardTurnulTag")}
+              </span>
+              <div className="relative z-10 p-3.5 text-center">
+                <div className="font-cinzel font-extrabold text-base sm:text-lg tracking-wider gold-title">
+                  {t("cardTurnulTitle")}
+                </div>
+                <div className="text-[0.72rem] text-[#f3dfb4] font-semibold mt-0.5">
+                  {t("cardTurnulSub")}
+                </div>
+              </div>
+            </Link>
+
+            {/* Card 4: PRC SPRINT */}
             <button
-              onClick={sendMessage}
-              disabled={sending || !chatInput.trim()}
-              className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] px-3 hover:brightness-110 disabled:opacity-40 cursor-pointer"
-              title="Trimite"
+              type="button"
+              onClick={openPrcSection}
+              className="mode-card group aspect-[3/4] flex flex-col justify-end text-left cursor-pointer"
             >
-              ➤
+              <img
+                src="/art/card-map.jpg"
+                alt={t("cardPrcTitle")}
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#09060b] via-[#1b1208]/35 to-transparent" />
+              {prcBest > 0 && (
+                <span className="absolute top-2.5 right-2.5 bg-[#120d1c]/85 border border-[#e3b559]/75 text-[#ffe399] font-cinzel font-bold text-[0.62rem] px-2 py-0.5 rounded-full">
+                  ★ {prcBest}
+                </span>
+              )}
+              <div className="relative z-10 p-3.5 text-center w-full">
+                <div className="font-cinzel font-extrabold text-base sm:text-lg tracking-wider gold-title">
+                  {t("cardPrcTitle")}
+                </div>
+                <div className="text-[0.72rem] text-[#f3dfb4] font-semibold mt-0.5">
+                  {t("cardPrcSub")}
+                </div>
+              </div>
             </button>
+          </div>
+
+          {/* Wide Royal Sapphire Training Banner */}
+          <div className="wood-desk-strip rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="hidden sm:flex items-center gap-2 text-2xl opacity-90 pl-1" aria-hidden>
+              <span>🌍</span>
+              <span>📚</span>
+            </div>
+            <Link
+              href="/train"
+              className="btn-sapphire flex-1 w-full rounded-xl px-5 py-3 flex flex-col items-center text-center"
+            >
+              <div className="flex items-center gap-2 font-cinzel font-extrabold text-base sm:text-lg tracking-[0.14em]">
+                <span>🎓</span>
+                <span>{t("trainingBannerTitle")}</span>
+              </div>
+              <div className="text-[0.72rem] text-[#cde2ff] mt-0.5">
+                {t("trainingBannerSub")}
+              </div>
+            </Link>
+            <div className="hidden sm:flex items-center gap-2 text-2xl opacity-90 pr-1" aria-hidden>
+              <span>🪶</span>
+              <span>🕯️</span>
+            </div>
+          </div>
+
+          {/* General Chat & Clasamentul Zilei (Daily Leaderboard preserved) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* General Chat */}
+            <section
+              className={`royal-panel rounded-2xl flex flex-col h-[340px] ${
+                activeTab === "chat" ? "ring-2 ring-[#f5cd71]" : ""
+              }`}
+            >
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#b68635]/40 bg-[#1a1322]/70 rounded-t-2xl">
+                <h3 className="font-cinzel font-bold text-[#f7d279] text-xs sm:text-sm tracking-[0.14em] uppercase flex items-center gap-2">
+                  <span>💬</span> {t("chatTitle")}
+                </h3>
+                <span className="text-[#c8ad7c] text-[0.7rem]">
+                  {messages.length} {t("chatMessages")}
+                </span>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3.5 flex flex-col gap-2">
+                {messages.length === 0 ? (
+                  <div className="text-[#b89f72] text-xs text-center my-auto">{t("chatEmpty")}</div>
+                ) : (
+                  messages.map((m) => (
+                    <div
+                      key={m.id}
+                      className="text-xs leading-relaxed bg-[#0f0c16]/65 border border-[#7a5828]/25 rounded-lg px-2.5 py-1.5"
+                    >
+                      <span className="font-cinzel font-bold text-[#f0ba58]">{m.authorName}:</span>{" "}
+                      <span className="text-[#efe2c6]">{m.text}</span>
+                    </div>
+                  ))
+                )}
+                <div ref={chatEndRef} />
+              </div>
+              <div className="p-2.5 border-t border-[#b68635]/40 flex gap-2 bg-[#120e19]/80 rounded-b-2xl">
+                <input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                  placeholder={t("chatPlaceholder")}
+                  maxLength={500}
+                  className="flex-1 bg-[#0b0910] border border-[#8e672b] rounded-lg text-[#fcecc4] text-xs px-3 py-2 outline-none focus:border-[#f0c05a]"
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={sending || !chatInput.trim()}
+                  className="btn-crimson rounded-lg px-3.5 text-xs font-cinzel font-bold cursor-pointer disabled:opacity-40"
+                  title={t("chatSend")}
+                >
+                  ➤
+                </button>
+              </div>
+            </section>
+
+            {/* Daily Leaderboard (Clasamentul Zilei) */}
+            <section
+              className={`royal-panel rounded-2xl p-4 flex flex-col gap-3 h-[340px] ${
+                activeTab === "ranks" ? "ring-2 ring-[#f5cd71]" : ""
+              }`}
+            >
+              <div className="flex items-center justify-between border-b border-[#b68635]/40 pb-2">
+                <h3 className="font-cinzel font-bold text-[#f7d279] text-xs sm:text-sm tracking-[0.14em] uppercase flex items-center gap-2">
+                  <span>👑</span> {t("leaderboardTitle")}
+                </h3>
+                <button
+                  onClick={loadLeaderboard}
+                  className="text-[#d6b77f] hover:text-[#ffe49e] text-sm cursor-pointer transition-colors"
+                  title={t("refresh")}
+                >
+                  ⟳
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto flex flex-col gap-1.5">
+                {rows.length === 0 ? (
+                  <div className="text-[#b89f72] text-xs text-center my-auto p-4">
+                    {t("leaderboardEmpty")}
+                  </div>
+                ) : (
+                  rows.map((r, i) => (
+                    <div
+                      key={r.name + i}
+                      className="grid grid-cols-[28px_1fr_auto_auto] gap-2 text-xs px-2.5 py-2 rounded-lg items-center bg-[#120e1a]/70 border border-[#7a5828]/30"
+                    >
+                      <span
+                        className={`font-cinzel font-extrabold text-center ${
+                          i === 0
+                            ? "text-[#ffd85c]"
+                            : i === 1
+                            ? "text-[#dce4f0]"
+                            : i === 2
+                            ? "text-[#e49b56]"
+                            : "text-[#9c845d]"
+                        }`}
+                      >
+                        {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
+                      </span>
+                      <span className="font-cinzel font-bold truncate text-[#f6ead0]">{r.name}</span>
+                      <span className="text-[#f7cf70] font-bold">
+                        {r.wins} {t("wins")}
+                      </span>
+                      <span className="text-[#9cc5f0] text-right font-semibold text-[0.7rem]">
+                        {r.accuracy}%
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
           </div>
         </section>
 
-        {/* Center: Leaderboard */}
-        <section className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full flex-1 p-4 flex flex-col gap-2.5">
-          <div className="flex items-center justify-between">
-            <h3 className="font-cinzel text-[#f5c97a] text-[0.9rem] tracking-widest">👑 Clasamentul zilei</h3>
-            <button
-              onClick={loadLeaderboard}
-              className="text-[#c8a070] hover:text-[#f5c97a] text-[0.75rem] cursor-pointer"
-              title="Reîmprospătează"
-            >
-              ⟳
-            </button>
-          </div>
-          {rows.length === 0 ? (
-            <div className="text-[#a07848] text-[0.8rem] text-center p-6">Niciun joc terminat azi. Joacă-te!</div>
-          ) : (
-            <div className="flex flex-col">
-              {rows.map((r, i) => (
-                <div
-                  key={r.name + i}
-                  className="grid grid-cols-[24px_1fr_auto_auto] gap-2 text-[0.82rem] p-1.5 px-2 rounded items-center odd:bg-white/5"
-                >
-                  <span className="text-[#a07848] text-[0.75rem]">{i + 1}</span>
-                  <span className="font-cinzel truncate text-[#e8d8b0]">{r.name}</span>
-                  <span className="text-[#f5c97a] font-bold">{r.wins} victorii</span>
-                  <span className="text-[#c8a070] text-right text-[0.72rem]">{r.accuracy}%</span>
+        {/* ---- RIGHT RAIL: DAILY MISSIONS PARCHMENT + PRC SPEED TRIAL ---- */}
+        <aside className="flex flex-col gap-4">
+          {/* Daily Quests Parchment Card */}
+          <div className="parchment-panel rounded-2xl overflow-hidden">
+            <div className="bg-gradient-to-r from-[#2c1c12] via-[#4a2b17] to-[#2c1c12] border-b-2 border-[#c9943b] px-4 py-2.5 flex items-center gap-2">
+              <span className="text-base">🎯</span>
+              <h3 className="font-cinzel font-extrabold text-xs tracking-[0.14em] uppercase text-[#fce096]">
+                {t("dailyMissions")}
+              </h3>
+            </div>
+            <div className="p-3.5 flex flex-col gap-3">
+              {[
+                { title: t("mission1"), progress: 35, label: "1/3", reward: "+150" },
+                { title: t("mission2"), progress: 100, label: "10/10", reward: "+200" },
+                {
+                  title: t("mission3"),
+                  progress: prcBest > 0 ? 100 : 0,
+                  label: prcBest > 0 ? "1/1" : "0/1",
+                  reward: "+100",
+                },
+              ].map((m, idx) => (
+                <div key={idx} className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#2b1808]">
+                    <span className="truncate pr-2">
+                      {m.progress === 100 ? "✅" : "⚔️"} {m.title}
+                    </span>
+                    <span className="text-[#9a5c08] font-cinzel shrink-0">🪙 {m.reward}</span>
+                  </div>
+                  <div className="w-full h-3 rounded-full bg-[#382313]/30 border border-[#96682c] overflow-hidden relative">
+                    <div
+                      className={`h-full transition-all ${
+                        m.progress === 100
+                          ? "bg-gradient-to-r from-[#2e9c4a] to-[#5cd472]"
+                          : "bg-gradient-to-r from-[#c47a20] to-[#f0b446]"
+                      }`}
+                      style={{ width: `${m.progress}%` }}
+                    />
+                    <span className="absolute inset-0 flex items-center justify-center text-[0.62rem] font-extrabold text-white drop-shadow">
+                      {m.label}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
-          )}
-        </section>
+          </div>
 
-        {/* Right rail */}
-        <section className="w-full lg:w-[260px] shrink-0 flex flex-col gap-4">
-          <a
-            href="/train"
-            className="bg-gradient-to-br from-[#f5c97a] to-[#c87030] border-2 border-[#f5c97a80] rounded-2xl shadow-2xl text-center p-5 hover:brightness-110 active:translate-y-px"
+          {/* Interactive PRC Speed Trial Widget (preserves existing players' PRC records) */}
+          <div
+            ref={prcSectionRef}
+            className={`royal-panel rounded-2xl p-4 flex flex-col gap-3 ${
+              activeTab === "prc" ? "ring-2 ring-[#f5cd71]" : ""
+            }`}
           >
-            <div className="font-cinzel text-[#2a1608] text-[1.1rem] tracking-widest">🏋️ Train</div>
-            <div className="text-[#3d2510] text-[0.75rem] mt-1">Antrenament de viteză</div>
-          </a>
+            <div className="flex items-center justify-between border-b border-[#b68635]/40 pb-2">
+              <h3 className="font-cinzel font-bold text-[#f7d279] text-xs sm:text-sm tracking-[0.14em] uppercase">
+                ⚡ {t("prcTitle")}
+              </h3>
+              {prcBest > 0 && (
+                <span className="text-[0.68rem] font-cinzel text-[#ffd977] bg-[#2a1c0d] border border-[#b68635]/60 rounded-full px-2 py-0.5">
+                  ★ {prcBest}
+                </span>
+              )}
+            </div>
 
-          <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-4 flex flex-col gap-2.5">
-            <h3 className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-widest">⚡ Măsoară PRC</h3>
             {!prcActive && !prcDone && (
               <>
-                <p className="text-[#c8a070] text-[0.75rem]">
-                  Scrie cât mai multe numere corect în {PRC_SECONDS} de secunde.
-                </p>
+                <p className="text-[#d9c49e] text-xs leading-relaxed">{t("prcDesc")}</p>
                 {prcBest > 0 && (
-                  <p className="text-[#f5c97a] text-[0.8rem]">Record personal: <strong>{prcBest}</strong></p>
+                  <p className="text-[#f7cf70] text-xs">
+                    {t("prcBest")} <strong>{prcBest}</strong>
+                  </p>
                 )}
                 <button
                   onClick={startPrc}
-                  className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-2.5 hover:brightness-110 cursor-pointer"
+                  className="btn-crimson rounded-xl font-cinzel font-bold text-xs tracking-[0.14em] uppercase py-2.5 cursor-pointer"
                 >
-                  Începe
+                  ⚡ {t("prcStart")}
                 </button>
               </>
             )}
+
             {prcActive && (
-              <div className="flex flex-col gap-2">
-                <div className="text-center font-cinzel text-[#f5c97a] text-[1.6rem]">{prcTarget}</div>
-                <div className="text-center text-[0.75rem] text-[#c8a070]">
-                  Timp rămas: <strong className="text-[#f5c97a]">{prcTimeLeft}s</strong> · Corecte:{" "}
-                  <strong className="text-[#f5c97a]">{prcCount}</strong>
+              <div className="flex flex-col gap-2.5">
+                <div className="text-center font-cinzel font-extrabold text-3xl gold-title py-1">
+                  {prcTarget}
+                </div>
+                <div className="text-center text-xs text-[#d6be92]">
+                  {t("prcTimeLeft")} <strong className="text-[#ffcf67]">{prcTimeLeft}s</strong> ·{" "}
+                  {t("prcCorrect")} <strong className="text-[#72e68a]">{prcCount}</strong>
                 </div>
                 <input
                   ref={prcInputRef}
@@ -280,32 +598,82 @@ export default function Dashboard() {
                   value={prcInput}
                   onChange={(e) => setPrcInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && submitPrc()}
-                  className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] text-[1.2rem] text-center p-2 outline-none focus:border-[#c87030]"
+                  className="bg-[#0b0910] border-2 border-[#c9943b] rounded-xl text-[#ffebb8] text-xl font-bold text-center p-2 outline-none focus:border-[#ffe28a]"
                 />
               </div>
             )}
+
             {prcDone && (
-              <div className="flex flex-col gap-2 text-center">
-                <div className="font-cinzel text-[#f5c97a] text-[1.3rem]">{prcCount} corecte</div>
-                <div className="text-[0.75rem] text-[#c8a070]">
-                  Greșite: {prcWrong} · Record: <strong>{prcBest}</strong>
+              <div className="flex flex-col gap-2.5 text-center">
+                <div className="font-cinzel font-extrabold text-2xl gold-title">
+                  {prcCount} {t("prcCorrect")}
+                </div>
+                <div className="text-xs text-[#d6be92]">
+                  {t("prcWrong")} {prcWrong} · {t("prcRecord")} <strong>{prcBest}</strong>
                 </div>
                 <button
                   onClick={startPrc}
-                  className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-2.5 hover:brightness-110 cursor-pointer"
+                  className="btn-crimson rounded-xl font-cinzel font-bold text-xs tracking-[0.14em] uppercase py-2.5 cursor-pointer"
                 >
-                  Încă o dată
+                  {t("prcAgain")}
                 </button>
               </div>
             )}
           </div>
+        </aside>
+      </main>
 
-          <div className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl p-4 flex flex-col gap-2">
-            <h3 className="font-cinzel text-[#f5c97a] text-[0.85rem] tracking-widest">😂 Gluma zilei</h3>
-            <p className="text-[#e8d8b0] text-[0.9rem] leading-relaxed font-cinzel">„Tu! Tu esti gluma!”</p>
+      {/* ================= BOTTOM ROYAL ACTION DOCK ================= */}
+      <footer className="fixed bottom-0 inset-x-0 z-30 bg-gradient-to-t from-[#090810] via-[#12101d]/95 to-[#1a1527]/90 border-t-2 border-[#b68635]/80 shadow-[0_-8px_28px_rgba(0,0,0,0.8)]">
+        <div className="max-w-[1440px] mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-5 overflow-x-auto">
+            <Link
+              href="/fight"
+              className="flex flex-col items-center text-[0.65rem] font-cinzel text-[#f3dfb4] hover:text-[#ffe396] transition-colors px-2"
+            >
+              <span className="text-lg">⚔️</span>
+              <span>{t("bottomDuel")}</span>
+            </Link>
+            <Link
+              href="/siege"
+              className="flex flex-col items-center text-[0.65rem] font-cinzel text-[#f3dfb4] hover:text-[#ffe396] transition-colors px-2"
+            >
+              <span className="text-lg">🔥</span>
+              <span>{t("bottomSiege")}</span>
+            </Link>
+            <Link
+              href="/turnul"
+              className="flex flex-col items-center text-[0.65rem] font-cinzel text-[#f3dfb4] hover:text-[#ffe396] transition-colors px-2"
+            >
+              <span className="text-lg">🗼</span>
+              <span>{t("bottomTurnul")}</span>
+            </Link>
+            <Link
+              href="/train"
+              className="flex flex-col items-center text-[0.65rem] font-cinzel text-[#f3dfb4] hover:text-[#ffe396] transition-colors px-2"
+            >
+              <span className="text-lg">🎓</span>
+              <span>{t("bottomTrivia")}</span>
+            </Link>
+            <button
+              type="button"
+              onClick={openPrcSection}
+              className="flex flex-col items-center text-[0.65rem] font-cinzel text-[#f3dfb4] hover:text-[#ffe396] transition-colors px-2 cursor-pointer"
+            >
+              <span className="text-lg">⚡</span>
+              <span>{t("bottomPrc")}</span>
+            </button>
           </div>
-        </section>
-      </div>
+
+          <Link
+            href="/siege"
+            className="btn-crimson shrink-0 rounded-xl px-5 sm:px-8 py-2.5 font-cinzel font-extrabold text-xs sm:text-sm tracking-[0.16em] uppercase flex items-center gap-2 animate-gold-glow"
+          >
+            <span>🔥</span>
+            <span>{t("playNow")}</span>
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }

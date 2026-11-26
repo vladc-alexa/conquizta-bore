@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { LanguageSwitcher, useI18n } from "@/lib/i18n";
 
 export default function LoginPage() {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,41 +22,60 @@ export default function LoginPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || "Autentificare eșuată.");
+        setError(data.error || t("loginFailed"));
         return;
       }
       window.location.href = "/";
     } catch {
-      setError("Eroare de rețea. Încearcă din nou.");
+      setError(t("loginNetError"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[80vh] w-full">
+    <div className="arena-backdrop flex flex-col items-center justify-center min-h-screen w-full px-4 py-8">
+      {/* Top right language switcher */}
+      <div className="fixed top-4 right-4 z-20">
+        <LanguageSwitcher />
+      </div>
+
+      {/* Royal Crest Header (clean Stone Quiz title, no tagline) */}
+      <div className="text-center mb-6 z-10 bg-[#120d19]/75 border border-[#b68635]/60 rounded-2xl px-8 py-3 shadow-xl">
+        <h1 className="font-cinzel font-extrabold text-4xl sm:text-5xl tracking-[0.14em] gold-title leading-tight">
+          {t("brandTitle")}
+        </h1>
+      </div>
+
+      {/* Ornate Login Citadel Card */}
       <form
         onSubmit={submit}
-        className="bg-gradient-to-br from-[#3d2510] to-[#2a1608] border-2 border-[#7a4e22] rounded-2xl shadow-2xl w-full max-w-[380px] p-7 flex flex-col gap-4"
+        className="royal-panel rounded-2xl w-full max-w-[420px] p-7 sm:p-8 flex flex-col gap-5 z-10"
       >
-        <h1 className="text-center !mb-1">ConQuizta – Bore</h1>
-        <p className="text-center text-[0.85rem] text-[#c8a070] -mt-2">Autentificare</p>
+        {/* Decorative top corner rivets */}
+        <div className="flex items-center justify-center gap-3">
+          <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#d4a147]" />
+          <span className="font-cinzel text-[#f3ca6b] text-sm tracking-[0.2em] uppercase">
+            {t("loginSubtitle")}
+          </span>
+          <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#d4a147]" />
+        </div>
 
-        <label className="flex flex-col gap-1.5 text-[0.8rem] text-[#c8a070]">
-          Email
+        <label className="flex flex-col gap-1.5 text-xs font-cinzel tracking-wider text-[#d9bc84] uppercase">
+          {t("loginEmail")}
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="tu@exemplu.ro"
+            placeholder={t("loginEmailPlaceholder")}
             autoComplete="email"
-            className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2.5 outline-none focus:border-[#c87030]"
+            className="bg-[#0d0a12]/90 border-2 border-[#7e5b27] rounded-xl text-[#fcecc4] font-sans text-sm px-3.5 py-2.5 outline-none focus:border-[#f0c05a] transition-colors"
           />
         </label>
 
-        <label className="flex flex-col gap-1.5 text-[0.8rem] text-[#c8a070]">
-          Parolă
+        <label className="flex flex-col gap-1.5 text-xs font-cinzel tracking-wider text-[#d9bc84] uppercase">
+          {t("loginPassword")}
           <input
             type="password"
             required
@@ -62,12 +83,12 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             autoComplete="current-password"
-            className="bg-[#1a0e05] border-2 border-[#7a4e22] rounded-lg text-[#f5c97a] p-2.5 outline-none focus:border-[#c87030]"
+            className="bg-[#0d0a12]/90 border-2 border-[#7e5b27] rounded-xl text-[#fcecc4] font-sans text-sm px-3.5 py-2.5 outline-none focus:border-[#f0c05a] transition-colors"
           />
         </label>
 
         {error && (
-          <div className="text-red-400 text-[0.8rem] bg-red-900/20 border border-red-500/40 rounded-lg p-2.5 text-center">
+          <div className="text-red-300 text-xs bg-red-950/70 border border-red-500/50 rounded-xl p-3 text-center">
             {error}
           </div>
         )}
@@ -75,10 +96,14 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="bg-gradient-to-br from-[#c87030] to-[#7a4010] border-2 border-[#f5c97a60] rounded-lg text-[#f5e8c0] font-cinzel p-3 hover:brightness-110 active:translate-y-px disabled:opacity-50 cursor-pointer"
+          className="btn-crimson rounded-xl font-cinzel font-bold tracking-[0.16em] text-sm uppercase py-3.5 cursor-pointer disabled:opacity-50"
         >
-          {loading ? "Se autentifică…" : "Intră"}
+          ⚔ {loading ? t("loginLoading") : t("loginSubmit")}
         </button>
+
+        <div className="text-center text-[0.72rem] text-[#bfa576] bg-[#0e0b14]/70 border border-[#6e4e20]/40 rounded-lg py-2 px-3">
+          {t("loginDemoHint")}
+        </div>
       </form>
     </div>
   );

@@ -1,0 +1,427 @@
+{
+  "count": 60,
+  "lang": "ro",
+  "updatedAt": "2026-11-26T12:06:43.847Z",
+  "questions": [
+    {
+      "id": "num-en-1",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a căzut Zidul Berlinului?",
+      "answer": 1989
+    },
+    {
+      "id": "num-en-2",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a pășit Neil Armstrong pentru prima dată pe Lună?",
+      "answer": 1969
+    },
+    {
+      "id": "num-en-3",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an s-a încheiat Al Doilea Război Mondial?",
+      "answer": 1945
+    },
+    {
+      "id": "num-en-4",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an s-a scufundat Titanicul?",
+      "answer": 1912
+    },
+    {
+      "id": "num-en-5",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a fost semnată Declarația de Independență?",
+      "answer": 1776
+    },
+    {
+      "id": "num-en-6",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a ajuns Cristofor Columb pentru prima dată în America?",
+      "answer": 1492
+    },
+    {
+      "id": "num-en-7",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a început Primul Război Mondial?",
+      "answer": 1914
+    },
+    {
+      "id": "num-en-8",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a început Revoluția Franceză?",
+      "answer": 1789
+    },
+    {
+      "id": "num-en-9",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a fost semnată Magna Carta?",
+      "answer": 1215
+    },
+    {
+      "id": "num-en-10",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a căzut Imperiul Roman de Apus?",
+      "answer": 476
+    },
+    {
+      "id": "num-en-11",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Câte oase are corpul uman adult?",
+      "answer": 206
+    },
+    {
+      "id": "num-en-12",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Câți cromozomi au oamenii în mod normal în total?",
+      "answer": 46
+    },
+    {
+      "id": "num-en-13",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Care este punctul de fierbere al apei în grade Celsius la nivelul mării?",
+      "answer": 100
+    },
+    {
+      "id": "num-en-14",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Care este numărul atomic al carbonului?",
+      "answer": 6
+    },
+    {
+      "id": "num-en-15",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Care este numărul atomic al aurului (Au)?",
+      "answer": 79
+    },
+    {
+      "id": "num-en-16",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Câte planete există în Sistemul nostru Solar?",
+      "answer": 8
+    },
+    {
+      "id": "num-en-17",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Câți dinți are în mod normal un om adult (inclusiv măselele de minte)?",
+      "answer": 32
+    },
+    {
+      "id": "num-en-18",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "La ce temperatură în grade Celsius îngheață apa?",
+      "answer": 0
+    },
+    {
+      "id": "num-en-19",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Câte elemente se află în tabelul periodic modern?",
+      "answer": 118
+    },
+    {
+      "id": "num-en-20",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Care este numărul atomic al oxigenului?",
+      "answer": 8
+    },
+    {
+      "id": "num-en-21",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Câte țări fac parte din Uniunea Europeană (în 2024)?",
+      "answer": 27
+    },
+    {
+      "id": "num-en-22",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Câte state are Statele Unite ale Americii?",
+      "answer": 50
+    },
+    {
+      "id": "num-en-23",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Câte continente există pe Pământ?",
+      "answer": 7
+    },
+    {
+      "id": "num-en-24",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Care este înălțimea aproximativă a Muntelui Everest în metri?",
+      "answer": 8849
+    },
+    {
+      "id": "num-en-25",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Peste câte fusuri orare se întinde Rusia?",
+      "answer": 11
+    },
+    {
+      "id": "num-en-26",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Câte oceane sunt recunoscute oficial pe Pământ?",
+      "answer": 5
+    },
+    {
+      "id": "num-en-27",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "În ce an a fost finalizat Turnul Eiffel?",
+      "answer": 1889
+    },
+    {
+      "id": "num-en-28",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câți jucători are pe teren o echipă de fotbal?",
+      "answer": 11
+    },
+    {
+      "id": "num-en-29",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câte găuri are un teren standard de golf?",
+      "answer": 18
+    },
+    {
+      "id": "num-en-30",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câte pătrate are o tablă standard de șah?",
+      "answer": 64
+    },
+    {
+      "id": "num-en-31",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câte minute durează un meci regulamentar de fotbal (fără minutele de prelungire)?",
+      "answer": 90
+    },
+    {
+      "id": "num-en-32",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câte cercuri sunt pe steagul olimpic?",
+      "answer": 5
+    },
+    {
+      "id": "num-en-33",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câte puncte valorează un touchdown în fotbalul american (înainte de punctul suplimentar)?",
+      "answer": 6
+    },
+    {
+      "id": "num-en-34",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câți jucători ai unei echipe de baschet sunt simultan pe teren?",
+      "answer": 5
+    },
+    {
+      "id": "num-en-35",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "În ce an au avut loc primele Jocuri Olimpice moderne la Atena?",
+      "answer": 1896
+    },
+    {
+      "id": "num-en-36",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte cărți sunt într-un pachet standard de joc (fără jokeri)?",
+      "answer": 52
+    },
+    {
+      "id": "num-en-37",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte clape are un pian standard de dimensiune completă?",
+      "answer": 88
+    },
+    {
+      "id": "num-en-38",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte zile are un an bisect?",
+      "answer": 366
+    },
+    {
+      "id": "num-en-39",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte minute are o zi întreagă?",
+      "answer": 1440
+    },
+    {
+      "id": "num-en-40",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte corzi are o chitară standard?",
+      "answer": 6
+    },
+    {
+      "id": "num-en-41",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte litere are alfabetul englez?",
+      "answer": 26
+    },
+    {
+      "id": "num-en-42",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Care este suma unghiurilor interioare ale unui triunghi în grade?",
+      "answer": 180
+    },
+    {
+      "id": "num-en-43",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte laturi are un dodecagon?",
+      "answer": 12
+    },
+    {
+      "id": "num-en-44",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "În ce an a fost lansat primul iPhone?",
+      "answer": 2007
+    },
+    {
+      "id": "num-en-45",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "Câți biți sunt într-un singur byte?",
+      "answer": 8
+    },
+    {
+      "id": "num-en-46",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "În ce an a fost fondat Google?",
+      "answer": 1998
+    },
+    {
+      "id": "num-en-47",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "Ce cod de stare HTTP înseamnă 'Not Found'?",
+      "answer": 404
+    },
+    {
+      "id": "num-en-48",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "Cât face 2 la puterea 10?",
+      "answer": 1024
+    },
+    {
+      "id": "num-en-49",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "În ce an a fost lansat primul film Star Wars?",
+      "answer": 1977
+    },
+    {
+      "id": "num-en-50",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "Câte cărți Harry Potter sunt în seria principală?",
+      "answer": 7
+    },
+    {
+      "id": "num-en-51",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "În ce an a fost lansat originalul Street Fighter II în sălile de jocuri?",
+      "answer": 1991
+    },
+    {
+      "id": "num-en-52",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "Câte filme Stăpânul Inelelor a regizat Peter Jackson în trilogia originală?",
+      "answer": 3
+    },
+    {
+      "id": "num-en-53",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Care este valoarea lui zero absolut în grade Celsius (rotunjită la cel mai apropiat număr întreg)?",
+      "answer": -273
+    },
+    {
+      "id": "num-en-54",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "La ce temperatură în grade Celsius se întâlnesc scările Fahrenheit și Celsius?",
+      "answer": -40
+    },
+    {
+      "id": "num-en-55",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Care este altitudinea aproximativă a țărmului Mării Moarte în metri (număr întreg negativ)?",
+      "answer": -430
+    },
+    {
+      "id": "num-en-56",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a fost asasinat Iulius Cezar (folosiți un număr negativ pentru î.Hr.)?",
+      "answer": -44
+    },
+    {
+      "id": "num-en-57",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Câte inimi are o caracatiță?",
+      "answer": 3
+    },
+    {
+      "id": "num-en-58",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte secunde sunt într-o oră?",
+      "answer": 3600
+    },
+    {
+      "id": "num-en-59",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a luat ființă oficial Organizația Națiunilor Unite?",
+      "answer": 1945
+    },
+    {
+      "id": "num-en-60",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "În ce an și-a lansat Netflix serviciul de streaming?",
+      "answer": 2007
+    }
+  ]
+}

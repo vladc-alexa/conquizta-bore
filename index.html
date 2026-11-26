@@ -452,6 +452,126 @@
   <script>
     const NUMBER_SET = [1, 2, 1990, 6500, 100, 8848, 1959, 2500, 10, 1000000];
 
+    function normalizeText(value) {
+      return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
+    function isVisible(node) {
+      if (!node) return false;
+      const style = window.getComputedStyle(node);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+      const rect = node.getBoundingClientRect?.();
+      if (rect && rect.width === 0 && rect.height === 0 && node.tagName !== 'INPUT' && node.tagName !== 'BUTTON') {
+        return false;
+      }
+      return true;
+    }
+
+    function findNode(selectors) {
+      for (const selector of selectors) {
+        const node = document.querySelector(selector);
+        if (node && isVisible(node)) return node;
+      }
+      return null;
+    }
+
+    function findButtonByText(texts) {
+      const matches = Array.from(document.querySelectorAll('button, [role="button"], input[type="submit"]')).filter(isVisible);
+      for (const candidate of matches) {
+        const label = normalizeText(candidate.textContent || candidate.value || candidate.getAttribute('aria-label'));
+        if (texts.some((t) => label.includes(t))) return candidate;
+      }
+      return null;
+    }
+
+    function findInputByText(texts) {
+      const matches = Array.from(document.querySelectorAll('input, textarea')).filter(isVisible);
+      for (const candidate of matches) {
+        const label = normalizeText(candidate.getAttribute('placeholder') || candidate.getAttribute('aria-label') || candidate.value || candidate.name || '');
+        if (texts.some((t) => label.includes(t))) return candidate;
+      }
+      return null;
+    }
+
+    function findQuestionCandidate() {
+      const nodes = Array.from(document.querySelectorAll('div, p, span, h1, h2, h3, label')).filter(isVisible);
+      const question = nodes.find((node) => {
+        const text = normalizeText(node.textContent || '');
+        if (text.length < 12) return false;
+        return /\?/.test(node.textContent || '') || /răspuns|answer|what|which|who|when|where|how/.test(text);
+      });
+      return question || findNode(['#question-text', '.question-text', '.modal-question', '.question-panel', '.prompt-text', '[data-testid*="question"]']) || null;
+    }
+
+    function findAnswerCandidate(questionNode) {
+      const candidates = Array.from(document.querySelectorAll('input, textarea')).filter(isVisible);
+      const near = questionNode ? questionNode.closest('div, section, form, main, article, [role="dialog"], .modal') : null;
+      if (near) {
+        const inside = Array.from(near.querySelectorAll('input, textarea')).filter(isVisible);
+        if (inside.length) return inside[0];
+      }
+      return (
+        findNode(['#answer-input', '.answer-input', '[data-testid*="answer"]', 'input[type="number"]', 'input[type="text"]']) ||
+        findInputByText(['răspuns', 'answer', 'your answer']) ||
+        candidates.find((candidate) => candidate.tagName === 'INPUT') ||
+        null
+      );
+    }
+
+    function findSubmitCandidate(questionNode, inputNode) {
+      const questionScope = questionNode ? questionNode.closest('div, section, form, main, article, [role="dialog"], .modal') : null;
+      if (questionScope) {
+        const nearby = Array.from(questionScope.querySelectorAll('button, [role="button"], input[type="submit"]')).filter(isVisible);
+        const button = nearby.find((candidate) => {
+          const label = normalizeText(candidate.textContent || candidate.value || candidate.getAttribute('aria-label'));
+          return /răspunde|trimite|answer|submit/.test(label);
+        });
+        if (button) return button;
+      }
+      return findButtonByText(['trimite', 'răspunde', 'submit', 'answer']) || document.querySelector('button, [role="button"], input[type="submit"]');
+    }
+
+    function detectUiMode() {
+      const question = findQuestionCandidate();
+      const input = findAnswerCandidate(question);
+      const submit = findSubmitCandidate(question, input);
+      const round = findNode(['#round-display', '.round-display', '.round-label', '[data-testid*="round"]', '.timer-round']) || document.querySelector('[class*="round"]');
+      if (question && input && submit) return 'battle-royale';
+      return 'legacy';
+    }
+
+    function resolveQuizNodes() {
+      const mode = detectUiMode();
+      const question = findQuestionCandidate() || document.getElementById('question-text');
+      const input = findAnswerCandidate(question) || document.getElementById('answer-input');
+      const submit = findSubmitCandidate(question, input) || document.getElementById('submit-btn');
+      const timer = findNode(['#timer-display', '.timer-display', '.time-left', '[data-testid*="timer"]', '.countdown']) || document.getElementById('timer-display');
+      const round = findNode(['#round-display', '.round-display', '.round-label', '[data-testid*="round"]', '.timer-round']) || document.querySelector('[class*="round"]');
+      return { mode, question, input, submit, timer, round };
+    }
+
+    window.__conquiztaResolveQuizNodes = resolveQuizNodes;
+
+    const startMutationMonitor = () => {
+      if (!document.body) return;
+      const observer = new MutationObserver(() => {
+        const nodes = resolveQuizNodes();
+        if (nodes.question && nodes.input && nodes.submit) {
+          window.__conquiztaDetectedQuiz = nodes;
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'id', 'placeholder', 'aria-label', 'value']
+      });
+      window.__conquiztaQuizObserver = observer;
+    };
+
+    startMutationMonitor();
+
     function generateQuestions(n, randomize) {
       const qs = [];
       for (let i = 0; i < n; i++) {
@@ -472,9 +592,10 @@
     let totalTime = 0;
     let scoreSubmitted = false;
 
-    const elQuestion   = document.getElementById('question-text');
-    const elInput      = document.getElementById('answer-input');
-    const elSubmit     = document.getElementById('submit-btn');
+    const ui = resolveQuizNodes();
+    const elQuestion   = ui.question || document.getElementById('question-text');
+    const elInput      = ui.input || document.getElementById('answer-input');
+    const elSubmit     = ui.submit || document.getElementById('submit-btn');
     const elFeedback   = document.getElementById('feedback');
     const elFeedIcon   = document.getElementById('feedback-icon');
     const elFeedLabel  = document.getElementById('feedback-label');

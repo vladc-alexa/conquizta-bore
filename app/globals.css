@@ -1,54 +1,188 @@
 @import "tailwindcss";
 
 @theme {
-  --font-cinzel: var(--font-cinzel);
-  --font-lato: var(--font-lato);
+  --font-cinzel: "Cinzel", Georgia, serif;
+  --font-lato: "Lato", system-ui, -apple-system, sans-serif;
 }
 
 :root {
-  --background: radial-gradient(ellipse at top, #3b2a1a 0%, #1a0e05 100%);
-  --foreground: #f0e0c0;
+  --gold-bright: #ffe59e;
+  --gold-mid: #d8a243;
+  --gold-deep: #8b5b1a;
+  --crimson-bright: #b92626;
+  --crimson-deep: #5c1012;
+  --slate-royal: #161a2a;
+  --slate-deep: #0b0e18;
+  --parchment-light: #f3e4c2;
+  --parchment-mid: #dcc493;
+  --foreground: #f6ead0;
+}
+
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #9f702b #140e12;
+}
+
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+*::-webkit-scrollbar-track {
+  background: #140e12;
+}
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #cfa049, #7a4f19);
+  border-radius: 4px;
+  border: 1px solid #2b1a0c;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #e9be67;
 }
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background-color: #0b090e;
   font-family: var(--font-lato), sans-serif;
   min-height: 100vh;
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
+  overflow-x: hidden;
 }
 
-/* Themed scrollbars (chat + leaderboard) */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #7a4e22 #1a0e05;
-}
-*::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-*::-webkit-scrollbar-track {
-  background: #1a0e05;
-}
-*::-webkit-scrollbar-thumb {
-  background: #7a4e22;
-  border-radius: 4px;
-  border: 1px solid #3d2510;
-}
-*::-webkit-scrollbar-thumb:hover {
-  background: #c87030;
+.font-cinzel {
+  font-family: var(--font-cinzel), Georgia, serif;
 }
 
-h1 {
-  font-family: var(--font-cinzel), serif;
-  font-size: 1.6rem;
-  letter-spacing: 3px;
-  color: #f5c97a;
-  margin-bottom: 20px;
-  text-shadow: 0 2px 8px #000a;
+/* Panoramic Medieval Castle Backdrop */
+.arena-backdrop {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  background-image:
+    radial-gradient(ellipse at 50% 25%, rgba(255, 194, 96, 0.14) 0%, rgba(12, 9, 16, 0.45) 55%, rgba(7, 5, 10, 0.88) 100%),
+    url('/art/bg-castle-panorama.jpg');
+  background-size: cover;
+  background-position: center top;
+  background-attachment: fixed;
+}
+
+/* Ornate Gold-Framed Dark Royal Panel */
+.royal-panel {
+  background: linear-gradient(165deg, rgba(31, 24, 34, 0.92) 0%, rgba(16, 13, 22, 0.95) 100%);
+  border: 2px solid #b68635;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.72),
+    inset 0 1px 0 rgba(255, 232, 168, 0.35),
+    inset 0 0 24px rgba(182, 134, 53, 0.08);
+  position: relative;
+}
+
+/* Antique Illuminated Parchment Card (Daily Missions / Info) */
+.parchment-panel {
+  background: linear-gradient(180deg, #f3e4c3 0%, #dfc697 100%);
+  color: #2b1909;
+  border: 2px solid #c9943b;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.65),
+    inset 0 0 18px rgba(125, 76, 22, 0.28);
+}
+
+/* Ornate Golden Bezel Mode Card */
+.mode-card {
+  position: relative;
+  border: 3px solid #d4a147;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.78),
+    0 0 0 1px rgba(40, 22, 6, 0.9),
+    inset 0 1px 0 rgba(255, 240, 190, 0.6);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease, border-color 220ms ease;
+}
+.mode-card:hover {
+  transform: translateY(-6px) scale(1.015);
+  border-color: #ffe399;
+  box-shadow:
+    0 22px 44px rgba(0, 0, 0, 0.85),
+    0 0 26px rgba(245, 190, 72, 0.42),
+    inset 0 1px 0 rgba(255, 248, 214, 0.85);
+}
+
+/* Royal Crimson CTA Button ("JOACĂ ACUM" / "PLAY NOW") */
+.btn-crimson {
+  background: linear-gradient(180deg, #d12e2e 0%, #8f1417 55%, #650b0e 100%);
+  border: 2px solid #ecc068;
+  color: #fff6dc;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.75);
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.65),
+    0 0 18px rgba(209, 46, 46, 0.38),
+    inset 0 1px 0 rgba(255, 225, 165, 0.5);
+  transition: transform 140ms ease, filter 140ms ease, box-shadow 140ms ease;
+}
+.btn-crimson:hover {
+  filter: brightness(1.13);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.75),
+    0 0 26px rgba(240, 185, 72, 0.45),
+    inset 0 1px 0 rgba(255, 240, 195, 0.7);
+}
+.btn-crimson:active {
+  transform: translateY(1px);
+}
+
+/* Royal Sapphire Training Banner Button */
+.btn-sapphire {
+  background: linear-gradient(180deg, #27569e 0%, #163263 55%, #0e2144 100%);
+  border: 2px solid #e4b65c;
+  color: #fff5d9;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.72),
+    inset 0 1px 0 rgba(173, 212, 255, 0.35);
+  transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+}
+.btn-sapphire:hover {
+  filter: brightness(1.14);
+  transform: translateY(-2px);
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.8),
+    0 0 22px rgba(90, 165, 255, 0.35);
+}
+
+/* Gilded Metallic Text */
+.gold-title {
+  background: linear-gradient(180deg, #fff8d6 0%, #f5cb6e 48%, #c78827 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.98)) drop-shadow(0 5px 12px rgba(0, 0, 0, 0.9));
+}
+
+/* Crimson Ribbon Banner */
+.crimson-ribbon {
+  background: linear-gradient(90deg, transparent 0%, #7d1216 14%, #a81c20 50%, #7d1216 86%, transparent 100%);
+  border-top: 1px solid rgba(242, 198, 107, 0.55);
+  border-bottom: 1px solid rgba(242, 198, 107, 0.55);
+}
+
+/* Carved Wood Table Strip */
+.wood-desk-strip {
+  background: linear-gradient(180deg, #4b2a14 0%, #2b160a 55%, #190c05 100%);
+  border-top: 2px solid #b58336;
+  border-bottom: 2px solid #593514;
+  box-shadow: inset 0 2px 10px rgba(255, 189, 89, 0.16), 0 8px 24px rgba(0, 0, 0, 0.75);
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 14px rgba(245, 194, 86, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(245, 194, 86, 0.7);
+  }
+}
+
+.animate-gold-glow {
+  animation: pulseGlow 2.6s ease-in-out infinite;
 }

@@ -17,8 +17,8 @@ export async function GET() {
       messages: [
         {
           id: "1",
-          authorName: "System",
-          text: "Mod local: Baza de date nu este disponibilă.",
+          authorName: "Royal Herald",
+          text: "Welcome to the Arena Tavern! (Local offline mode — live DB not configured)",
           createdAt: new Date().toISOString(),
         },
       ],
