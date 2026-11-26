@@ -244,7 +244,7 @@ export default function Dashboard() {
         {/* ---- LEFT: TALL GENERAL CHAT BOX (more messages visible at once) ---- */}
         <section
           ref={chatSectionRef}
-          className="royal-panel rounded-2xl flex flex-col h-[460px] lg:h-[calc(100vh-165px)] lg:min-h-[580px]"
+          className="royal-panel rounded-2xl flex flex-col h-[460px] lg:h-[calc(100vh-248px)] lg:min-h-[460px]"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#b68635]/40 bg-[#1a1322]/75 rounded-t-2xl">
             <h3 className="font-cinzel font-bold text-[#f7d279] text-xs sm:text-sm tracking-[0.14em] uppercase flex items-center gap-2">
