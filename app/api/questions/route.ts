@@ -51,7 +51,14 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-// On-the-fly fallback translator (only hit if pre-translated JSON isn't present or translating DB rows)
+function inferResponseType(prompt: string, answer: number): string {
+  if (/în ce an\b|în anul\b|\banul\b|când a fost|când s-a născut|când a murit|când a apărut|what year/i.test(prompt)) {
+    return "an";
+  }
+  if (answer < 0) return "număr negativ";
+  return "număr";
+}
+
 async function translateLiveStrings(texts: string[], sl: string, tl: string): Promise<string[]> {
   if (sl === tl || texts.length === 0) return texts;
   const out = [...texts];
@@ -118,6 +125,7 @@ async function serveLocal(mode: "rapide" | "grila", count: number, lang: "ro" | 
           category: q.category,
           prompt: translatedPrompts[idx],
           answer: q.answer,
+          responseType: inferResponseType(translatedPrompts[idx], q.answer),
         })),
         totalBank: pool.length,
       };
@@ -129,6 +137,7 @@ async function serveLocal(mode: "rapide" | "grila", count: number, lang: "ro" | 
         category: q.category,
         prompt: q.prompt,
         answer: q.answer,
+        responseType: inferResponseType(q.prompt, q.answer),
       })),
       totalBank: pool.length,
     };
@@ -203,13 +212,12 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "mode must be rapide or grila" }, { status: 400 });
   }
 
-  // When a category filter is chosen or in EN mode, serve from the 560-question bank directly
   if (lang === "en" || (category && category !== "all")) {
     const result = await serveLocal(mode, count, lang, category);
     return NextResponse.json(result);
   }
 
-  // Romanian mode (default): mix published PostgreSQL DB questions (if available) with the 500+ translated Romanian bank
+  // Romanian mode (default): mix published PostgreSQL DB questions (if available) with the 1,660 translated bank
   try {
     let ids: { id: string }[];
     if (mode === "rapide") {
@@ -245,11 +253,13 @@ export async function GET(req: Request) {
           .map((q) => {
             const correct = q.options.find((o) => o.isCorrect);
             if (!correct || !/^-?\d+$/.test(correct.text.trim())) return null;
+            const answer = parseInt(correct.text.trim(), 10);
             return {
               id: q.id,
               category: q.category?.name ?? "General",
               prompt: q.prompt,
-              answer: parseInt(correct.text.trim(), 10),
+              answer,
+              responseType: inferResponseType(q.prompt, answer),
             };
           })
           .filter(Boolean);
@@ -277,7 +287,7 @@ export async function GET(req: Request) {
       }
     }
   } catch {
-    // DB unavailable locally — serve translated Romanian Open Trivia bank seamlessly
+    // DB unavailable locally — serve translated Romanian bank seamlessly
   }
 
   return NextResponse.json(await serveLocal(mode, count, lang, category));

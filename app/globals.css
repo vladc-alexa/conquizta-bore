@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --font-cinzel: "Cinzel", Georgia, serif;
-  --font-lato: "Lato", system-ui, -apple-system, sans-serif;
+  --font-cinzel: "Cinzel", var(--font-display), Georgia, serif;
+  --font-display: var(--font-display), "Cinzel", Georgia, serif;
+  --font-lato: var(--font-lato), system-ui, -apple-system, sans-serif;
 }
 
 :root {
@@ -15,7 +16,11 @@
   --slate-deep: #0b0e18;
   --parchment-light: #f3e4c2;
   --parchment-mid: #dcc493;
+  --background: radial-gradient(ellipse at top, #0b1a16 0%, #040a08 100%);
   --foreground: #f6ead0;
+  --gem: #7fa8a5;
+  --gem-bright: #9ec6c1;
+  --stone-white: #dfe7e5;
 }
 
 * {
@@ -23,7 +28,6 @@
   scrollbar-width: thin;
   scrollbar-color: #9f702b #140e12;
 }
-
 *::-webkit-scrollbar {
   width: 7px;
   height: 7px;
@@ -44,19 +48,29 @@ body {
   color: var(--foreground);
   background-color: #0b090e;
   font-family: var(--font-lato), sans-serif;
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* iOS Safari zooms the whole page when a focused field is under 16px. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
 }
 
 .font-cinzel {
   font-family: var(--font-cinzel), Georgia, serif;
 }
 
-/* Panoramic Medieval Castle Backdrop */
+/* ---- Stone Quiz Medieval Royal Arena Theme ---- */
 .arena-backdrop {
   position: relative;
-  min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
   background-image:
     radial-gradient(ellipse at 50% 25%, rgba(255, 194, 96, 0.14) 0%, rgba(12, 9, 16, 0.45) 55%, rgba(7, 5, 10, 0.88) 100%),
@@ -66,7 +80,6 @@ body {
   background-attachment: fixed;
 }
 
-/* Ornate Gold-Framed Dark Royal Panel */
 .royal-panel {
   background: linear-gradient(165deg, rgba(31, 24, 34, 0.92) 0%, rgba(16, 13, 22, 0.95) 100%);
   border: 2px solid #b68635;
@@ -77,7 +90,6 @@ body {
   position: relative;
 }
 
-/* Antique Illuminated Parchment Card (Daily Missions / Info) */
 .parchment-panel {
   background: linear-gradient(180deg, #f3e4c3 0%, #dfc697 100%);
   color: #2b1909;
@@ -87,7 +99,6 @@ body {
     inset 0 0 18px rgba(125, 76, 22, 0.28);
 }
 
-/* Ornate Golden Bezel Mode Card */
 .mode-card {
   position: relative;
   border: 3px solid #d4a147;
@@ -108,7 +119,6 @@ body {
     inset 0 1px 0 rgba(255, 248, 214, 0.85);
 }
 
-/* Royal Crimson CTA Button ("JOACĂ ACUM" / "PLAY NOW") */
 .btn-crimson {
   background: linear-gradient(180deg, #d12e2e 0%, #8f1417 55%, #650b0e 100%);
   border: 2px solid #ecc068;
@@ -131,7 +141,6 @@ body {
   transform: translateY(1px);
 }
 
-/* Royal Sapphire Training Banner Button */
 .btn-sapphire {
   background: linear-gradient(180deg, #27569e 0%, #163263 55%, #0e2144 100%);
   border: 2px solid #e4b65c;
@@ -150,7 +159,6 @@ body {
     0 0 22px rgba(90, 165, 255, 0.35);
 }
 
-/* Gilded Metallic Text */
 .gold-title {
   background: linear-gradient(180deg, #fff8d6 0%, #f5cb6e 48%, #c78827 100%);
   -webkit-background-clip: text;
@@ -159,14 +167,12 @@ body {
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.98)) drop-shadow(0 5px 12px rgba(0, 0, 0, 0.9));
 }
 
-/* Crimson Ribbon Banner */
 .crimson-ribbon {
   background: linear-gradient(90deg, transparent 0%, #7d1216 14%, #a81c20 50%, #7d1216 86%, transparent 100%);
   border-top: 1px solid rgba(242, 198, 107, 0.55);
   border-bottom: 1px solid rgba(242, 198, 107, 0.55);
 }
 
-/* Carved Wood Table Strip */
 .wood-desk-strip {
   background: linear-gradient(180deg, #4b2a14 0%, #2b160a 55%, #190c05 100%);
   border-top: 2px solid #b58336;
@@ -182,7 +188,293 @@ body {
     box-shadow: 0 0 28px rgba(245, 194, 86, 0.7);
   }
 }
-
 .animate-gold-glow {
   animation: pulseGlow 2.6s ease-in-out infinite;
+}
+
+/* ---- brand wordmark: ST0NE (gem as the O) over QUIZ ---------------------- */
+.brand {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font-family: var(--font-display), var(--font-lato), sans-serif;
+  font-weight: 300;
+  color: var(--stone-white);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  text-shadow: 0 2px 10px #0009;
+}
+.brand-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.04em;
+  padding-left: 0.18em;
+}
+.brand-gem {
+  height: 0.92em;
+  width: auto;
+  margin: 0 0.03em;
+  filter: drop-shadow(0 0 6px rgba(127, 168, 165, 0.45));
+}
+.brand-quiz {
+  margin-top: 0.2em;
+  padding-left: 0.45em;
+  font-size: 0.5em;
+  letter-spacing: 0.45em;
+  color: #cfe0de;
+}
+
+/* ---- 1v1 arena ---------------------------------------------------------- */
+.dw-arena {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1774 / 887;
+  border: 2px solid #1e3a34;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px #0009;
+  user-select: none;
+}
+.dw-bg {
+  position: absolute;
+  inset: 0;
+  background: url("/duel/arena.webp") 0 0 / 100% 100% no-repeat;
+  box-shadow: inset 0 0 60px #0006;
+}
+.dw-arena.dw-mirror .dw-bg {
+  transform: scaleX(-1);
+}
+.dw-fighter {
+  position: absolute;
+  bottom: 20%;
+  background: none;
+  border: 0;
+  padding: 0;
+  transition: left 0.7s cubic-bezier(0.2, 0.8, 0.25, 1),
+    translate 0.22s cubic-bezier(0.3, 0.9, 0.3, 1);
+  filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.5));
+  will-change: left, translate;
+}
+.dw-sprite {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-size: calc(100% * var(--n)) 100%;
+}
+.dw-pose {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  opacity: 0;
+  transition: opacity 90ms linear;
+}
+.dw-pose.dw-on {
+  opacity: 1;
+}
+.dw-sprite.dw-loop {
+  animation: dw-strip var(--sd, 900ms) steps(var(--n, 2), jump-none) infinite;
+}
+.dw-sprite.dw-once {
+  animation: dw-strip var(--sd, 520ms) steps(var(--n, 2), jump-none) 1 forwards;
+}
+@keyframes dw-strip {
+  from { background-position-x: 0%; }
+  to { background-position-x: 100%; }
+}
+.dw-fall {
+  animation: dw-fall 1.25s ease-in forwards;
+}
+@keyframes dw-fall {
+  to {
+    transform: translate(var(--fx, 150%), 45%) rotate(var(--rot, 18deg));
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dw-fighter { transition: none; }
+  .dw-fall { animation-duration: 0.01s; }
+}
+
+/* --- Turnul: climber climb loop --- */
+@keyframes climb-step {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50% { transform: translateY(-2px) rotate(1.5deg); }
+}
+.climber-sprite {
+  animation: climb-step 700ms linear infinite;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+.climber-sprite--held { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .climber-sprite { animation: none; }
+}
+
+.rock {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1.9cqh;
+  height: 1.9cqh;
+  margin: -0.95cqh 0 0 -0.95cqh;
+  border-radius: 45%;
+  background: radial-gradient(circle at 32% 28%, #d6dcda, #7d8785 62%, #454e4c);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+@keyframes victim-shake {
+  0%, 100% { transform: translateX(-50%) rotate(0deg); }
+  20% { transform: translateX(-50%) translateX(-5px) rotate(-7deg); }
+  55% { transform: translateX(-50%) translateX(5px) rotate(7deg); }
+  80% { transform: translateX(-50%) translateX(-2px) rotate(-3deg); }
+}
+.victim-hit { animation: victim-shake 520ms ease-in-out; }
+
+@keyframes climber-hit-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(-3px) rotate(-4deg); }
+  60% { transform: translateX(3px) rotate(4deg); }
+}
+.climber-hit { animation: climber-hit-shake 420ms ease-in-out; }
+
+.online-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #5fd39a;
+  box-shadow: 0 0 0 2px rgba(95, 211, 154, 0.18);
+  animation: online-pulse 2.4s ease-in-out infinite;
+  vertical-align: middle;
+}
+@keyframes online-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .online-dot { animation: none; }
+}
+
+/* ---- La Carciuma ---- */
+@keyframes cq-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.cq-bob { animation: cq-bob 2.6s ease-in-out infinite; }
+@keyframes cq-zzz {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.8); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-6px, -26px) scale(1.15); }
+}
+.cq-zzz { animation: cq-zzz 2.8s ease-out infinite; }
+@keyframes cq-splash {
+  0% { opacity: 0; transform: translateY(4px) scale(0.7); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-26px) scale(1.1); }
+}
+.cq-splash { animation: cq-splash 1.6s ease-out forwards; }
+@keyframes cq-glow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.75; }
+}
+.cq-glow { animation: cq-glow 2.2s ease-in-out infinite; }
+.cq-idle { animation: cq-breathe 4.6s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes cq-breathe {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-1.5%) rotate(-0.6deg); }
+}
+.cq-out {
+  transform: rotate(7deg) translateY(4%) scale(0.98);
+  filter: saturate(0.8) brightness(0.85);
+  transition: transform 700ms ease, filter 700ms ease;
+}
+.cq-burp { animation: cq-burp 620ms ease-out; }
+@keyframes cq-burp {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.06) translateY(-2%); }
+  55% { transform: scale(0.98) translateY(1%); }
+  100% { transform: scale(1); }
+}
+.cq-toast { animation: cq-toast 900ms ease-in-out; }
+@keyframes cq-toast {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  40% { transform: translateY(-4%) rotate(-2deg); }
+  70% { transform: translateY(-2%) rotate(1.5deg); }
+}
+.cq-hiccup { animation: cq-hiccup 520ms steps(2, end) 2; }
+@keyframes cq-hiccup {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(-1.2%, -1.5%); }
+  66% { transform: translate(1.2%, 0.5%); }
+}
+.cq-laugh { animation: cq-laugh 700ms ease-in-out; }
+@keyframes cq-laugh {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  25% { transform: translateY(-2%) rotate(-1.6deg); }
+  50% { transform: translateY(0) rotate(1.4deg); }
+  75% { transform: translateY(-1.5%) rotate(-1deg); }
+}
+.cq-wipe { animation: cq-wipe 1100ms ease-in-out; }
+@keyframes cq-wipe {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(2.2deg) translateX(1%); }
+}
+.cq-winner { animation: cq-winner 2.4s ease-in-out infinite; }
+@keyframes cq-winner {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 205, 120, 0)); }
+  50% { filter: drop-shadow(0 0 14px rgba(255, 205, 120, 0.55)); }
+}
+.cq-bubble {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: #f4e4c1;
+  color: #2a1608;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 10px;
+  border: 2px solid #2a1608;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+  animation: cq-pop 260ms ease-out;
+}
+.cq-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 10px;
+  height: 10px;
+  background: #f4e4c1;
+  border-right: 2px solid #2a1608;
+  border-bottom: 2px solid #2a1608;
+  transform: translateX(-50%) rotate(45deg);
+}
+@keyframes cq-pop {
+  from { opacity: 0; transform: translateX(-50%) scale(0.7); }
+  to { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+.cq-zzz {
+  position: absolute;
+  right: -2%;
+  top: 4%;
+  color: #ffd98e;
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 6px #000;
+}
+.cq-zzz span { animation: cq-float 2.6s ease-in-out infinite; display: inline-block; }
+.cq-zzz span:nth-child(2) { animation-delay: 0.4s; opacity: 0.7; }
+@keyframes cq-float {
+  0%, 100% { transform: translateY(0); opacity: 0.35; }
+  50% { transform: translateY(-6px); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cq-idle, .cq-burp, .cq-toast, .cq-hiccup, .cq-laugh, .cq-wipe, .cq-winner, .cq-zzz span { animation: none; }
 }

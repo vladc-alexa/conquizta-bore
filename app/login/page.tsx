@@ -4,7 +4,7 @@ import { useState } from "react";
 import { LanguageSwitcher, useI18n } from "@/lib/i18n";
 
 export default function LoginPage() {
-  const { t } = useI18n();
+  const { lang, t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -52,7 +52,6 @@ export default function LoginPage() {
         onSubmit={submit}
         className="royal-panel rounded-2xl w-full max-w-[420px] p-7 sm:p-8 flex flex-col gap-5 z-10"
       >
-        {/* Decorative top corner rivets */}
         <div className="flex items-center justify-center gap-3">
           <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#d4a147]" />
           <span className="font-cinzel text-[#f3ca6b] text-sm tracking-[0.2em] uppercase">
@@ -100,6 +99,13 @@ export default function LoginPage() {
         >
           ⚔ {loading ? t("loginLoading") : t("loginSubmit")}
         </button>
+
+        <p className="text-center text-xs text-[#d6be92]">
+          {lang === "ro" ? "Nu ai cont? " : "No account yet? "}
+          <a href="/register" className="text-[#ffe28a] underline hover:text-white font-semibold">
+            {lang === "ro" ? "Creează unul" : "Create one"}
+          </a>
+        </p>
 
         <div className="text-center text-[0.72rem] text-[#bfa576] bg-[#0e0b14]/70 border border-[#6e4e20]/40 rounded-lg py-2 px-3">
           {t("loginDemoHint")}

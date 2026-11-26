@@ -1,4 +1,6 @@
-// Demo seed: admin user + leaderboard entries + a chat message.
+// Demo seed: admin user + a test user + a starter chat message.
+// NOTE: no leaderboard/PRC demo data is seeded anymore — scores come only
+// from real games (the old demo-session seeding was removed).
 // Local:  npm run seed   (reads .env)
 // Coolify: npm run seed  (env comes from the container)
 import { PrismaClient } from "@prisma/client";
@@ -37,26 +39,6 @@ async function main() {
     },
   });
   console.log(`user ${testUser.email} (test) created/updated`);
-
-  const demoNames = ["Rovi", "Lxcxfxr13", "Thinker", "St0ne", "BoreKing"];
-  for (const n of demoNames) {
-    let u = await prisma.user.findUnique({ where: { displayName: n } });
-    if (!u) u = await prisma.user.create({ data: { displayName: n } });
-    const wins = 3 + Math.floor(Math.random() * 12);
-    for (let i = 0; i < wins; i++) {
-      await prisma.quizSession.create({
-        data: {
-          userId: u.id,
-          status: "COMPLETED",
-          questionCount: 10,
-          correctCount: 6 + Math.floor(Math.random() * 5),
-          startedAt: new Date(Date.now() - (i + 1) * 3600000),
-          completedAt: new Date(Date.now() - i * 3600000),
-        },
-      });
-    }
-    console.log(`seeded ${wins} sessions for ${n}`);
-  }
 
   const chatCount = await prisma.chatMessage.count();
   if (chatCount === 0) {

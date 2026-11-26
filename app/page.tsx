@@ -14,8 +14,9 @@ interface ChatMessage {
 
 interface LeaderRow {
   name: string;
-  wins: number;
-  accuracy: number;
+  wins?: number;
+  points?: number;
+  accuracy?: number;
 }
 
 // Preserved localStorage key so existing players keep their PRC records
@@ -25,11 +26,12 @@ const PRC_SECONDS = 30;
 export default function Dashboard() {
   const { lang, t } = useI18n();
   const [name, setName] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [sending, setSending] = useState(false);
-  const [bankCount, setBankCount] = useState<number>(560);
+  const [bankCount, setBankCount] = useState<number>(1660);
   const [activeTab, setActiveTab] = useState<"home" | "chat" | "ranks" | "prc">("home");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -71,7 +73,11 @@ export default function Dashboard() {
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setName(d.name))
+      .then((d) => {
+        if (!d) return;
+        setName(d.name);
+        if (d.isAdmin) setIsAdmin(true);
+      })
       .catch(() => {});
     fetch(`/api/questions?meta=1&lang=${lang}`)
       .then((r) => (r.ok ? r.json() : null))
@@ -113,7 +119,6 @@ export default function Dashboard() {
     window.location.href = "/login";
   };
 
-  // ---- PRC sprint ----
   const startPrc = () => {
     setPrcActive(true);
     setPrcDone(false);
@@ -172,6 +177,7 @@ export default function Dashboard() {
   return (
     <div className="arena-backdrop min-h-screen w-full flex flex-col justify-between pb-24 lg:pb-20">
       <InviteToast />
+
       {/* ================= TOP ROYAL HUD BAR ================= */}
       <header className="w-full max-w-[1440px] mx-auto px-3 sm:px-6 pt-3 pb-1 flex flex-wrap items-center justify-between gap-3 z-20">
         {/* Player Avatar Medallion (keeps existing player account name & PRC record) */}
@@ -201,20 +207,29 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Center Gilded Crest Banner: STONE QUIZ (clean title, tagline removed) */}
+        {/* Center Gilded Crest Banner: STONE QUIZ (clean title, no tagline) */}
         <div className="order-3 xl:order-2 w-full xl:w-auto flex flex-col items-center text-center my-1 xl:my-0 bg-[#120d19]/78 backdrop-blur-[2px] border border-[#b68635]/65 rounded-2xl px-8 py-2.5 shadow-xl">
           <h1 className="font-cinzel font-extrabold text-2xl sm:text-3xl lg:text-4xl tracking-[0.16em] gold-title leading-none">
             {t("brandTitle")}
           </h1>
         </div>
 
-        {/* Right Bank Badge + Language Switcher + Sign Out */}
+        {/* Right Bank Badge + Admin + Language Switcher + Sign Out */}
         <div className="order-2 xl:order-3 flex items-center gap-2 sm:gap-2.5 flex-wrap justify-end">
           <div className="hidden md:flex items-center gap-2 royal-panel rounded-xl px-3 py-1.5 text-xs font-cinzel">
             <span className="flex items-center gap-1 text-[#ffd977] font-bold">
               <span>📚</span> {bankCount}
             </span>
           </div>
+
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="royal-panel hover:border-[#f5cd71] rounded-xl px-3 py-1.5 text-xs font-cinzel font-bold text-[#ffd977]"
+            >
+              🛡 Admin
+            </Link>
+          )}
 
           <LanguageSwitcher />
 
@@ -229,7 +244,7 @@ export default function Dashboard() {
 
       {/* ================= MAIN ARENA GRID ================= */}
       <main className="w-full max-w-[1440px] mx-auto px-3 sm:px-6 mt-3 flex-1 grid grid-cols-1 lg:grid-cols-[190px_1fr_300px] gap-4 items-start z-10">
-        {/* ---- LEFT NAVIGATION RAIL (Medieval Sidebar — Gluma Zilei removed) ---- */}
+        {/* ---- LEFT NAVIGATION RAIL ---- */}
         <aside className="hidden lg:flex flex-col gap-2 royal-panel rounded-2xl p-2.5">
           {(
             [
@@ -238,7 +253,7 @@ export default function Dashboard() {
               { id: "siege", icon: "🔥", label: t("navSiege"), href: "/siege" },
               { id: "turnul", icon: "🗼", label: t("navTurnul"), href: "/turnul" },
               { id: "train", icon: "🎓", label: t("navTrain"), href: "/train" },
-              { id: "ranks", icon: "🏆", label: t("navLeaderboard"), tab: "ranks" as const },
+              { id: "ranks", icon: "🏆", label: t("navLeaderboard"), href: "/leaderboard" },
               { id: "chat", icon: "💬", label: t("navChat"), tab: "chat" as const },
               { id: "prc", icon: "⚡", label: t("navPrc"), tab: "prc" as const },
             ] as const
@@ -276,9 +291,8 @@ export default function Dashboard() {
 
         {/* ---- CENTER STAGE: 4 ILLUSTRATED MODE CARDS + TRAINING BANNER + CHAT & CLASAMENT ---- */}
         <section className="flex flex-col gap-4">
-          {/* 4 Ornate Medieval Mode Cards */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-3.5">
-            {/* Card 1: QUIZ FIGHTER (1 vs 1 Trivia Street Fighter) */}
+            {/* Card 1: QUIZ FIGHTER */}
             <Link href="/fight" className="mode-card group aspect-[3/4] flex flex-col justify-end">
               <img
                 src="/art/card-duel.jpg"
@@ -299,7 +313,7 @@ export default function Dashboard() {
               </div>
             </Link>
 
-            {/* Card 2: ASEDIUL CASTELULUI / TOWER SIEGE (Right next to Quiz Fighter!) */}
+            {/* Card 2: ASEDIUL CASTELULUI / TOWER SIEGE */}
             <Link href="/siege" className="mode-card group aspect-[3/4] flex flex-col justify-end">
               <img
                 src="/art/card-siege.jpg"
@@ -320,7 +334,7 @@ export default function Dashboard() {
               </div>
             </Link>
 
-            {/* Card 3: TURNUL (Upgraded Multiplayer 2–6 Players) */}
+            {/* Card 3: TURNUL (Multiplayer 2-6 Players) */}
             <Link href="/turnul" className="mode-card group aspect-[3/4] flex flex-col justify-end">
               <img
                 src="/art/card-crown.jpg"
@@ -393,9 +407,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* General Chat & Clasamentul Zilei (Daily Leaderboard preserved) */}
+          {/* General Chat & Clasamentul Zilei */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* General Chat */}
             <section
               className={`royal-panel rounded-2xl flex flex-col h-[340px] ${
                 activeTab === "chat" ? "ring-2 ring-[#f5cd71]" : ""
@@ -445,16 +458,18 @@ export default function Dashboard() {
               </div>
             </section>
 
-            {/* Daily Leaderboard (Clasamentul Zilei) */}
             <section
               className={`royal-panel rounded-2xl p-4 flex flex-col gap-3 h-[340px] ${
                 activeTab === "ranks" ? "ring-2 ring-[#f5cd71]" : ""
               }`}
             >
               <div className="flex items-center justify-between border-b border-[#b68635]/40 pb-2">
-                <h3 className="font-cinzel font-bold text-[#f7d279] text-xs sm:text-sm tracking-[0.14em] uppercase flex items-center gap-2">
+                <Link
+                  href="/leaderboard"
+                  className="font-cinzel font-bold text-[#f7d279] hover:text-[#fff0b3] text-xs sm:text-sm tracking-[0.14em] uppercase flex items-center gap-2"
+                >
                   <span>👑</span> {t("leaderboardTitle")}
-                </h3>
+                </Link>
                 <button
                   onClick={loadLeaderboard}
                   className="text-[#d6b77f] hover:text-[#ffe49e] text-sm cursor-pointer transition-colors"
@@ -489,10 +504,10 @@ export default function Dashboard() {
                       </span>
                       <span className="font-cinzel font-bold truncate text-[#f6ead0]">{r.name}</span>
                       <span className="text-[#f7cf70] font-bold">
-                        {r.wins} {t("wins")}
+                        {typeof r.points === "number" ? `${r.points} pts` : `${r.wins ?? 0} ${t("wins")}`}
                       </span>
                       <span className="text-[#9cc5f0] text-right font-semibold text-[0.7rem]">
-                        {r.accuracy}%
+                        {typeof r.accuracy === "number" ? `${r.accuracy}%` : ""}
                       </span>
                     </div>
                   ))
@@ -504,7 +519,6 @@ export default function Dashboard() {
 
         {/* ---- RIGHT RAIL: DAILY MISSIONS PARCHMENT + PRC SPEED TRIAL ---- */}
         <aside className="flex flex-col gap-4">
-          {/* Daily Quests Parchment Card */}
           <div className="parchment-panel rounded-2xl overflow-hidden">
             <div className="bg-gradient-to-r from-[#2c1c12] via-[#4a2b17] to-[#2c1c12] border-b-2 border-[#c9943b] px-4 py-2.5 flex items-center gap-2">
               <span className="text-base">🎯</span>
@@ -548,7 +562,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Interactive PRC Speed Trial Widget (preserves existing players' PRC records) */}
           <div
             ref={prcSectionRef}
             className={`royal-panel rounded-2xl p-4 flex flex-col gap-3 ${

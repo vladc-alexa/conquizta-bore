@@ -44,8 +44,8 @@ function TrainContent() {
   const [errorMsg, setErrorMsg] = useState("");
 
   // Bank metadata & filters
-  const [mcCount, setMcCount] = useState(500);
-  const [numCount, setNumCount] = useState(60);
+  const [mcCount, setMcCount] = useState(1500);
+  const [numCount, setNumCount] = useState(160);
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [questionCount, setQuestionCount] = useState(10);
@@ -139,7 +139,6 @@ function TrainContent() {
       setWrong((w) => w + 1);
       stoneSound.shieldCrack();
     }
-    // Simulate rival bots/online room opponents scoring each round
     if (roomSeats.length > 1) {
       setRivalScores((prev) => {
         const next = { ...prev };
@@ -167,9 +166,10 @@ function TrainContent() {
     setTimeouts(0);
     setRivalScores({});
     try {
-      const catParam = m === "grila" && selectedCategory !== "all"
-        ? `&category=${encodeURIComponent(selectedCategory)}`
-        : "";
+      const catParam =
+        m === "grila" && selectedCategory !== "all"
+          ? `&category=${encodeURIComponent(selectedCategory)}`
+          : "";
       const res = await fetch(`/api/questions?mode=${m}&count=${questionCount}&lang=${lang}${catParam}`);
       const data = await res.json();
       const qs = data.questions ?? [];
@@ -200,7 +200,6 @@ function TrainContent() {
     }
   };
 
-  // Auto-launch if navigated with ?mode=grila or ?mode=rapide
   useEffect(() => {
     if (autoStartedRef.current) return;
     const qp = searchParams.get("mode");
@@ -211,7 +210,6 @@ function TrainContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Keyboard shortcuts 1-4 / A-D in multiple-choice mode
   useEffect(() => {
     if (phase !== "playing" || mode !== "grila" || feedback) return;
     const onKey = (e: KeyboardEvent) => {
@@ -233,7 +231,7 @@ function TrainContent() {
   return (
     <div className="arena-backdrop min-h-screen w-full px-4 py-6 flex flex-col items-center">
       <InviteToast />
-      {/* Top Bar */}
+
       <header className="w-full max-w-4xl flex items-center justify-between gap-3 mb-6">
         <Link
           href="/"
@@ -249,7 +247,6 @@ function TrainContent() {
         </div>
       </header>
 
-      {/* ---------- MODE SELECTION ---------- */}
       {mode === null && (
         <div className="w-full max-w-4xl flex flex-col gap-6">
           <div className="text-center">
@@ -261,7 +258,6 @@ function TrainContent() {
             </div>
           </div>
 
-          {/* Filter & Config Bar */}
           <div className="royal-panel rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
             <label className="flex items-center gap-2.5 text-xs font-cinzel text-[#e6c98e] flex-1 min-w-[220px]">
               <span className="uppercase tracking-wider shrink-0">{t("trainCategoryLabel")}:</span>
@@ -270,7 +266,9 @@ function TrainContent() {
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="flex-1 bg-[#0e0b14] border border-[#9f702b] rounded-lg px-3 py-2 text-xs font-sans text-[#fff0cc] outline-none focus:border-[#f5cd71]"
               >
-                <option value="all">{t("trainAllCategories")} ({mcCount})</option>
+                <option value="all">
+                  {t("trainAllCategories")} ({mcCount})
+                </option>
                 {categories.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -304,7 +302,6 @@ function TrainContent() {
             </div>
           )}
 
-          {/* Online Invite & Bot Seats Lobby for Training */}
           <MatchLobby
             gameType="train"
             maxSeats={4}
@@ -314,7 +311,6 @@ function TrainContent() {
             onSeatsChange={(s) => setRoomSeats(s)}
           />
 
-          {/* Two Illustrated Mode Cards */}
           <div className="grid sm:grid-cols-2 gap-5 items-stretch">
             <button
               onClick={() => startGame("grila")}
@@ -334,9 +330,7 @@ function TrainContent() {
                 <span className="font-cinzel font-extrabold text-xl tracking-wider gold-title">
                   {t("trainGrilaTitle")}
                 </span>
-                <span className="text-[#ead5ac] text-xs leading-relaxed">
-                  {t("trainGrilaDesc")}
-                </span>
+                <span className="text-[#ead5ac] text-xs leading-relaxed">{t("trainGrilaDesc")}</span>
               </div>
             </button>
 
@@ -358,251 +352,250 @@ function TrainContent() {
                 <span className="font-cinzel font-extrabold text-xl tracking-wider gold-title">
                   {t("trainRapideTitle")}
                 </span>
-                <span className="text-[#ead5ac] text-xs leading-relaxed">
-                  {t("trainRapideDesc")}
-                </span>
+                <span className="text-[#ead5ac] text-xs leading-relaxed">{t("trainRapideDesc")}</span>
               </div>
             </button>
           </div>
         </div>
       )}
 
-      {/* ---------- LOADING ---------- */}
       {mode !== null && phase === "loading" && (
         <div className="royal-panel rounded-2xl px-10 py-14 text-center font-cinzel text-[#f7d279] text-lg tracking-wider my-auto">
           ⏳ {t("trainLoading")}
         </div>
       )}
 
-      {/* ---------- FINISHED ---------- */}
-      {mode !== null && phase === "finished" && (() => {
-        const total = correct + wrong + timeouts;
-        const accuracy = total ? Math.round((correct / total) * 100) : 0;
-        return (
-          <div className="royal-panel rounded-2xl w-full max-w-[540px] p-8 flex flex-col gap-5 text-center my-auto">
-            <div className="text-5xl">🏆</div>
-            <h2 className="font-cinzel font-extrabold text-2xl sm:text-3xl gold-title">
-              {t("trainFinished")}
-            </h2>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-[#120e1a]/80 border border-emerald-500/40 rounded-xl p-3">
-                <div className="text-2xl font-cinzel font-extrabold text-emerald-400">{correct}</div>
-                <div className="text-[0.7rem] text-[#cbb894] uppercase">{t("trainCorrect")}</div>
-              </div>
-              <div className="bg-[#120e1a]/80 border border-rose-500/40 rounded-xl p-3">
-                <div className="text-2xl font-cinzel font-extrabold text-rose-400">{wrong}</div>
-                <div className="text-[0.7rem] text-[#cbb894] uppercase">{t("trainWrong")}</div>
-              </div>
-              <div className="bg-[#120e1a]/80 border border-amber-500/40 rounded-xl p-3">
-                <div className="text-2xl font-cinzel font-extrabold text-amber-300">{accuracy}%</div>
-                <div className="text-[0.7rem] text-[#cbb894] uppercase">{t("trainTimeouts")}: {timeouts}</div>
-              </div>
-            </div>
-            {roomSeats.length > 1 && (
-              <div className="bg-[#120e1a]/80 border border-[#b68635]/60 rounded-xl p-3 flex flex-col gap-1.5 text-left">
-                <div className="text-[0.7rem] font-cinzel font-bold uppercase tracking-wider text-[#ffd977]">
-                  👑 {t("trainRivalsTitle")}
+      {mode !== null &&
+        phase === "finished" &&
+        (() => {
+          const total = correct + wrong + timeouts;
+          const accuracy = total ? Math.round((correct / total) * 100) : 0;
+          return (
+            <div className="royal-panel rounded-2xl w-full max-w-[540px] p-8 flex flex-col gap-5 text-center my-auto">
+              <div className="text-5xl">🏆</div>
+              <h2 className="font-cinzel font-extrabold text-2xl sm:text-3xl gold-title">
+                {t("trainFinished")}
+              </h2>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-[#120e1a]/80 border border-emerald-500/40 rounded-xl p-3">
+                  <div className="text-2xl font-cinzel font-extrabold text-emerald-400">{correct}</div>
+                  <div className="text-[0.7rem] text-[#cbb894] uppercase">{t("trainCorrect")}</div>
                 </div>
-                {roomSeats
-                  .map((s, idx) => ({
-                    name: s.name,
-                    score: idx === 0 ? correct : rivalScores[s.userId] ?? 0,
-                    isMe: idx === 0,
-                  }))
-                  .sort((a, b) => b.score - a.score)
-                  .map((row, idx) => (
-                    <div
-                      key={row.name + idx}
-                      className={`flex items-center justify-between text-xs px-2.5 py-1 rounded-lg ${
-                        row.isMe ? "bg-[#2c1f10] text-[#ffe28a] font-bold" : "text-[#e0cba0]"
-                      }`}
-                    >
-                      <span>
-                        #{idx + 1} {row.name}
-                      </span>
-                      <span className="font-cinzel font-bold">
-                        {row.score} / {total}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            )}
-
-            <div className="flex gap-3 mt-1">
-              <button
-                onClick={() => startGame(mode)}
-                className="btn-crimson flex-1 rounded-xl font-cinzel font-bold text-xs tracking-wider uppercase py-3.5 cursor-pointer"
-              >
-                ⚔ {t("trainPlayAgain")}
-              </button>
-              <button
-                onClick={() => setMode(null)}
-                className="btn-sapphire flex-1 rounded-xl font-cinzel font-bold text-xs tracking-wider uppercase py-3.5 cursor-pointer"
-              >
-                {t("trainChangeMode")}
-              </button>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ---------- PLAYING ---------- */}
-      {mode !== null && phase === "playing" && (() => {
-        const q = questions[idx];
-        const isGrila = mode === "grila";
-        const pct = (timeLeft / TIMER_SECONDS) * 100;
-        return (
-          <div className="w-full max-w-[680px] flex flex-col gap-4 my-auto">
-            {/* Progress + Score bar */}
-            <div className="royal-panel rounded-xl px-4 py-2.5 flex items-center gap-3 text-xs text-[#dfc79a]">
-              <span className="font-cinzel font-bold shrink-0">
-                {t("trainQuestionOf")} {idx + 1} / {questions.length}
-              </span>
-              <div className="flex-1 h-2 bg-[#0d0a12] rounded-full overflow-hidden border border-[#8e672b]/60">
-                <div
-                  className="h-full bg-gradient-to-r from-[#c87030] via-[#f0bc58] to-[#ffe69c] transition-all duration-150"
-                  style={{ width: `${((idx + (feedback ? 1 : 0)) / questions.length) * 100}%` }}
-                />
-              </div>
-              <span className="font-cinzel font-bold text-[#ffd977] shrink-0">
-                {correct}✓ {wrong + timeouts}✗
-              </span>
-            </div>
-
-            {/* Question Card */}
-            <div className="royal-panel rounded-2xl p-6 sm:p-8 flex flex-col gap-5">
-              {/* Category & Timer */}
-              <div className="flex items-center gap-3.5">
-                <div
-                  className={`w-14 h-14 rounded-full border-2 flex items-center justify-center font-cinzel font-extrabold text-xl shrink-0 shadow-inner ${
-                    timeLeft <= 3 && !feedback
-                      ? "border-red-500 text-red-400 bg-red-950/50 animate-pulse"
-                      : "border-[#f3ca6b] text-[#ffe49e] bg-[#161020]"
-                  }`}
-                >
-                  {Math.ceil(timeLeft)}
+                <div className="bg-[#120e1a]/80 border border-rose-500/40 rounded-xl p-3">
+                  <div className="text-2xl font-cinzel font-extrabold text-rose-400">{wrong}</div>
+                  <div className="text-[0.7rem] text-[#cbb894] uppercase">{t("trainWrong")}</div>
                 </div>
-                <div className="flex-1 flex flex-col gap-1.5">
-                  {q?.category && (
-                    <span className="text-[0.7rem] font-cinzel tracking-widest uppercase text-[#f0c05a]">
-                      ⚜ {q.category}
-                    </span>
-                  )}
-                  <div className="h-2.5 bg-[#0c0912] rounded-full overflow-hidden border border-[#8e672b]/60">
-                    <div
-                      className={`h-full transition-all duration-100 ${
-                        timeLeft <= 3
-                          ? "bg-gradient-to-r from-red-600 to-rose-400"
-                          : "bg-gradient-to-r from-[#c97e2a] via-[#f2c45e] to-[#fff0b3]"
-                      }`}
-                      style={{ width: `${pct}%` }}
-                    />
+                <div className="bg-[#120e1a]/80 border border-amber-500/40 rounded-xl p-3">
+                  <div className="text-2xl font-cinzel font-extrabold text-amber-300">{accuracy}%</div>
+                  <div className="text-[0.7rem] text-[#cbb894] uppercase">
+                    {t("trainTimeouts")}: {timeouts}
                   </div>
                 </div>
               </div>
 
-              {/* Parchment Scroll Prompt */}
-              <div className="parchment-panel rounded-xl p-5 min-h-[88px] flex items-center">
-                <p className="font-cinzel font-bold text-base sm:text-lg leading-relaxed text-[#251407]">
-                  {q?.prompt}
-                </p>
-              </div>
-
-              {isGrila ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {(q as GrilaQuestion).options.map((opt, i) => {
-                    let cls =
-                      "bg-[#130f1c]/90 border-2 border-[#8c6429] hover:border-[#f5cd71] hover:bg-[#231932] text-[#f6ead0]";
-                    if (feedback) {
-                      const isCorrectOpt = i === (q as GrilaQuestion).correctIndex;
-                      const isSelected = i === selectedOption;
-                      if (isCorrectOpt) {
-                        cls = "bg-emerald-900/55 border-2 border-emerald-400 text-white shadow-[0_0_16px_rgba(52,211,153,0.4)]";
-                      } else if (isSelected) {
-                        cls = "bg-rose-900/55 border-2 border-rose-400 text-white";
-                      } else {
-                        cls = "bg-[#0e0b14]/60 border-2 border-[#4d3c23] opacity-45";
-                      }
-                    }
-                    return (
-                      <button
-                        key={i}
-                        disabled={!!feedback}
-                        onClick={() => {
-                          setSelectedOption(i);
-                          handleAnswer(i === (q as GrilaQuestion).correctIndex);
-                        }}
-                        className={`${cls} rounded-xl text-left px-4 py-3.5 text-sm font-medium cursor-pointer disabled:cursor-default transition-all flex items-start gap-2.5`}
+              {roomSeats.length > 1 && (
+                <div className="bg-[#120e1a]/80 border border-[#b68635]/60 rounded-xl p-3 flex flex-col gap-1.5 text-left">
+                  <div className="text-[0.7rem] font-cinzel font-bold uppercase tracking-wider text-[#ffd977]">
+                    👑 {t("trainRivalsTitle")}
+                  </div>
+                  {roomSeats
+                    .map((s, sIdx) => ({
+                      name: s.name,
+                      score: sIdx === 0 ? correct : rivalScores[s.userId] ?? 0,
+                      isMe: sIdx === 0,
+                    }))
+                    .sort((a, b) => b.score - a.score)
+                    .map((row, rIdx) => (
+                      <div
+                        key={row.name + rIdx}
+                        className={`flex items-center justify-between text-xs px-2.5 py-1 rounded-lg ${
+                          row.isMe ? "bg-[#2c1f10] text-[#ffe28a] font-bold" : "text-[#e0cba0]"
+                        }`}
                       >
-                        <span className="font-cinzel font-extrabold text-[#f3c35c] shrink-0">
-                          {String.fromCharCode(65 + i)}.
+                        <span>
+                          #{rIdx + 1} {row.name}
                         </span>
-                        <span className="leading-snug">{opt}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex gap-2.5">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    value={inputValue}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/[^0-9-]/g, "");
-                      if (/^-?\d*$/.test(v)) setInputValue(v);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !feedback && inputValue !== "") {
-                        handleAnswer(parseInt(inputValue, 10) === (q as RapideQuestion).answer);
-                      }
-                    }}
-                    disabled={!!feedback}
-                    placeholder={t("trainNumericPlaceholder")}
-                    className="flex-1 bg-[#0b0910] border-2 border-[#b68635] rounded-xl text-[#ffe59e] text-2xl font-cinzel font-bold text-center py-3 outline-none focus:border-[#ffe082] disabled:opacity-50"
-                  />
-                  <button
-                    onClick={() => handleAnswer(parseInt(inputValue, 10) === (q as RapideQuestion).answer)}
-                    disabled={!!feedback || inputValue === ""}
-                    className="btn-crimson rounded-xl font-cinzel font-bold px-6 cursor-pointer disabled:opacity-40"
-                  >
-                    OK
-                  </button>
+                        <span className="font-cinzel font-bold">
+                          {row.score} / {total}
+                        </span>
+                      </div>
+                    ))}
                 </div>
               )}
 
-              {feedback && (
-                <div
-                  className={`rounded-xl p-4 text-center border-2 ${
-                    feedback.state === "correct"
-                      ? "bg-emerald-950/60 border-emerald-400/70"
-                      : feedback.state === "wrong"
-                      ? "bg-rose-950/60 border-rose-400/70"
-                      : "bg-amber-950/60 border-amber-400/70"
-                  }`}
+              <div className="flex gap-3 mt-1">
+                <button
+                  onClick={() => startGame(mode)}
+                  className="btn-crimson flex-1 rounded-xl font-cinzel font-bold text-xs tracking-wider uppercase py-3.5 cursor-pointer"
                 >
-                  <div className="text-2xl">
-                    {feedback.state === "correct" ? "✔" : feedback.state === "wrong" ? "✖" : "⏱"}
+                  ⚔ {t("trainPlayAgain")}
+                </button>
+                <button
+                  onClick={() => setMode(null)}
+                  className="btn-sapphire flex-1 rounded-xl font-cinzel font-bold text-xs tracking-wider uppercase py-3.5 cursor-pointer"
+                >
+                  {t("trainChangeMode")}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
+      {mode !== null &&
+        phase === "playing" &&
+        (() => {
+          const q = questions[idx];
+          const isGrila = mode === "grila";
+          const pct = (timeLeft / TIMER_SECONDS) * 100;
+          return (
+            <div className="w-full max-w-[680px] flex flex-col gap-4 my-auto">
+              <div className="royal-panel rounded-xl px-4 py-2.5 flex items-center gap-3 text-xs text-[#dfc79a]">
+                <span className="font-cinzel font-bold shrink-0">
+                  {t("trainQuestionOf")} {idx + 1} / {questions.length}
+                </span>
+                <div className="flex-1 h-2 bg-[#0d0a12] rounded-full overflow-hidden border border-[#8e672b]/60">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#c87030] via-[#f0bc58] to-[#ffe69c] transition-all duration-150"
+                    style={{ width: `${((idx + (feedback ? 1 : 0)) / questions.length) * 100}%` }}
+                  />
+                </div>
+                <span className="font-cinzel font-bold text-[#ffd977] shrink-0">
+                  {correct}✓ {wrong + timeouts}✗
+                </span>
+              </div>
+
+              <div className="royal-panel rounded-2xl p-6 sm:p-8 flex flex-col gap-5">
+                <div className="flex items-center gap-3.5">
+                  <div
+                    className={`w-14 h-14 rounded-full border-2 flex items-center justify-center font-cinzel font-extrabold text-xl shrink-0 shadow-inner ${
+                      timeLeft <= 3 && !feedback
+                        ? "border-red-500 text-red-400 bg-red-950/50 animate-pulse"
+                        : "border-[#f3ca6b] text-[#ffe49e] bg-[#161020]"
+                    }`}
+                  >
+                    {Math.ceil(timeLeft)}
                   </div>
-                  <div className="font-cinzel font-bold text-base tracking-wider">
-                    {feedback.state === "correct"
-                      ? t("trainCorrectMsg")
-                      : feedback.state === "wrong"
-                      ? t("trainWrongMsg")
-                      : t("trainTimeoutMsg")}
-                  </div>
-                  <div className="text-xs text-[#e5cfa3] mt-1">
-                    {t("trainCorrectAnswer")}{" "}
-                    <strong className="text-[#ffe28a]">{feedback.reveal}</strong>
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    {q?.category && (
+                      <span className="text-[0.7rem] font-cinzel tracking-widest uppercase text-[#f0c05a]">
+                        ⚜ {q.category}
+                      </span>
+                    )}
+                    <div className="h-2.5 bg-[#0c0912] rounded-full overflow-hidden border border-[#8e672b]/60">
+                      <div
+                        className={`h-full transition-all duration-100 ${
+                          timeLeft <= 3
+                            ? "bg-gradient-to-r from-red-600 to-rose-400"
+                            : "bg-gradient-to-r from-[#c97e2a] via-[#f2c45e] to-[#fff0b3]"
+                        }`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
-              )}
+
+                <div className="parchment-panel rounded-xl p-5 min-h-[88px] flex items-center">
+                  <p className="font-cinzel font-bold text-base sm:text-lg leading-relaxed text-[#251407]">
+                    {q?.prompt}
+                  </p>
+                </div>
+
+                {isGrila ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {(q as GrilaQuestion).options.map((opt, i) => {
+                      let cls =
+                        "bg-[#130f1c]/90 border-2 border-[#8c6429] hover:border-[#f5cd71] hover:bg-[#231932] text-[#f6ead0]";
+                      if (feedback) {
+                        const isCorrectOpt = i === (q as GrilaQuestion).correctIndex;
+                        const isSelected = i === selectedOption;
+                        if (isCorrectOpt) {
+                          cls =
+                            "bg-emerald-900/55 border-2 border-emerald-400 text-white shadow-[0_0_16px_rgba(52,211,153,0.4)]";
+                        } else if (isSelected) {
+                          cls = "bg-rose-900/55 border-2 border-rose-400 text-white";
+                        } else {
+                          cls = "bg-[#0e0b14]/60 border-2 border-[#4d3c23] opacity-45";
+                        }
+                      }
+                      return (
+                        <button
+                          key={i}
+                          disabled={!!feedback}
+                          onClick={() => {
+                            setSelectedOption(i);
+                            handleAnswer(i === (q as GrilaQuestion).correctIndex);
+                          }}
+                          className={`${cls} rounded-xl text-left px-4 py-3.5 text-sm font-medium cursor-pointer disabled:cursor-default transition-all flex items-start gap-2.5`}
+                        >
+                          <span className="font-cinzel font-extrabold text-[#f3c35c] shrink-0">
+                            {String.fromCharCode(65 + i)}.
+                          </span>
+                          <span className="leading-snug">{opt}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex gap-2.5">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      value={inputValue}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/[^0-9-]/g, "");
+                        if (/^-?\d*$/.test(v)) setInputValue(v);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !feedback && inputValue !== "") {
+                          handleAnswer(parseInt(inputValue, 10) === (q as RapideQuestion).answer);
+                        }
+                      }}
+                      disabled={!!feedback}
+                      placeholder={t("trainNumericPlaceholder")}
+                      className="flex-1 bg-[#0b0910] border-2 border-[#b68635] rounded-xl text-[#ffe59e] text-2xl font-cinzel font-bold text-center py-3 outline-none focus:border-[#ffe082] disabled:opacity-50"
+                    />
+                    <button
+                      onClick={() => handleAnswer(parseInt(inputValue, 10) === (q as RapideQuestion).answer)}
+                      disabled={!!feedback || inputValue === ""}
+                      className="btn-crimson rounded-xl font-cinzel font-bold px-6 cursor-pointer disabled:opacity-40"
+                    >
+                      OK
+                    </button>
+                  </div>
+                )}
+
+                {feedback && (
+                  <div
+                    className={`rounded-xl p-4 text-center border-2 ${
+                      feedback.state === "correct"
+                        ? "bg-emerald-950/60 border-emerald-400/70"
+                        : feedback.state === "wrong"
+                        ? "bg-rose-950/60 border-rose-400/70"
+                        : "bg-amber-950/60 border-amber-400/70"
+                    }`}
+                  >
+                    <div className="text-2xl">
+                      {feedback.state === "correct" ? "✔" : feedback.state === "wrong" ? "✖" : "⏱"}
+                    </div>
+                    <div className="font-cinzel font-bold text-base tracking-wider">
+                      {feedback.state === "correct"
+                        ? t("trainCorrectMsg")
+                        : feedback.state === "wrong"
+                        ? t("trainWrongMsg")
+                        : t("trainTimeoutMsg")}
+                    </div>
+                    <div className="text-xs text-[#e5cfa3] mt-1">
+                      {t("trainCorrectAnswer")}{" "}
+                      <strong className="text-[#ffe28a]">{feedback.reveal}</strong>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
     </div>
   );
 }

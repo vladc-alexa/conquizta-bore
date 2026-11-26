@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
+import { isSiteOff } from "@/lib/siteOff";
 
 export async function GET() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
@@ -8,5 +10,21 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  return NextResponse.json({ id: session.sub, name: session.name });
+  const user = await prisma.user.findUnique({
+    where: { id: session.sub },
+    select: { id: true, displayName: true, isAdmin: true, isMuted: true, nameColor: true, hideScore: true, canEditQuestions: true },
+  });
+  if (!user) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  return NextResponse.json({
+    id: user.id,
+    name: user.displayName,
+    isAdmin: user.isAdmin,
+    isMuted: user.isMuted,
+    nameColor: user.nameColor,
+    hideScore: user.hideScore,
+    canEditQuestions: user.canEditQuestions,
+    siteOff: await isSiteOff(prisma),
+  });
 }

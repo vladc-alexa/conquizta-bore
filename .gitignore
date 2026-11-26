@@ -6,3 +6,6 @@ build
 *.log
 .env*
 !.env.example
+audit/
+*.tsbuildinfo
+__pycache__/
