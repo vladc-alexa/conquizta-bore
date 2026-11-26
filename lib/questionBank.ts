@@ -210,7 +210,10 @@ export async function serveQuestion(
     return serveLocal(mode, count, lang, category);
   }
 
-  // Romanian mode (default): mix published PostgreSQL DB questions (if available) with the 1,660 translated bank
+  // Romanian mode (default): mix published PostgreSQL DB questions (if available) with the translated bank.
+  // Capped at half the batch on purpose: with 2 700+ published DB rows the DB alone always satisfied
+  // the request, which starved the newer bank questions (Open Trivia import) out of every Romanian game.
+  const dbWant = Math.max(1, Math.ceil(count / 2));
   try {
     let ids: { id: string }[];
     if (mode === "rapide") {
@@ -219,7 +222,7 @@ export async function serveQuestion(
         JOIN "QuestionOption" o ON o."questionId" = q.id AND o."isCorrect" = true
         WHERE q."isPublished" = true AND trim(o."text") ~ '^-?[0-9]+$'
         ORDER BY random()
-        LIMIT ${count}`;
+        LIMIT ${dbWant}`;
     } else {
       ids = await prisma.$queryRaw`
         SELECT q.id FROM "Question" q
@@ -227,7 +230,7 @@ export async function serveQuestion(
           AND (SELECT count(*) FROM "QuestionOption" o WHERE o."questionId" = q.id) = 4
           AND (SELECT count(*) FROM "QuestionOption" o WHERE o."questionId" = q.id AND o."isCorrect" = true) = 1
         ORDER BY random()
-        LIMIT ${count}`;
+        LIMIT ${dbWant}`;
     }
 
     if (ids.length > 0) {
@@ -256,8 +259,7 @@ export async function serveQuestion(
             };
           })
           .filter(Boolean);
-        if (dbOut.length >= count) return { questions: dbOut };
-        const topUp = await serveLocal("rapide", count - dbOut.length, "ro", null);
+        const topUp = await serveLocal("rapide", Math.max(0, count - dbOut.length), "ro", null);
         return { questions: shuffle([...dbOut, ...topUp.questions]) };
       } else {
         const dbOut = questions
@@ -274,8 +276,7 @@ export async function serveQuestion(
             };
           })
           .filter(Boolean);
-        if (dbOut.length >= count) return { questions: dbOut };
-        const topUp = await serveLocal("grila", count - dbOut.length, "ro", null);
+        const topUp = await serveLocal("grila", Math.max(0, count - dbOut.length), "ro", null);
         return { questions: shuffle([...dbOut, ...topUp.questions]) };
       }
     }
