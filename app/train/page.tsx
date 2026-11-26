@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LanguageSwitcher, useI18n } from "@/lib/i18n";
+import { ThemeSwitcher, useArtTheme } from "@/lib/theme";
 import { InviteToast, LobbySeat, MatchLobby } from "@/components/MatchLobby";
 import { stoneSound } from "@/lib/sound";
 
@@ -33,6 +34,7 @@ function fmtSec(ms: number): string {
 
 function TrainContent() {
   const { lang, t } = useI18n();
+  const { art } = useArtTheme();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>(null);
   const [phase, setPhase] = useState<"idle" | "loading" | "playing" | "finished">("idle");
@@ -105,6 +107,17 @@ function TrainContent() {
     if (idxRef.current + 1 >= questionsRef.current.length) {
       clearTimer();
       setPhase("finished");
+      const finalCorrect = correct;
+      const finalWrong = wrong + timeouts;
+      fetch("/api/stats/daily", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          win: finalCorrect >= Math.ceil(questionsRef.current.length / 2),
+          correct: finalCorrect,
+          wrong: finalWrong,
+        }),
+      }).catch(() => {});
       return;
     }
     const ni = idxRef.current + 1;
@@ -289,6 +302,7 @@ function TrainContent() {
           <span className="hidden sm:inline-flex items-center gap-1.5 royal-panel rounded-xl px-3 py-1.5 text-xs font-cinzel text-[#ffd977]">
             📚 {t("trainBankBadge")}: <strong>{mcCount + numCount}</strong>
           </span>
+          <ThemeSwitcher compact />
           <LanguageSwitcher />
         </div>
       </header>
@@ -363,7 +377,7 @@ function TrainContent() {
               className="mode-card group h-[290px] w-full flex flex-col justify-end text-left cursor-pointer"
             >
               <img
-                src="/art/card-crown.jpg"
+                src={art.cardCrown}
                 alt={t("trainGrilaTitle")}
                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
@@ -385,7 +399,7 @@ function TrainContent() {
               className="mode-card group h-[290px] w-full flex flex-col justify-end text-left cursor-pointer"
             >
               <img
-                src="/art/card-banners.jpg"
+                src={art.cardBanners}
                 alt={t("trainRapideTitle")}
                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />

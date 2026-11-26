@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { LanguageSwitcher, useI18n } from "@/lib/i18n";
+import { ThemeSwitcher } from "@/lib/theme";
 
 export default function LoginPage() {
   const { lang, t } = useI18n();
@@ -35,9 +36,10 @@ export default function LoginPage() {
 
   return (
     <div className="arena-backdrop flex flex-col items-center justify-center min-h-screen w-full px-4 py-8">
-      {/* Top right language switcher */}
-      <div className="fixed top-4 right-4 z-20">
-        <LanguageSwitcher />
+      {/* Top right theme + language switcher */}
+      <div className="fixed top-4 right-4 z-20 flex items-center gap-2">
+        <ThemeSwitcher />
+        <LanguageSwitcher compact />
       </div>
 
       {/* Royal Crest Header (clean Stone Quiz title, no tagline) */}

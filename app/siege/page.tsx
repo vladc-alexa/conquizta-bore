@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LanguageSwitcher, useI18n } from "@/lib/i18n";
+import { ThemeSwitcher, useArtTheme } from "@/lib/theme";
 import { InviteToast, LobbyRoom, LobbySeat, MatchLobby } from "@/components/MatchLobby";
 import { stoneSound } from "@/lib/sound";
 
@@ -131,6 +132,7 @@ function createCastleTowers(side: "left" | "right"): TowerState[] {
 
 function TowerSiegeContent() {
   const { lang, t } = useI18n();
+  const { art } = useArtTheme();
   const searchParams = useSearchParams();
   const initialRoom = searchParams.get("room");
 
@@ -225,7 +227,7 @@ function TowerSiegeContent() {
 
   useEffect(() => {
     const manifest: Array<[keyof typeof assetsRef.current, string]> = [
-      ["env", "/art/siege-env.jpg"],
+      ["env", art.siegeEnv],
       ["towerRedIntact", "/art/tower-intact-red.png"],
       ["towerRedDamaged", "/art/tower-damaged-red.png"],
       ["towerBlueIntact", "/art/tower-intact-blue.png"],
@@ -242,7 +244,7 @@ function TowerSiegeContent() {
         assetsRef.current[key] = img;
       };
     }
-  }, []);
+  }, [art.siegeEnv]);
 
   const clearTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -319,6 +321,11 @@ function TowerSiegeContent() {
         if (rightAlive === 0 || leftAlive === 0) {
           setPhase("matchOver");
           stoneSound.victoryFanfare();
+          fetch("/api/stats/daily", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ win: rightAlive === 0 }),
+          }).catch(() => {});
         } else {
           finishRoundRef.current(appliedRoundRef.current);
         }
@@ -431,6 +438,12 @@ function TowerSiegeContent() {
     (q: GrilaQ, chosenIdx: number) => {
       if (answeredRef.current || lockedRef.current) return;
       if (chosenIdx >= 0) setSelectedOpt(chosenIdx);
+      const isCorrect = chosenIdx === q.correctIndex;
+      fetch("/api/stats/daily", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correct: isCorrect ? 1 : 0, wrong: isCorrect ? 0 : 1 }),
+      }).catch(() => {});
       submitAnswer({ choice: chosenIdx >= 0 ? chosenIdx : null });
     },
     [submitAnswer]
@@ -1233,6 +1246,7 @@ function TowerSiegeContent() {
           >
             {soundOn ? `🔊 ${t("fightSoundOn")}` : `🔇 ${t("fightSoundOff")}`}
           </button>
+          <ThemeSwitcher compact />
           <LanguageSwitcher compact />
         </div>
       </header>
@@ -1243,7 +1257,7 @@ function TowerSiegeContent() {
           {/* Illustrated Siege Hero Banner */}
           <div className="royal-panel rounded-2xl overflow-hidden grid sm:grid-cols-[220px_1fr]">
             <img
-              src="/art/card-siege.jpg"
+              src={art.cardSiege}
               alt={t("siegeTitle")}
               className="w-full h-56 sm:h-full object-cover"
             />

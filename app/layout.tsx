@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n";
+import { ArtThemeProvider } from "@/lib/theme";
 import SiteHeader from "@/components/SiteHeader";
 import PresenceBeacon from "@/components/PresenceBeacon";
 import ChatDock from "@/components/ChatDock";
@@ -59,11 +60,13 @@ export default function RootLayout({
       </head>
       <body className={`${display.variable} ${lato.variable} antialiased`}>
         <I18nProvider>
-          <SiteHeader />
-          <PresenceBeacon />
-          {children}
-          <ChatDock />
-          <InvitesCenter />
+          <ArtThemeProvider>
+            <SiteHeader />
+            <PresenceBeacon />
+            {children}
+            <ChatDock />
+            <InvitesCenter />
+          </ArtThemeProvider>
         </I18nProvider>
       </body>
     </html>

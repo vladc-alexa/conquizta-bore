@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LanguageSwitcher, useI18n } from "@/lib/i18n";
+import { ThemeSwitcher, useArtTheme } from "@/lib/theme";
 import { FIGHTERS, FighterDef, arcadeAudio } from "@/lib/fighters";
 import { InviteToast, LobbyRoom, LobbySeat, MatchLobby } from "@/components/MatchLobby";
 
@@ -116,6 +117,7 @@ function makeFighter(slot: 1 | 2, def: FighterDef): FighterEntity {
 
 function QuizFighterContent() {
   const { lang, t } = useI18n();
+  const { art } = useArtTheme();
   const searchParams = useSearchParams();
   const initialRoom = searchParams.get("room");
   const [screen, setScreen] = useState<"select" | "battle">("select");
@@ -188,11 +190,11 @@ function QuizFighterContent() {
 
   useEffect(() => {
     const img = new Image();
-    img.src = "/art/bg-arena-fight.jpg";
+    img.src = art.fightStage;
     img.onload = () => {
       stageImgRef.current = img;
     };
-  }, []);
+  }, [art.fightStage]);
 
   const clearQTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -272,6 +274,11 @@ function QuizFighterContent() {
 
       const s = simRef.current;
       const isCorrect = chosenIdx === q.correctIndex;
+      fetch("/api/stats/daily", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correct: isCorrect ? 1 : 0, wrong: isCorrect ? 0 : 1 }),
+      }).catch(() => {});
       const isTimeout = chosenIdx === -1;
       const isFast = isCorrect && elapsedSec <= 4.5;
       const correctText = q.options[q.correctIndex] ?? "";
@@ -633,6 +640,13 @@ function QuizFighterContent() {
       if (seq.frame >= seq.duration) {
         s.sequence = null;
         if (s.matchWinner) {
+          if (s.matchWinner === 1) {
+            fetch("/api/stats/daily", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ win: true }),
+            }).catch(() => {});
+          }
           setBattlePhase("matchOver");
         } else {
           // Reset stances smoothly to home positions
@@ -1221,6 +1235,7 @@ function QuizFighterContent() {
           >
             {soundOn ? `🔊 ${t("fightSoundOn")}` : `🔇 ${t("fightSoundOff")}`}
           </button>
+          <ThemeSwitcher compact />
           <LanguageSwitcher compact />
         </div>
       </header>

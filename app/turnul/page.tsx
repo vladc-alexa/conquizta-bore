@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LanguageSwitcher, useI18n } from "@/lib/i18n";
+import { ThemeSwitcher, useArtTheme } from "@/lib/theme";
 import { InviteToast, LobbyRoom, LobbySeat, MatchLobby } from "@/components/MatchLobby";
 import { stoneSound } from "@/lib/sound";
 
@@ -50,6 +51,7 @@ const COLORS = ["#facc15", "#38bdf8", "#fb7185", "#a78bfa", "#34d399", "#fb923c"
 
 function TurnulContent() {
   const { lang, t } = useI18n();
+  const { art } = useArtTheme();
   const searchParams = useSearchParams();
   const initialRoom = searchParams.get("room");
 
@@ -159,6 +161,11 @@ function TurnulContent() {
       clearTimer();
 
       const playerElapsedMs = Math.max(50, Date.now() - startRef.current);
+      fetch("/api/stats/daily", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correct: playerCorrect ? 1 : 0, wrong: playerCorrect ? 0 : 1 }),
+      }).catch(() => {});
       const updated: Climber[] = climbersRef.current.map((c, idx) => {
         if (c.eliminated) return { ...c, lastOutcome: null };
         let ok = false;
@@ -213,6 +220,13 @@ function TurnulContent() {
           setWinner(sorted[0] ?? null);
           setPhase("finished");
           stoneSound.victoryFanfare();
+          if (sorted[0]?.id === updated[0]?.id) {
+            fetch("/api/stats/daily", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ win: true }),
+            }).catch(() => {});
+          }
         } else {
           loadFloorRound(roundNum + 1);
         }
@@ -331,6 +345,7 @@ function TurnulContent() {
           >
             {soundOn ? `🔊 ${t("fightSoundOn")}` : `🔇 ${t("fightSoundOff")}`}
           </button>
+          <ThemeSwitcher compact />
           <LanguageSwitcher compact />
         </div>
       </header>
@@ -340,7 +355,7 @@ function TurnulContent() {
         <div className="w-full max-w-[1000px] flex flex-col gap-5">
           <div className="royal-panel rounded-2xl overflow-hidden grid sm:grid-cols-[220px_1fr]">
             <img
-              src="/art/card-crown.jpg"
+              src={art.cardTurnul}
               alt={t("turnulTitle")}
               className="w-full h-56 sm:h-full object-cover"
             />
