@@ -1,64 +1,965 @@
 {
+  "count": 160,
   "questions": [
-    { "id": "num-en-1", "category": "History", "prompt": "In what year did the Berlin Wall fall?", "answer": 1989 },
-    { "id": "num-en-2", "category": "History", "prompt": "In what year did Neil Armstrong first walk on the Moon?", "answer": 1969 },
-    { "id": "num-en-3", "category": "History", "prompt": "In what year did World War II end?", "answer": 1945 },
-    { "id": "num-en-4", "category": "History", "prompt": "In what year did the Titanic sink?", "answer": 1912 },
-    { "id": "num-en-5", "category": "History", "prompt": "In what year was the Declaration of Independence signed?", "answer": 1776 },
-    { "id": "num-en-6", "category": "History", "prompt": "In what year did Christopher Columbus first reach the Americas?", "answer": 1492 },
-    { "id": "num-en-7", "category": "History", "prompt": "In what year did World War I begin?", "answer": 1914 },
-    { "id": "num-en-8", "category": "History", "prompt": "In what year did the French Revolution begin?", "answer": 1789 },
-    { "id": "num-en-9", "category": "History", "prompt": "In what year was the Magna Carta signed?", "answer": 1215 },
-    { "id": "num-en-10", "category": "History", "prompt": "In what year did the Roman Empire fall in the West?", "answer": 476 },
-    { "id": "num-en-11", "category": "Science", "prompt": "How many bones are in the adult human body?", "answer": 206 },
-    { "id": "num-en-12", "category": "Science", "prompt": "How many chromosomes do humans normally have in total?", "answer": 46 },
-    { "id": "num-en-13", "category": "Science", "prompt": "What is the boiling point of water in degrees Celsius at sea level?", "answer": 100 },
-    { "id": "num-en-14", "category": "Science", "prompt": "What is the atomic number of Carbon?", "answer": 6 },
-    { "id": "num-en-15", "category": "Science", "prompt": "What is the atomic number of Gold (Au)?", "answer": 79 },
-    { "id": "num-en-16", "category": "Science", "prompt": "How many planets are in our Solar System?", "answer": 8 },
-    { "id": "num-en-17", "category": "Science", "prompt": "How many teeth does a normal adult human have (including wisdom teeth)?", "answer": 32 },
-    { "id": "num-en-18", "category": "Science", "prompt": "At what temperature in Celsius does water freeze?", "answer": 0 },
-    { "id": "num-en-19", "category": "Science", "prompt": "How many elements are on the modern periodic table?", "answer": 118 },
-    { "id": "num-en-20", "category": "Science", "prompt": "What is the atomic number of Oxygen?", "answer": 8 },
-    { "id": "num-en-21", "category": "Geography", "prompt": "How many countries are in the European Union (as of 2024)?", "answer": 27 },
-    { "id": "num-en-22", "category": "Geography", "prompt": "How many states are in the United States of America?", "answer": 50 },
-    { "id": "num-en-23", "category": "Geography", "prompt": "How many continents are there on Earth?", "answer": 7 },
-    { "id": "num-en-24", "category": "Geography", "prompt": "What is the approximate height of Mount Everest in meters?", "answer": 8849 },
-    { "id": "num-en-25", "category": "Geography", "prompt": "How many time zones does Russia span?", "answer": 11 },
-    { "id": "num-en-26", "category": "Geography", "prompt": "How many oceans are officially recognized on Earth?", "answer": 5 },
-    { "id": "num-en-27", "category": "Geography", "prompt": "In what year was the Eiffel Tower completed?", "answer": 1889 },
-    { "id": "num-en-28", "category": "Sports", "prompt": "How many players are on a soccer (football) team on the field?", "answer": 11 },
-    { "id": "num-en-29", "category": "Sports", "prompt": "How many holes are on a standard golf course?", "answer": 18 },
-    { "id": "num-en-30", "category": "Sports", "prompt": "How many squares are on a standard chessboard?", "answer": 64 },
-    { "id": "num-en-31", "category": "Sports", "prompt": "How many minutes is a standard regulation soccer match (excluding stoppage time)?", "answer": 90 },
-    { "id": "num-en-32", "category": "Sports", "prompt": "How many rings are on the Olympic flag?", "answer": 5 },
-    { "id": "num-en-33", "category": "Sports", "prompt": "How many points is a touchdown worth in American football (before the extra point)?", "answer": 6 },
-    { "id": "num-en-34", "category": "Sports", "prompt": "How many players from one basketball team are on the court at once?", "answer": 5 },
-    { "id": "num-en-35", "category": "Sports", "prompt": "In what year were the first modern Olympic Games held in Athens?", "answer": 1896 },
-    { "id": "num-en-36", "category": "General Knowledge", "prompt": "How many cards are in a standard deck (without jokers)?", "answer": 52 },
-    { "id": "num-en-37", "category": "General Knowledge", "prompt": "How many keys are on a full-size standard piano?", "answer": 88 },
-    { "id": "num-en-38", "category": "General Knowledge", "prompt": "How many days are in a leap year?", "answer": 366 },
-    { "id": "num-en-39", "category": "General Knowledge", "prompt": "How many minutes are in one full day?", "answer": 1440 },
-    { "id": "num-en-40", "category": "General Knowledge", "prompt": "How many strings does a standard guitar have?", "answer": 6 },
-    { "id": "num-en-41", "category": "General Knowledge", "prompt": "How many letters are in the English alphabet?", "answer": 26 },
-    { "id": "num-en-42", "category": "General Knowledge", "prompt": "What is the sum of the interior angles of a triangle in degrees?", "answer": 180 },
-    { "id": "num-en-43", "category": "General Knowledge", "prompt": "How many sides does a dodecagon have?", "answer": 12 },
-    { "id": "num-en-44", "category": "Technology", "prompt": "In what year was the first iPhone released?", "answer": 2007 },
-    { "id": "num-en-45", "category": "Technology", "prompt": "How many bits are in a single byte?", "answer": 8 },
-    { "id": "num-en-46", "category": "Technology", "prompt": "In what year was Google founded?", "answer": 1998 },
-    { "id": "num-en-47", "category": "Technology", "prompt": "What HTTP status code means 'Not Found'?", "answer": 404 },
-    { "id": "num-en-48", "category": "Technology", "prompt": "What is 2 to the power of 10?", "answer": 1024 },
-    { "id": "num-en-49", "category": "Entertainment", "prompt": "In what year was the first Star Wars movie released?", "answer": 1977 },
-    { "id": "num-en-50", "category": "Entertainment", "prompt": "How many Harry Potter books are in the main series?", "answer": 7 },
-    { "id": "num-en-51", "category": "Entertainment", "prompt": "In what year was the original Street Fighter II released in arcades?", "answer": 1991 },
-    { "id": "num-en-52", "category": "Entertainment", "prompt": "How many Lord of the Rings movies did Peter Jackson direct in the original trilogy?", "answer": 3 },
-    { "id": "num-en-53", "category": "Science", "prompt": "What is absolute zero in degrees Celsius (rounded to nearest integer)?", "answer": -273 },
-    { "id": "num-en-54", "category": "Science", "prompt": "At what temperature in Celsius do Fahrenheit and Celsius scales meet?", "answer": -40 },
-    { "id": "num-en-55", "category": "Geography", "prompt": "What is the approximate elevation of the Dead Sea shore in meters (negative integer)?", "answer": -430 },
-    { "id": "num-en-56", "category": "History", "prompt": "In what year was Julius Caesar assassinated (use negative for BCE)?", "answer": -44 },
-    { "id": "num-en-57", "category": "Science", "prompt": "How many hearts does an octopus have?", "answer": 3 },
-    { "id": "num-en-58", "category": "General Knowledge", "prompt": "How many seconds are in an hour?", "answer": 3600 },
-    { "id": "num-en-59", "category": "History", "prompt": "In what year did the United Nations officially come into existence?", "answer": 1945 },
-    { "id": "num-en-60", "category": "Entertainment", "prompt": "In what year did Netflix launch its streaming service?", "answer": 2007 }
+    {
+      "id": "num-en-1",
+      "category": "History",
+      "prompt": "In what year did the Berlin Wall fall?",
+      "answer": 1989
+    },
+    {
+      "id": "num-en-2",
+      "category": "History",
+      "prompt": "In what year did Neil Armstrong first walk on the Moon?",
+      "answer": 1969
+    },
+    {
+      "id": "num-en-3",
+      "category": "History",
+      "prompt": "In what year did World War II end?",
+      "answer": 1945
+    },
+    {
+      "id": "num-en-4",
+      "category": "History",
+      "prompt": "In what year did the Titanic sink?",
+      "answer": 1912
+    },
+    {
+      "id": "num-en-5",
+      "category": "History",
+      "prompt": "In what year was the Declaration of Independence signed?",
+      "answer": 1776
+    },
+    {
+      "id": "num-en-6",
+      "category": "History",
+      "prompt": "In what year did Christopher Columbus first reach the Americas?",
+      "answer": 1492
+    },
+    {
+      "id": "num-en-7",
+      "category": "History",
+      "prompt": "In what year did World War I begin?",
+      "answer": 1914
+    },
+    {
+      "id": "num-en-8",
+      "category": "History",
+      "prompt": "In what year did the French Revolution begin?",
+      "answer": 1789
+    },
+    {
+      "id": "num-en-9",
+      "category": "History",
+      "prompt": "In what year was the Magna Carta signed?",
+      "answer": 1215
+    },
+    {
+      "id": "num-en-10",
+      "category": "History",
+      "prompt": "In what year did the Roman Empire fall in the West?",
+      "answer": 476
+    },
+    {
+      "id": "num-en-11",
+      "category": "Science",
+      "prompt": "How many bones are in the adult human body?",
+      "answer": 206
+    },
+    {
+      "id": "num-en-12",
+      "category": "Science",
+      "prompt": "How many chromosomes do humans normally have in total?",
+      "answer": 46
+    },
+    {
+      "id": "num-en-13",
+      "category": "Science",
+      "prompt": "What is the boiling point of water in degrees Celsius at sea level?",
+      "answer": 100
+    },
+    {
+      "id": "num-en-14",
+      "category": "Science",
+      "prompt": "What is the atomic number of Carbon?",
+      "answer": 6
+    },
+    {
+      "id": "num-en-15",
+      "category": "Science",
+      "prompt": "What is the atomic number of Gold (Au)?",
+      "answer": 79
+    },
+    {
+      "id": "num-en-16",
+      "category": "Science",
+      "prompt": "How many planets are in our Solar System?",
+      "answer": 8
+    },
+    {
+      "id": "num-en-17",
+      "category": "Science",
+      "prompt": "How many teeth does a normal adult human have (including wisdom teeth)?",
+      "answer": 32
+    },
+    {
+      "id": "num-en-18",
+      "category": "Science",
+      "prompt": "At what temperature in Celsius does water freeze?",
+      "answer": 0
+    },
+    {
+      "id": "num-en-19",
+      "category": "Science",
+      "prompt": "How many elements are on the modern periodic table?",
+      "answer": 118
+    },
+    {
+      "id": "num-en-20",
+      "category": "Science",
+      "prompt": "What is the atomic number of Oxygen?",
+      "answer": 8
+    },
+    {
+      "id": "num-en-21",
+      "category": "Geography",
+      "prompt": "How many countries are in the European Union (as of 2024)?",
+      "answer": 27
+    },
+    {
+      "id": "num-en-22",
+      "category": "Geography",
+      "prompt": "How many states are in the United States of America?",
+      "answer": 50
+    },
+    {
+      "id": "num-en-23",
+      "category": "Geography",
+      "prompt": "How many continents are there on Earth?",
+      "answer": 7
+    },
+    {
+      "id": "num-en-24",
+      "category": "Geography",
+      "prompt": "What is the approximate height of Mount Everest in meters?",
+      "answer": 8849
+    },
+    {
+      "id": "num-en-25",
+      "category": "Geography",
+      "prompt": "How many time zones does Russia span?",
+      "answer": 11
+    },
+    {
+      "id": "num-en-26",
+      "category": "Geography",
+      "prompt": "How many oceans are officially recognized on Earth?",
+      "answer": 5
+    },
+    {
+      "id": "num-en-27",
+      "category": "Geography",
+      "prompt": "In what year was the Eiffel Tower completed?",
+      "answer": 1889
+    },
+    {
+      "id": "num-en-28",
+      "category": "Sports",
+      "prompt": "How many players are on a soccer (football) team on the field?",
+      "answer": 11
+    },
+    {
+      "id": "num-en-29",
+      "category": "Sports",
+      "prompt": "How many holes are on a standard golf course?",
+      "answer": 18
+    },
+    {
+      "id": "num-en-30",
+      "category": "Sports",
+      "prompt": "How many squares are on a standard chessboard?",
+      "answer": 64
+    },
+    {
+      "id": "num-en-31",
+      "category": "Sports",
+      "prompt": "How many minutes is a standard regulation soccer match (excluding stoppage time)?",
+      "answer": 90
+    },
+    {
+      "id": "num-en-32",
+      "category": "Sports",
+      "prompt": "How many rings are on the Olympic flag?",
+      "answer": 5
+    },
+    {
+      "id": "num-en-33",
+      "category": "Sports",
+      "prompt": "How many points is a touchdown worth in American football (before the extra point)?",
+      "answer": 6
+    },
+    {
+      "id": "num-en-34",
+      "category": "Sports",
+      "prompt": "How many players from one basketball team are on the court at once?",
+      "answer": 5
+    },
+    {
+      "id": "num-en-35",
+      "category": "Sports",
+      "prompt": "In what year were the first modern Olympic Games held in Athens?",
+      "answer": 1896
+    },
+    {
+      "id": "num-en-36",
+      "category": "General Knowledge",
+      "prompt": "How many cards are in a standard deck (without jokers)?",
+      "answer": 52
+    },
+    {
+      "id": "num-en-37",
+      "category": "General Knowledge",
+      "prompt": "How many keys are on a full-size standard piano?",
+      "answer": 88
+    },
+    {
+      "id": "num-en-38",
+      "category": "General Knowledge",
+      "prompt": "How many days are in a leap year?",
+      "answer": 366
+    },
+    {
+      "id": "num-en-39",
+      "category": "General Knowledge",
+      "prompt": "How many minutes are in one full day?",
+      "answer": 1440
+    },
+    {
+      "id": "num-en-40",
+      "category": "General Knowledge",
+      "prompt": "How many strings does a standard guitar have?",
+      "answer": 6
+    },
+    {
+      "id": "num-en-41",
+      "category": "General Knowledge",
+      "prompt": "How many letters are in the English alphabet?",
+      "answer": 26
+    },
+    {
+      "id": "num-en-42",
+      "category": "General Knowledge",
+      "prompt": "What is the sum of the interior angles of a triangle in degrees?",
+      "answer": 180
+    },
+    {
+      "id": "num-en-43",
+      "category": "General Knowledge",
+      "prompt": "How many sides does a dodecagon have?",
+      "answer": 12
+    },
+    {
+      "id": "num-en-44",
+      "category": "Technology",
+      "prompt": "In what year was the first iPhone released?",
+      "answer": 2007
+    },
+    {
+      "id": "num-en-45",
+      "category": "Technology",
+      "prompt": "How many bits are in a single byte?",
+      "answer": 8
+    },
+    {
+      "id": "num-en-46",
+      "category": "Technology",
+      "prompt": "In what year was Google founded?",
+      "answer": 1998
+    },
+    {
+      "id": "num-en-47",
+      "category": "Technology",
+      "prompt": "What HTTP status code means 'Not Found'?",
+      "answer": 404
+    },
+    {
+      "id": "num-en-48",
+      "category": "Technology",
+      "prompt": "What is 2 to the power of 10?",
+      "answer": 1024
+    },
+    {
+      "id": "num-en-49",
+      "category": "Entertainment",
+      "prompt": "In what year was the first Star Wars movie released?",
+      "answer": 1977
+    },
+    {
+      "id": "num-en-50",
+      "category": "Entertainment",
+      "prompt": "How many Harry Potter books are in the main series?",
+      "answer": 7
+    },
+    {
+      "id": "num-en-51",
+      "category": "Entertainment",
+      "prompt": "In what year was the original Street Fighter II released in arcades?",
+      "answer": 1991
+    },
+    {
+      "id": "num-en-52",
+      "category": "Entertainment",
+      "prompt": "How many Lord of the Rings movies did Peter Jackson direct in the original trilogy?",
+      "answer": 3
+    },
+    {
+      "id": "num-en-53",
+      "category": "Science",
+      "prompt": "What is absolute zero in degrees Celsius (rounded to nearest integer)?",
+      "answer": -273
+    },
+    {
+      "id": "num-en-54",
+      "category": "Science",
+      "prompt": "At what temperature in Celsius do Fahrenheit and Celsius scales meet?",
+      "answer": -40
+    },
+    {
+      "id": "num-en-55",
+      "category": "Geography",
+      "prompt": "What is the approximate elevation of the Dead Sea shore in meters (negative integer)?",
+      "answer": -430
+    },
+    {
+      "id": "num-en-56",
+      "category": "History",
+      "prompt": "In what year was Julius Caesar assassinated (use negative for BCE)?",
+      "answer": -44
+    },
+    {
+      "id": "num-en-57",
+      "category": "Science",
+      "prompt": "How many hearts does an octopus have?",
+      "answer": 3
+    },
+    {
+      "id": "num-en-58",
+      "category": "General Knowledge",
+      "prompt": "How many seconds are in an hour?",
+      "answer": 3600
+    },
+    {
+      "id": "num-en-59",
+      "category": "History",
+      "prompt": "In what year did the United Nations officially come into existence?",
+      "answer": 1945
+    },
+    {
+      "id": "num-en-60",
+      "category": "Entertainment",
+      "prompt": "In what year did Netflix launch its streaming service?",
+      "answer": 2007
+    },
+    {
+      "id": "num-61",
+      "category": "History",
+      "prompt": "In what year did the Chernobyl nuclear disaster occur?",
+      "answer": 1986
+    },
+    {
+      "id": "num-62",
+      "category": "History",
+      "prompt": "In what year did the Soviet Union officially dissolve?",
+      "answer": 1991
+    },
+    {
+      "id": "num-63",
+      "category": "History",
+      "prompt": "In what year did India gain independence from British rule?",
+      "answer": 1947
+    },
+    {
+      "id": "num-64",
+      "category": "History",
+      "prompt": "In what year was NATO (the North Atlantic Treaty Organization) founded?",
+      "answer": 1949
+    },
+    {
+      "id": "num-65",
+      "category": "History",
+      "prompt": "In what year did the Battle of Waterloo take place?",
+      "answer": 1815
+    },
+    {
+      "id": "num-66",
+      "category": "History",
+      "prompt": "In what year did the Bolshevik (October) Revolution take place in Russia?",
+      "answer": 1917
+    },
+    {
+      "id": "num-67",
+      "category": "History",
+      "prompt": "In what year did the Wright brothers achieve the first powered, controlled airplane flight?",
+      "answer": 1903
+    },
+    {
+      "id": "num-68",
+      "category": "History",
+      "prompt": "In what year did the American Civil War end?",
+      "answer": 1865
+    },
+    {
+      "id": "num-69",
+      "category": "History",
+      "prompt": "In what year was the Treaty of Versailles signed after World War I?",
+      "answer": 1919
+    },
+    {
+      "id": "num-70",
+      "category": "History",
+      "prompt": "In what year CE did Mount Vesuvius erupt and bury Pompeii?",
+      "answer": 79
+    },
+    {
+      "id": "num-71",
+      "category": "History",
+      "prompt": "In what year did Martin Luther post his Ninety-five Theses, sparking the Protestant Reformation?",
+      "answer": 1517
+    },
+    {
+      "id": "num-72",
+      "category": "History",
+      "prompt": "In what year did euro banknotes and coins officially enter physical circulation?",
+      "answer": 2002
+    },
+    {
+      "id": "num-73",
+      "category": "History",
+      "prompt": "In what year did South Africa hold its first post-apartheid democratic election, electing Nelson Mandela president?",
+      "answer": 1994
+    },
+    {
+      "id": "num-74",
+      "category": "History",
+      "prompt": "In what year was the Battle of Hastings fought?",
+      "answer": 1066
+    },
+    {
+      "id": "num-75",
+      "category": "History",
+      "prompt": "In what year was the Battle of Marathon fought (use negative for BCE)?",
+      "answer": -490
+    },
+    {
+      "id": "num-76",
+      "category": "Science",
+      "prompt": "What is the atomic number of Hydrogen?",
+      "answer": 1
+    },
+    {
+      "id": "num-77",
+      "category": "Science",
+      "prompt": "What is the atomic number of Iron (Fe)?",
+      "answer": 26
+    },
+    {
+      "id": "num-78",
+      "category": "Science",
+      "prompt": "How many chambers does a normal human heart have?",
+      "answer": 4
+    },
+    {
+      "id": "num-79",
+      "category": "Science",
+      "prompt": "How many natural moons does Mars have?",
+      "answer": 2
+    },
+    {
+      "id": "num-80",
+      "category": "Science",
+      "prompt": "How many pairs of ribs does a normal human have?",
+      "answer": 12
+    },
+    {
+      "id": "num-81",
+      "category": "Science",
+      "prompt": "What is the pH value of pure neutral water at 25 degrees Celsius?",
+      "answer": 7
+    },
+    {
+      "id": "num-82",
+      "category": "Science",
+      "prompt": "How many wings does a honeybee have?",
+      "answer": 4
+    },
+    {
+      "id": "num-83",
+      "category": "Science",
+      "prompt": "How many legs does an arachnid (such as a spider) have?",
+      "answer": 8
+    },
+    {
+      "id": "num-84",
+      "category": "Science",
+      "prompt": "How many neck (cervical) vertebrae do both humans and giraffes have?",
+      "answer": 7
+    },
+    {
+      "id": "num-85",
+      "category": "Science",
+      "prompt": "At what temperature in degrees Fahrenheit does water freeze at standard atmospheric pressure?",
+      "answer": 32
+    },
+    {
+      "id": "num-86",
+      "category": "Science",
+      "prompt": "How many minutes does it take sunlight to travel from the Sun to Earth (rounded to the nearest integer)?",
+      "answer": 8
+    },
+    {
+      "id": "num-87",
+      "category": "Science",
+      "prompt": "What is the atomic number of Nitrogen?",
+      "answer": 7
+    },
+    {
+      "id": "num-88",
+      "category": "Science",
+      "prompt": "At what temperature in degrees Fahrenheit does water boil at sea level?",
+      "answer": 212
+    },
+    {
+      "id": "num-89",
+      "category": "Science",
+      "prompt": "What is the normal human body temperature in degrees Celsius (rounded to the nearest integer)?",
+      "answer": 37
+    },
+    {
+      "id": "num-90",
+      "category": "Science",
+      "prompt": "What is the boiling point of liquid nitrogen in degrees Celsius at standard atmospheric pressure (rounded to the nearest integer)?",
+      "answer": -196
+    },
+    {
+      "id": "num-91",
+      "category": "Geography",
+      "prompt": "How many countries share a land border with Romania?",
+      "answer": 5
+    },
+    {
+      "id": "num-92",
+      "category": "Geography",
+      "prompt": "How many provinces does Canada have (excluding territories)?",
+      "answer": 10
+    },
+    {
+      "id": "num-93",
+      "category": "Geography",
+      "prompt": "In what year was the Panama Canal officially opened?",
+      "answer": 1914
+    },
+    {
+      "id": "num-94",
+      "category": "Geography",
+      "prompt": "How many time zones does mainland China officially observe?",
+      "answer": 1
+    },
+    {
+      "id": "num-95",
+      "category": "Geography",
+      "prompt": "How many official languages does Switzerland have at the federal level?",
+      "answer": 4
+    },
+    {
+      "id": "num-96",
+      "category": "Geography",
+      "prompt": "How many sovereign countries are located in South America?",
+      "answer": 12
+    },
+    {
+      "id": "num-97",
+      "category": "Geography",
+      "prompt": "How many stripes are on the flag of the United States?",
+      "answer": 13
+    },
+    {
+      "id": "num-98",
+      "category": "Geography",
+      "prompt": "How many stars are on the flag of the European Union?",
+      "answer": 12
+    },
+    {
+      "id": "num-99",
+      "category": "Geography",
+      "prompt": "How many countries does the Danube River flow through or border?",
+      "answer": 10
+    },
+    {
+      "id": "num-100",
+      "category": "Geography",
+      "prompt": "In what year was the Suez Canal officially opened?",
+      "answer": 1869
+    },
+    {
+      "id": "num-101",
+      "category": "Geography",
+      "prompt": "How many emirates make up the United Arab Emirates?",
+      "answer": 7
+    },
+    {
+      "id": "num-102",
+      "category": "Geography",
+      "prompt": "What is the elevation in meters of Moldoveanu Peak, the highest mountain in Romania?",
+      "answer": 2544
+    },
+    {
+      "id": "num-103",
+      "category": "Geography",
+      "prompt": "What is the height of Mount Fuji in Japan in meters?",
+      "answer": 3776
+    },
+    {
+      "id": "num-104",
+      "category": "Geography",
+      "prompt": "How many sovereign countries in the world are completely surrounded by only one other country?",
+      "answer": 3
+    },
+    {
+      "id": "num-105",
+      "category": "Sports",
+      "prompt": "How many players from one team are on the ice during standard 5-on-5 ice hockey play (including the goalie)?",
+      "answer": 6
+    },
+    {
+      "id": "num-106",
+      "category": "Sports",
+      "prompt": "How many players from one volleyball team are on the court during play?",
+      "answer": 6
+    },
+    {
+      "id": "num-107",
+      "category": "Sports",
+      "prompt": "What is the maximum break possible in a single visit in standard snooker without foul points?",
+      "answer": 147
+    },
+    {
+      "id": "num-108",
+      "category": "Sports",
+      "prompt": "How many Grand Slam tournaments are held each year in professional tennis?",
+      "answer": 4
+    },
+    {
+      "id": "num-109",
+      "category": "Sports",
+      "prompt": "What is the highest possible score in a single standard game of ten-pin bowling?",
+      "answer": 300
+    },
+    {
+      "id": "num-110",
+      "category": "Sports",
+      "prompt": "How many frames are in a standard game of ten-pin bowling?",
+      "answer": 10
+    },
+    {
+      "id": "num-111",
+      "category": "Sports",
+      "prompt": "In what year was the very first FIFA World Cup held?",
+      "answer": 1930
+    },
+    {
+      "id": "num-112",
+      "category": "Sports",
+      "prompt": "How many meters long is a standard Olympic swimming pool?",
+      "answer": 50
+    },
+    {
+      "id": "num-113",
+      "category": "Sports",
+      "prompt": "How many players from one team are on the field in rugby union?",
+      "answer": 15
+    },
+    {
+      "id": "num-114",
+      "category": "Sports",
+      "prompt": "In what year did Nadia Comăneci score the first perfect 10 in Olympic gymnastics history?",
+      "answer": 1976
+    },
+    {
+      "id": "num-115",
+      "category": "Sports",
+      "prompt": "How many pieces does each player start with in a standard game of chess?",
+      "answer": 16
+    },
+    {
+      "id": "num-116",
+      "category": "Sports",
+      "prompt": "How many players from the fielding team are on the field at once in baseball?",
+      "answer": 9
+    },
+    {
+      "id": "num-117",
+      "category": "Sports",
+      "prompt": "How many minutes long is a standard NBA basketball game (excluding overtime)?",
+      "answer": 48
+    },
+    {
+      "id": "num-118",
+      "category": "Sports",
+      "prompt": "What is the maximum score possible with three darts in a standard game of darts?",
+      "answer": 180
+    },
+    {
+      "id": "num-119",
+      "category": "General Knowledge",
+      "prompt": "What is the sum of the numbers on any two opposite faces of a standard six-sided die?",
+      "answer": 7
+    },
+    {
+      "id": "num-120",
+      "category": "General Knowledge",
+      "prompt": "How many white keys are on a standard 88-key piano?",
+      "answer": 52
+    },
+    {
+      "id": "num-121",
+      "category": "General Knowledge",
+      "prompt": "How many letters are in the modern Romanian alphabet?",
+      "answer": 31
+    },
+    {
+      "id": "num-122",
+      "category": "General Knowledge",
+      "prompt": "How many letters are in the modern Greek alphabet?",
+      "answer": 24
+    },
+    {
+      "id": "num-123",
+      "category": "General Knowledge",
+      "prompt": "How many degrees are in a full circle?",
+      "answer": 360
+    },
+    {
+      "id": "num-124",
+      "category": "General Knowledge",
+      "prompt": "How many faces does a regular icosahedron have?",
+      "answer": 20
+    },
+    {
+      "id": "num-125",
+      "category": "General Knowledge",
+      "prompt": "How many zodiac signs are in traditional Western astrology?",
+      "answer": 12
+    },
+    {
+      "id": "num-126",
+      "category": "General Knowledge",
+      "prompt": "How many cards are in a standard Tarot deck (Major and Minor Arcana combined)?",
+      "answer": 78
+    },
+    {
+      "id": "num-127",
+      "category": "General Knowledge",
+      "prompt": "How many tiles are in a standard double-six domino set?",
+      "answer": 28
+    },
+    {
+      "id": "num-128",
+      "category": "General Knowledge",
+      "prompt": "How many karats represent pure gold?",
+      "answer": 24
+    },
+    {
+      "id": "num-129",
+      "category": "General Knowledge",
+      "prompt": "How many millimeters are in one meter?",
+      "answer": 1000
+    },
+    {
+      "id": "num-130",
+      "category": "General Knowledge",
+      "prompt": "How many strings does a standard violin have?",
+      "answer": 4
+    },
+    {
+      "id": "num-131",
+      "category": "General Knowledge",
+      "prompt": "How many dots (pips) are in total on a standard six-sided die?",
+      "answer": 21
+    },
+    {
+      "id": "num-132",
+      "category": "General Knowledge",
+      "prompt": "In Roman numerals, what integer value does the letter 'D' represent?",
+      "answer": 500
+    },
+    {
+      "id": "num-133",
+      "category": "Technology",
+      "prompt": "What standard TCP port number is used for unencrypted HTTP traffic?",
+      "answer": 80
+    },
+    {
+      "id": "num-134",
+      "category": "Technology",
+      "prompt": "What standard TCP port number is used for HTTPS traffic?",
+      "answer": 443
+    },
+    {
+      "id": "num-135",
+      "category": "Technology",
+      "prompt": "In what year was Wikipedia launched?",
+      "answer": 2001
+    },
+    {
+      "id": "num-136",
+      "category": "Technology",
+      "prompt": "In what year was YouTube founded?",
+      "answer": 2005
+    },
+    {
+      "id": "num-137",
+      "category": "Technology",
+      "prompt": "In what year was Facebook (originally Thefacebook) launched?",
+      "answer": 2004
+    },
+    {
+      "id": "num-138",
+      "category": "Technology",
+      "prompt": "In what year was Microsoft founded?",
+      "answer": 1975
+    },
+    {
+      "id": "num-139",
+      "category": "Technology",
+      "prompt": "In what year was Apple Computer founded?",
+      "answer": 1976
+    },
+    {
+      "id": "num-140",
+      "category": "Technology",
+      "prompt": "How many bits are in an IPv4 address?",
+      "answer": 32
+    },
+    {
+      "id": "num-141",
+      "category": "Technology",
+      "prompt": "How many bits are in an IPv6 address?",
+      "answer": 128
+    },
+    {
+      "id": "num-142",
+      "category": "Technology",
+      "prompt": "In ASCII, what is the decimal character code for the uppercase letter 'A'?",
+      "answer": 65
+    },
+    {
+      "id": "num-143",
+      "category": "Technology",
+      "prompt": "What HTTP status code means 'OK' (successful request)?",
+      "answer": 200
+    },
+    {
+      "id": "num-144",
+      "category": "Technology",
+      "prompt": "In what year did Linus Torvalds release the first version of the Linux kernel?",
+      "answer": 1991
+    },
+    {
+      "id": "num-145",
+      "category": "Technology",
+      "prompt": "How many bits are in a nibble (half a byte)?",
+      "answer": 4
+    },
+    {
+      "id": "num-146",
+      "category": "Technology",
+      "prompt": "In what year was the world's first SMS text message sent?",
+      "answer": 1992
+    },
+    {
+      "id": "num-147",
+      "category": "Entertainment",
+      "prompt": "In what year was the original 'Toy Story', the first feature-length computer-animated film, released?",
+      "answer": 1995
+    },
+    {
+      "id": "num-148",
+      "category": "Entertainment",
+      "prompt": "In what year was the original 'Jurassic Park' movie directed by Steven Spielberg released?",
+      "answer": 1993
+    },
+    {
+      "id": "num-149",
+      "category": "Entertainment",
+      "prompt": "In what year was the first 'The Matrix' movie released?",
+      "answer": 1999
+    },
+    {
+      "id": "num-150",
+      "category": "Entertainment",
+      "prompt": "How many seasons did the HBO television series 'Game of Thrones' have?",
+      "answer": 8
+    },
+    {
+      "id": "num-151",
+      "category": "Entertainment",
+      "prompt": "In what year was Disney's original animated film 'The Lion King' released?",
+      "answer": 1994
+    },
+    {
+      "id": "num-152",
+      "category": "Entertainment",
+      "prompt": "In what year was the very first Academy Awards (Oscars) ceremony held?",
+      "answer": 1929
+    },
+    {
+      "id": "num-153",
+      "category": "Entertainment",
+      "prompt": "How many original Generation I Pokémon species are there (from Bulbasaur to Mew)?",
+      "answer": 151
+    },
+    {
+      "id": "num-154",
+      "category": "Entertainment",
+      "prompt": "In what year did The Beatles release their iconic album 'Abbey Road'?",
+      "answer": 1969
+    },
+    {
+      "id": "num-155",
+      "category": "Entertainment",
+      "prompt": "In what year was Michael Jackson's album 'Thriller' released?",
+      "answer": 1982
+    },
+    {
+      "id": "num-156",
+      "category": "Entertainment",
+      "prompt": "How many symphonies did Ludwig van Beethoven complete?",
+      "answer": 9
+    },
+    {
+      "id": "num-157",
+      "category": "Entertainment",
+      "prompt": "How many seasons did the television sitcom 'Friends' run?",
+      "answer": 10
+    },
+    {
+      "id": "num-158",
+      "category": "Entertainment",
+      "prompt": "In what year did MTV launch on cable television in the United States?",
+      "answer": 1981
+    },
+    {
+      "id": "num-159",
+      "category": "Entertainment",
+      "prompt": "In what year was the first 'Iron Man' movie, launching the Marvel Cinematic Universe, released?",
+      "answer": 2008
+    },
+    {
+      "id": "num-160",
+      "category": "Entertainment",
+      "prompt": "In what year was the first 'Avatar' movie, directed by James Cameron, released?",
+      "answer": 2009
+    }
   ]
 }

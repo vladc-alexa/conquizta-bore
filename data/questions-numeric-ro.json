@@ -1,7 +1,6 @@
 {
-  "count": 60,
+  "count": 160,
   "lang": "ro",
-  "updatedAt": "2026-11-26T12:06:43.847Z",
   "questions": [
     {
       "id": "num-en-1",
@@ -422,6 +421,706 @@
       "category": "Divertisment",
       "prompt": "În ce an și-a lansat Netflix serviciul de streaming?",
       "answer": 2007
+    },
+    {
+      "id": "num-61",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a avut loc dezastrul nuclear de la Cernobîl?",
+      "answer": 1986
+    },
+    {
+      "id": "num-62",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an s-a destrămat oficial Uniunea Sovietică?",
+      "answer": 1991
+    },
+    {
+      "id": "num-63",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an și-a obținut India independența față de dominația britanică?",
+      "answer": 1947
+    },
+    {
+      "id": "num-64",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a fost fondată NATO (Organizația Tratatului Atlanticului de Nord)?",
+      "answer": 1949
+    },
+    {
+      "id": "num-65",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a avut loc Bătălia de la Waterloo?",
+      "answer": 1815
+    },
+    {
+      "id": "num-66",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a avut loc Revoluția Bolșevică (Revoluția din Octombrie) din Rusia?",
+      "answer": 1917
+    },
+    {
+      "id": "num-67",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an au realizat frații Wright primul zbor propulsat și controlat cu avionul?",
+      "answer": 1903
+    },
+    {
+      "id": "num-68",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an s-a încheiat Războiul Civil American?",
+      "answer": 1865
+    },
+    {
+      "id": "num-69",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a fost semnat Tratatul de la Versailles după Primul Război Mondial?",
+      "answer": 1919
+    },
+    {
+      "id": "num-70",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an d.Hr. a erupt Muntele Vezuviu, îngropând orașul Pompei?",
+      "answer": 79
+    },
+    {
+      "id": "num-71",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an și-a afișat Martin Luther cele 95 de teze, declanșând Reforma Protestantă?",
+      "answer": 1517
+    },
+    {
+      "id": "num-72",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an au intrat oficial în circulație bancnotele și monedele euro?",
+      "answer": 2002
+    },
+    {
+      "id": "num-73",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an au avut loc primele alegeri democratice post-apartheid din Africa de Sud, în urma cărora Nelson Mandela a fost ales președinte?",
+      "answer": 1994
+    },
+    {
+      "id": "num-74",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a avut loc Bătălia de la Hastings?",
+      "answer": 1066
+    },
+    {
+      "id": "num-75",
+      "categoryEn": "History",
+      "category": "Istorie",
+      "prompt": "În ce an a avut loc Bătălia de la Maraton (folosiți un număr negativ pentru î.Hr.)?",
+      "answer": -490
+    },
+    {
+      "id": "num-76",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Care este numărul atomic al hidrogenului?",
+      "answer": 1
+    },
+    {
+      "id": "num-77",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Care este numărul atomic al fierului (Fe)?",
+      "answer": 26
+    },
+    {
+      "id": "num-78",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Câte camere are o inimă umană normală?",
+      "answer": 4
+    },
+    {
+      "id": "num-79",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Câți sateliți naturali are planeta Marte?",
+      "answer": 2
+    },
+    {
+      "id": "num-80",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Câte perechi de coaste are în mod normal un om?",
+      "answer": 12
+    },
+    {
+      "id": "num-81",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Care este valoarea pH-ului apei pure neutre la 25 de grade Celsius?",
+      "answer": 7
+    },
+    {
+      "id": "num-82",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Câte aripi are o albină?",
+      "answer": 4
+    },
+    {
+      "id": "num-83",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Câte picioare are o arahnidă (precum un păianjen)?",
+      "answer": 8
+    },
+    {
+      "id": "num-84",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Câte vertebre cervicale (ale gâtului) au atât oamenii, cât și girafele?",
+      "answer": 7
+    },
+    {
+      "id": "num-85",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "La ce temperatură în grade Fahrenheit îngheață apa la presiune atmosferică standard?",
+      "answer": 32
+    },
+    {
+      "id": "num-86",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Câte minute îi ia luminii de la Soare să ajungă pe Pământ (rotunjit la cel mai apropiat număr întreg)?",
+      "answer": 8
+    },
+    {
+      "id": "num-87",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Care este numărul atomic al azotului?",
+      "answer": 7
+    },
+    {
+      "id": "num-88",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "La ce temperatură în grade Fahrenheit fierbe apa la nivelul mării?",
+      "answer": 212
+    },
+    {
+      "id": "num-89",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Care este temperatura normală a corpului uman în grade Celsius (rotunjită la cel mai apropiat număr întreg)?",
+      "answer": 37
+    },
+    {
+      "id": "num-90",
+      "categoryEn": "Science",
+      "category": "Știință",
+      "prompt": "Care este punctul de fierbere al azotului lichid în grade Celsius la presiune atmosferică standard (rotunjit la cel mai apropiat număr întreg)?",
+      "answer": -196
+    },
+    {
+      "id": "num-91",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Cu câte țări are România graniță terestră?",
+      "answer": 5
+    },
+    {
+      "id": "num-92",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Câte provincii are Canada (fără teritorii)?",
+      "answer": 10
+    },
+    {
+      "id": "num-93",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "În ce an a fost inaugurat oficial Canalul Panama?",
+      "answer": 1914
+    },
+    {
+      "id": "num-94",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Câte fusuri orare folosește oficial China continentală?",
+      "answer": 1
+    },
+    {
+      "id": "num-95",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Câte limbi oficiale are Elveția la nivel federal?",
+      "answer": 4
+    },
+    {
+      "id": "num-96",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Câte țări suverane se află în America de Sud?",
+      "answer": 12
+    },
+    {
+      "id": "num-97",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Câte dungi are steagul Statelor Unite ale Americii?",
+      "answer": 13
+    },
+    {
+      "id": "num-98",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Câte stele sunt pe steagul Uniunii Europene?",
+      "answer": 12
+    },
+    {
+      "id": "num-99",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Prin câte țări curge sau formează graniță fluviul Dunărea?",
+      "answer": 10
+    },
+    {
+      "id": "num-100",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "În ce an a fost inaugurat oficial Canalul Suez?",
+      "answer": 1869
+    },
+    {
+      "id": "num-101",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Câte emirate alcătuiesc Emiratele Arabe Unite?",
+      "answer": 7
+    },
+    {
+      "id": "num-102",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Care este altitudinea în metri a Vârfului Moldoveanu, cel mai înalt vârf din România?",
+      "answer": 2544
+    },
+    {
+      "id": "num-103",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Care este înălțimea în metri a Muntelui Fuji din Japonia?",
+      "answer": 3776
+    },
+    {
+      "id": "num-104",
+      "categoryEn": "Geography",
+      "category": "Geografie",
+      "prompt": "Câte țări suverane din lume sunt complet înconjurate de o singură altă țară?",
+      "answer": 3
+    },
+    {
+      "id": "num-105",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câți jucători ai unei echipe sunt simultan pe gheață în hocheiul pe gheață în format standard (incluzând portarul)?",
+      "answer": 6
+    },
+    {
+      "id": "num-106",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câți jucători ai unei echipe de volei sunt simultan pe teren în timpul jocului?",
+      "answer": 6
+    },
+    {
+      "id": "num-107",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Care este break-ul maxim posibil într-o singură vizită la masă în snooker, fără puncte din faulturi?",
+      "answer": 147
+    },
+    {
+      "id": "num-108",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câte turnee de Grand Slam au loc în fiecare an în tenisul profesionist?",
+      "answer": 4
+    },
+    {
+      "id": "num-109",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Care este cel mai mare scor posibil într-un singur joc standard de bowling?",
+      "answer": 300
+    },
+    {
+      "id": "num-110",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câte frame-uri (runde) are un joc standard de bowling?",
+      "answer": 10
+    },
+    {
+      "id": "num-111",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "În ce an a avut loc prima ediție a Cupei Mondiale FIFA?",
+      "answer": 1930
+    },
+    {
+      "id": "num-112",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câți metri lungime are un bazin olimpic standard de înot?",
+      "answer": 50
+    },
+    {
+      "id": "num-113",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câți jucători are pe teren o echipă de rugby în XV (rugby union)?",
+      "answer": 15
+    },
+    {
+      "id": "num-114",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "În ce an a obținut Nadia Comăneci prima notă de 10 perfect din istoria gimnasticii olimpice?",
+      "answer": 1976
+    },
+    {
+      "id": "num-115",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Cu câte piese începe fiecare jucător o partidă standard de șah?",
+      "answer": 16
+    },
+    {
+      "id": "num-116",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câți jucători ai echipei aflate în apărare sunt simultan pe teren în baseball?",
+      "answer": 9
+    },
+    {
+      "id": "num-117",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Câte minute durează un meci regulamentar de baschet în NBA (fără prelungiri)?",
+      "answer": 48
+    },
+    {
+      "id": "num-118",
+      "categoryEn": "Sports",
+      "category": "Sport",
+      "prompt": "Care este scorul maxim posibil din trei săgeți într-un joc standard de darts?",
+      "answer": 180
+    },
+    {
+      "id": "num-119",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Care este suma numerelor de pe oricare două fețe opuse ale unui zar standard cu șase fețe?",
+      "answer": 7
+    },
+    {
+      "id": "num-120",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte clape albe are un pian standard cu 88 de clape?",
+      "answer": 52
+    },
+    {
+      "id": "num-121",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte litere are alfabetul român modern?",
+      "answer": 31
+    },
+    {
+      "id": "num-122",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte litere are alfabetul grec modern?",
+      "answer": 24
+    },
+    {
+      "id": "num-123",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte grade are un cerc complet?",
+      "answer": 360
+    },
+    {
+      "id": "num-124",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte fețe are un icosaedru regulat?",
+      "answer": 20
+    },
+    {
+      "id": "num-125",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte semne zodiacale sunt în astrologia occidentală tradițională?",
+      "answer": 12
+    },
+    {
+      "id": "num-126",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte cărți are un pachet standard de tarot (Arcana Majoră și Arcana Minoră laolaltă)?",
+      "answer": 78
+    },
+    {
+      "id": "num-127",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte piese are un set standard de domino dublu-șase?",
+      "answer": 28
+    },
+    {
+      "id": "num-128",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte karate are aurul pur?",
+      "answer": 24
+    },
+    {
+      "id": "num-129",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câți milimetri sunt într-un metru?",
+      "answer": 1000
+    },
+    {
+      "id": "num-130",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte corzi are o vioară standard?",
+      "answer": 4
+    },
+    {
+      "id": "num-131",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "Câte puncte sunt în total pe un zar standard cu șase fețe?",
+      "answer": 21
+    },
+    {
+      "id": "num-132",
+      "categoryEn": "General Knowledge",
+      "category": "Cultură Generală",
+      "prompt": "În cifre romane, ce valoare întreagă reprezintă litera „D”?",
+      "answer": 500
+    },
+    {
+      "id": "num-133",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "Ce număr standard de port TCP este folosit pentru traficul HTTP necriptat?",
+      "answer": 80
+    },
+    {
+      "id": "num-134",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "Ce număr standard de port TCP este folosit pentru traficul HTTPS?",
+      "answer": 443
+    },
+    {
+      "id": "num-135",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "În ce an a fost lansată Wikipedia?",
+      "answer": 2001
+    },
+    {
+      "id": "num-136",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "În ce an a fost fondat YouTube?",
+      "answer": 2005
+    },
+    {
+      "id": "num-137",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "În ce an a fost lansat Facebook (inițial Thefacebook)?",
+      "answer": 2004
+    },
+    {
+      "id": "num-138",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "În ce an a fost fondată compania Microsoft?",
+      "answer": 1975
+    },
+    {
+      "id": "num-139",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "În ce an a fost fondată compania Apple?",
+      "answer": 1976
+    },
+    {
+      "id": "num-140",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "Câți biți are o adresă IPv4?",
+      "answer": 32
+    },
+    {
+      "id": "num-141",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "Câți biți are o adresă IPv6?",
+      "answer": 128
+    },
+    {
+      "id": "num-142",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "În codificarea ASCII, care este codul zecimal pentru litera mare „A”?",
+      "answer": 65
+    },
+    {
+      "id": "num-143",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "Ce cod de stare HTTP înseamnă „OK” (cerere reușită)?",
+      "answer": 200
+    },
+    {
+      "id": "num-144",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "În ce an a lansat Linus Torvalds prima versiune a nucleului Linux?",
+      "answer": 1991
+    },
+    {
+      "id": "num-145",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "Câți biți sunt într-un nibble (jumătate de byte)?",
+      "answer": 4
+    },
+    {
+      "id": "num-146",
+      "categoryEn": "Technology",
+      "category": "Tehnologie",
+      "prompt": "În ce an a fost trimis primul mesaj text SMS din lume?",
+      "answer": 1992
+    },
+    {
+      "id": "num-147",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "În ce an a fost lansat filmul original „Toy Story”, primul lungmetraj de animație pe computer?",
+      "answer": 1995
+    },
+    {
+      "id": "num-148",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "În ce an a fost lansat filmul original „Jurassic Park”, regizat de Steven Spielberg?",
+      "answer": 1993
+    },
+    {
+      "id": "num-149",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "În ce an a fost lansat primul film „Matrix”?",
+      "answer": 1999
+    },
+    {
+      "id": "num-150",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "Câte sezoane a avut serialul de televiziune HBO „Urzeala tronurilor” (Game of Thrones)?",
+      "answer": 8
+    },
+    {
+      "id": "num-151",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "În ce an a fost lansat filmul original de animație Disney „Regele Leu” (The Lion King)?",
+      "answer": 1994
+    },
+    {
+      "id": "num-152",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "În ce an a avut loc prima ceremonie a Premiilor Oscar (Academy Awards)?",
+      "answer": 1929
+    },
+    {
+      "id": "num-153",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "Câte specii de Pokémon există în prima generație originală (de la Bulbasaur la Mew)?",
+      "answer": 151
+    },
+    {
+      "id": "num-154",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "În ce an a lansat trupa The Beatles celebrul album „Abbey Road”?",
+      "answer": 1969
+    },
+    {
+      "id": "num-155",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "În ce an a fost lansat albumul „Thriller” al lui Michael Jackson?",
+      "answer": 1982
+    },
+    {
+      "id": "num-156",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "Câte simfonii a finalizat Ludwig van Beethoven?",
+      "answer": 9
+    },
+    {
+      "id": "num-157",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "Câte sezoane a avut serialul de televiziune „Friends”?",
+      "answer": 10
+    },
+    {
+      "id": "num-158",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "În ce an s-a lansat postul de televiziune MTV în Statele Unite?",
+      "answer": 1981
+    },
+    {
+      "id": "num-159",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "În ce an a fost lansat primul film „Iron Man”, care a dat startul Universului Cinematografic Marvel?",
+      "answer": 2008
+    },
+    {
+      "id": "num-160",
+      "categoryEn": "Entertainment",
+      "category": "Divertisment",
+      "prompt": "În ce an a fost lansat primul film „Avatar”, regizat de James Cameron?",
+      "answer": 2009
     }
   ]
 }
