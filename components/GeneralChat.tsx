@@ -53,8 +53,11 @@ const DOCK_KEY = "bore.chatdock.open";
 export default function GeneralChat({
   variant = "page",
   refreshToken = 0,
+  className = "",
 }: {
   variant?: "page" | "dock";
+  /** extra classes for the page-shaped card (dashboard sizes it differently) */
+  className?: string;
   /** bump to force a full resync (rename / colour change elsewhere on the page) */
   refreshToken?: number;
 }) {
@@ -551,8 +554,9 @@ export default function GeneralChat({
                   {me?.isAdmin && (
                     <button
                       onClick={() => deleteMessage(m.id)}
-                      className="text-[#75938f] hover:text-red-400 text-[0.7rem] cursor-pointer"
+                      className="shrink-0 inline-flex h-[22px] w-[22px] items-center justify-center rounded-md border border-[#7a3a2a] bg-[#2a1310] text-[0.68rem] leading-none text-[#f0a08a] transition-colors hover:border-[#a8503a] hover:bg-[#3a1419] hover:text-[#ff8b6b] cursor-pointer"
                       title="Șterge mesajul"
+                      aria-label="Șterge mesajul"
                     >
                       ✕
                     </button>
@@ -672,7 +676,9 @@ export default function GeneralChat({
 
   if (!dock) {
     return (
-      <section className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full lg:w-[600px] shrink-0 flex flex-col h-[560px] lg:h-[calc(100vh-130px)] lg:min-h-[672px]">
+      <section
+        className={`bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full lg:w-[600px] shrink-0 flex flex-col h-[560px] lg:h-[calc(100vh-130px)] lg:min-h-[672px] ${className}`}
+      >
         <div className="flex items-center justify-between px-[1.15rem] py-[0.7rem] border-b border-[#1e3a3460] relative">
           <h3 className="font-cinzel text-[#9ec6c1] text-[0.85rem] tracking-widest">Chat general</h3>
           <div className="flex items-center gap-2">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { LanguageSwitcher, useI18n } from "@/lib/i18n";
 import { ThemeSwitcher, useArtTheme } from "@/lib/theme";
 import { InviteToast } from "@/components/MatchLobby";
+import GeneralChat from "@/components/GeneralChat";
 
 interface ChatMessage {
   id: string;
@@ -40,17 +41,12 @@ export default function Dashboard() {
   const [name, setName] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [siteOff, setSiteOff] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState("");
-  const [chatError, setChatError] = useState<string | null>(null);
   const [rows, setRows] = useState<DailyLeaderRow[]>([]);
   const [rankTab, setRankTab] = useState<"day" | "speed">("day");
   const [speedRows, setSpeedRows] = useState<DailyLeaderRow[]>([]);
   const [speedBest, setSpeedBest] = useState<number | null>(null);
   const [onlinePlayers, setOnlinePlayers] = useState<OnlinePlayer[]>([]);
-  const [sending, setSending] = useState(false);
   const [bankCount, setBankCount] = useState<number>(1660);
-  const chatEndRef = useRef<HTMLDivElement>(null);
 
   // PRC sprint state (preserves existing players' PRC records)
   const [prcActive, setPrcActive] = useState(false);
@@ -91,17 +87,6 @@ export default function Dashboard() {
     }
   }, []);
 
-  const loadChat = useCallback(async () => {
-    try {
-      const res = await fetch("/api/chat");
-      if (!res.ok) return;
-      const data = await res.json();
-      setMessages(data.messages ?? []);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   const loadOnlinePlayers = useCallback(async () => {
     try {
       const res = await fetch("/api/players");
@@ -127,59 +112,18 @@ export default function Dashboard() {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d?.totalCount && setBankCount(d.totalCount))
       .catch(() => {});
-    loadChat();
     loadLeaderboard();
     loadSpeedBoard();
     loadOnlinePlayers();
     const best = parseInt(localStorage.getItem(PRC_BEST_KEY) || "0", 10);
     if (!isNaN(best)) setPrcBest(best);
-    const chatTimer = setInterval(loadChat, 5000);
     const lbTimer = setInterval(loadLeaderboard, 15000);
     const playersTimer = setInterval(loadOnlinePlayers, 15000);
     return () => {
-      clearInterval(chatTimer);
       clearInterval(lbTimer);
       clearInterval(playersTimer);
     };
-  }, [lang, loadChat, loadLeaderboard, loadOnlinePlayers]);
-
-  // No auto-scroll on purpose: the page and the chat stay exactly where the
-  // player left them (new messages no longer yank the view around).
-  const sendMessage = async () => {
-    const text = chatInput.trim();
-    if (!text || sending) return;
-    setSending(true);
-    setChatError(null);
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-      if (res.ok) {
-        setChatInput("");
-        loadChat();
-      } else {
-        const data = await res.json().catch(() => null);
-        setChatError(data?.error || (lang === "ro" ? "Mesajul nu a putut fi trimis." : "Failed to send message."));
-      }
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const deleteMessage = async (id: string) => {
-    try {
-      const res = await fetch(`/api/admin/chat/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        setMessages((prev) => prev.filter((m) => m.id !== id));
-      }
-    } catch {
-      /* ignore */
-    }
-  };
+  }, [lang, loadLeaderboard, loadOnlinePlayers]);
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -340,68 +284,10 @@ export default function Dashboard() {
         {/* ---- LEFT: LARGE GENERAL CHAT BOX (more messages visible at once) ---- */}
         <section
           ref={chatSectionRef}
-          className="royal-panel rounded-2xl flex flex-col h-[520px] lg:h-[calc(100vh-238px)] lg:min-h-[580px]"
+          id="chat"
+          className="flex flex-col min-w-0 h-[520px] lg:h-[calc(100vh-238px)] lg:min-h-[580px]"
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[#b68635]/40 bg-[#1a1322]/75 rounded-t-2xl">
-            <h3 className="font-cinzel font-bold text-[#f7d279] text-xs sm:text-sm tracking-[0.14em] uppercase flex items-center gap-2">
-              <span>💬</span> {t("chatTitle")}
-            </h3>
-            <span className="text-[#c8ad7c] text-[0.7rem]">
-              {messages.length} {t("chatMessages")}
-            </span>
-          </div>
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 flex flex-col gap-2 min-w-0">
-            {messages.length === 0 ? (
-              <div className="text-[#b89f72] text-xs text-center my-auto">{t("chatEmpty")}</div>
-            ) : (
-              messages.map((m) => (
-                <div
-                  key={m.id}
-                  className="text-xs leading-relaxed bg-[#0f0c16]/65 border border-[#7a5828]/25 rounded-lg px-2.5 py-1.5 flex items-start justify-between gap-2 min-w-0"
-                >
-                  <div className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
-                    <span className="font-cinzel font-bold text-[#f0ba58]">{m.authorName}:</span>{" "}
-                    <span className="text-[#efe2c6]">{m.text}</span>
-                  </div>
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => deleteMessage(m.id)}
-                      className="shrink-0 text-[#d88989] hover:text-[#ff6b6b] hover:bg-[#3a1419]/60 rounded px-1.5 py-0.5 text-[0.7rem] cursor-pointer transition-colors"
-                      title={lang === "ro" ? "Șterge mesajul" : "Delete message"}
-                      aria-label={lang === "ro" ? "Șterge mesajul" : "Delete message"}
-                    >
-                      🗑
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-            <div ref={chatEndRef} />
-          </div>
-          {chatError && (
-            <div className="px-3 py-1.5 bg-[#3a1419]/90 border-t border-[#b54545]/50 text-[#ffbdbd] text-[11px]">
-              {chatError}
-            </div>
-          )}
-          <div className="p-2.5 border-t border-[#b68635]/40 flex gap-2 bg-[#120e19]/80 rounded-b-2xl">
-            <input
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              placeholder={t("chatPlaceholder")}
-              maxLength={500}
-              className="flex-1 bg-[#0b0910] border border-[#8e672b] rounded-lg text-[#fcecc4] text-xs px-3 py-2 outline-none focus:border-[#f0c05a]"
-            />
-            <button
-              onClick={sendMessage}
-              disabled={sending || !chatInput.trim()}
-              className="btn-crimson rounded-lg px-3.5 text-xs font-cinzel font-bold cursor-pointer disabled:opacity-40"
-              title={t("chatSend")}
-            >
-              ➤
-            </button>
-          </div>
+          <GeneralChat variant="page" className="!w-full !h-full" />
         </section>
 
         {/* ---- RIGHT STAGE: 4 GAME MODE CARDS + TRAINING BANNER + COMBINED LEADERBOARD & PRC ---- */}
@@ -473,7 +359,10 @@ export default function Dashboard() {
             {/* Card 4: PRC SPRINT */}
             <button
               type="button"
-              onClick={() => prcSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}
+              onClick={() => {
+                prcSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                startPrc();
+              }}
               className="mode-card group aspect-[3/4] flex flex-col justify-end text-left cursor-pointer"
             >
               <img
@@ -524,14 +413,14 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.95fr_1fr_0.9fr] gap-4">
             {/* Clasamentul Zilei (narrower) */}
             <section ref={ranksSectionRef} className="royal-panel rounded-2xl p-3.5 flex flex-col gap-2.5 min-h-[260px]">
-              <div className="flex items-center justify-between border-b border-[#b68635]/40 pb-2 gap-2">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-[#b68635]/40 pb-2">
                 <Link
                   href="/leaderboard"
-                  className="font-cinzel font-bold text-[#f7d279] hover:text-[#fff0b3] text-xs tracking-[0.12em] uppercase flex items-center gap-1.5 truncate"
+                  className="min-w-0 font-cinzel font-bold text-[#f7d279] hover:text-[#fff0b3] text-[0.7rem] tracking-[0.1em] uppercase flex items-center gap-1.5 whitespace-nowrap"
                 >
                   <span>👑</span> {t("leaderboardTitle")}
                 </Link>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                   <button
                     onClick={() => setRankTab("day")}
                     className={`text-[0.62rem] font-cinzel px-1.5 py-0.5 rounded border cursor-pointer ${
