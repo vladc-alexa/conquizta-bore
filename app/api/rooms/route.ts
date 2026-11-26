@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
+import {
+  SIEGE_LEAD_MS,
+  SIEGE_NEXT_LEAD_MS,
+  SIEGE_TIE_LEAD_MS,
+  allHumansAnswered,
+  armRound,
+  evaluateRound,
+  roundDeadline,
+  type SiegeMode,
+  type SiegeQuestion,
+  type SiegeRoomLike,
+  type SiegeRoundResult,
+} from "@/lib/siegeRoom";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +26,8 @@ export interface RoomSeat {
   isBot: boolean;
   botDifficulty?: "easy" | "medium" | "hard";
   ready: boolean;
+  /** siege: seat pressed START; the battle only begins when every human seat has */
+  started?: boolean;
   score: number;
   lastAnswer?: {
     round: number;
@@ -36,6 +51,13 @@ export interface GameRoom {
   seats: RoomSeat[];
   currentRound: number;
   roundQuestion?: unknown;
+  // ---- siege sync state (server-authoritative rounds) ----
+  roundSeq?: number;
+  roundMode?: SiegeMode;
+  roundStartedAt?: number;
+  roundAnswers?: Record<string, { seq: number; choice?: number | null; guess?: number | null; elapsedMs: number }>;
+  lastResult?: SiegeRoundResult | null;
+  startAt?: number;
 }
 
 export interface OnlineUser {
@@ -109,6 +131,65 @@ async function getAuth() {
   return { userId: session.sub, name: session.name };
 }
 
+// ---------- SIEGE round engine glue ----------
+
+function siegeState(room: GameRoom): SiegeRoomLike {
+  return room as unknown as SiegeRoomLike;
+}
+
+/** Pull one question from the same endpoint the solo modes use. */
+async function fetchSiegeQuestion(req: Request, mode: SiegeMode, lang: "ro" | "en") {
+  try {
+    const origin = new URL(req.url).origin;
+    const res = await fetch(`${origin}/api/questions?mode=${mode}&count=1&lang=${lang}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return (data?.questions?.[0] as SiegeQuestion) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Serve the next question to both seats on the server clock. */
+async function armSiegeRound(
+  req: Request,
+  room: GameRoom,
+  mode: SiegeMode,
+  leadMs: number,
+  round: number
+) {
+  const q = await fetchSiegeQuestion(req, mode, room.lang);
+  if (!q) return false;
+  armRound(siegeState(room), q, mode, leadMs, round);
+  return true;
+}
+
+/** Decide the current round (both answered, or the server deadline passed). */
+async function resolveSiegeRound(req: Request, room: GameRoom) {
+  const s = siegeState(room);
+  if (!s.roundQuestion || s.lastResult) return;
+  const ev = evaluateRound(s);
+  if (ev.goToTie) {
+    await armSiegeRound(req, room, "rapide", SIEGE_TIE_LEAD_MS, room.currentRound);
+    return;
+  }
+  s.lastResult = ev.result;
+  room.updatedAt = Date.now();
+}
+
+/** Cheap housekeeping run on every room read/write. */
+async function tickSiege(req: Request, room: GameRoom) {
+  if (room.gameType !== "siege" || room.status !== "playing") return;
+  const s = siegeState(room);
+  if (!s.roundQuestion || s.lastResult) return;
+  const now = Date.now();
+  if (now < (s.roundStartedAt || 0)) return;
+  if (!allHumansAnswered(s) && now <= roundDeadline(s)) return;
+  await resolveSiegeRound(req, room);
+}
+
 // GET /api/rooms -> returns online players, pending invites for me, open rooms, or a specific ?code=XXXX
 export async function GET(req: Request) {
   pruneStale();
@@ -126,7 +207,14 @@ export async function GET(req: Request) {
   if (code) {
     const room = rooms.get(code);
     if (!room) return NextResponse.json({ error: "room_not_found" }, { status: 404 });
-    return NextResponse.json({ room, onlinePlayers, invites: myInvites, me });
+    await tickSiege(req, room);
+    return NextResponse.json({
+      room,
+      serverNow: Date.now(),
+      onlinePlayers,
+      invites: myInvites,
+      me,
+    });
   }
 
   const openRooms = [...rooms.values()]
@@ -284,10 +372,47 @@ export async function POST(req: Request) {
   }
 
   if (action === "start") {
+    // SIEGE: START is a ready-check. The battle begins only when EVERY human
+    // seat has pressed it, and then on one shared server timestamp.
+    if (room.gameType === "siege") {
+      const seat = room.seats.find((s) => s.userId === me.userId);
+      if (!seat) return NextResponse.json({ error: "not_seated" }, { status: 400 });
+      if (room.status === "waiting") seat.started = true;
+
+      const humans = room.seats.filter((s) => !s.isBot);
+      const ready = humans.length > 0 && humans.every((s) => s.started);
+      if (room.status === "waiting" && ready && room.seats.length >= 2) {
+        room.status = "playing";
+        room.currentRound = 1;
+        for (const s of room.seats) s.lastAnswer = undefined;
+        await armSiegeRound(req, room, "grila", SIEGE_LEAD_MS, 1);
+        room.startAt = room.roundStartedAt;
+      }
+      return NextResponse.json({ room, serverNow: Date.now() });
+    }
+
     room.status = "playing";
     room.currentRound = 1;
     if (body?.question) room.roundQuestion = body.question;
     return NextResponse.json({ room });
+  }
+
+  // SIEGE: called by both clients after the catapult animation. Idempotent —
+  // only the first caller for a given round number advances the match.
+  if (action === "advance") {
+    if (room.gameType !== "siege") return NextResponse.json({ error: "bad_action" }, { status: 400 });
+    const round = Number(body?.round) || 0;
+    if (room.status !== "playing" || !room.lastResult) {
+      return NextResponse.json({ room, serverNow: Date.now() });
+    }
+    if (room.lastResult.round !== round || round !== room.currentRound) {
+      return NextResponse.json({ room, serverNow: Date.now() });
+    }
+    room.currentRound = round + 1;
+    room.lastResult = null;
+    for (const s of room.seats) s.lastAnswer = undefined;
+    await armSiegeRound(req, room, "grila", SIEGE_NEXT_LEAD_MS, room.currentRound);
+    return NextResponse.json({ room, serverNow: Date.now() });
   }
 
   if (action === "nextRound") {
@@ -300,6 +425,33 @@ export async function POST(req: Request) {
   }
 
   if (action === "submitAnswer") {
+    if (room.gameType === "siege") {
+      const s = siegeState(room);
+      const seat = room.seats.find((x) => x.userId === me.userId);
+      const seq = Number(body?.seq) || 0;
+      if (!seat || room.status !== "playing" || !s.roundQuestion) {
+        return NextResponse.json({ room, serverNow: Date.now() });
+      }
+      if (seq !== s.roundSeq || s.lastResult) {
+        return NextResponse.json({ room, serverNow: Date.now() });
+      }
+      s.roundAnswers[me.userId] = {
+        seq,
+        choice: typeof body?.choice === "number" ? body.choice : null,
+        guess: typeof body?.guess === "number" ? body.guess : null,
+        elapsedMs: Math.min(Math.max(Number(body?.elapsedMs) || 0, 0), roundDeadline(s) - s.roundStartedAt),
+      };
+      seat.lastAnswer = {
+        round: room.currentRound,
+        correct: false,
+        choice: typeof body?.choice === "number" ? body.choice : undefined,
+        numericGuess: typeof body?.guess === "number" ? body.guess : undefined,
+        elapsedMs: s.roundAnswers[me.userId].elapsedMs,
+      };
+      if (allHumansAnswered(s)) await resolveSiegeRound(req, room);
+      return NextResponse.json({ room, serverNow: Date.now() });
+    }
+
     const seat = room.seats.find((s) => s.userId === me.userId);
     if (seat) {
       seat.lastAnswer = {
@@ -312,6 +464,26 @@ export async function POST(req: Request) {
       if (body?.correct) seat.score += 1;
     }
     return NextResponse.json({ room });
+  }
+
+  // SIEGE: rematch — everyone must press START again.
+  if (action === "reset") {
+    if (room.gameType !== "siege") return NextResponse.json({ error: "bad_action" }, { status: 400 });
+    const seat = room.seats.find((s) => s.userId === me.userId);
+    if (!seat) return NextResponse.json({ error: "not_seated" }, { status: 400 });
+    room.status = "waiting";
+    room.currentRound = 0;
+    room.roundSeq = 0;
+    room.roundQuestion = null;
+    room.roundAnswers = {};
+    room.lastResult = null;
+    room.roundStartedAt = 0;
+    room.startAt = undefined;
+    for (const s of room.seats) {
+      s.started = false;
+      s.lastAnswer = undefined;
+    }
+    return NextResponse.json({ room, serverNow: Date.now() });
   }
 
   if (action === "leave") {

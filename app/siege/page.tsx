@@ -22,6 +22,32 @@ interface RapideQ {
   answer: number;
 }
 
+type SiegeSide = "left" | "right";
+
+interface SiegeResult {
+  round: number;
+  kind: "hit" | "both-wrong";
+  attacker: SiegeSide;
+  tie: boolean;
+  targetSeed: number;
+  correctText: string;
+  times: { left: number; right: number };
+  guesses?: { left: number | null; right: number | null };
+  exact?: number;
+}
+
+interface RoomView {
+  code: string;
+  status: "waiting" | "playing" | "finished";
+  currentRound: number;
+  roundSeq: number;
+  roundMode: "grila" | "rapide";
+  roundStartedAt: number;
+  roundQuestion: (GrilaQ | RapideQ) | null;
+  lastResult: SiegeResult | null;
+  seats: LobbySeat[];
+}
+
 interface TowerState {
   id: number; // 0, 1, 2
   hp: number; // 2 -> 1 -> 0
@@ -153,6 +179,19 @@ function TowerSiegeContent() {
   const answeredRef = useRef<boolean>(false);
   const tieInputRef = useRef<HTMLInputElement>(null);
 
+  // ---- server-synced match state ----
+  const [roomCode, setRoomCode] = useState<string | null>(initialRoom ? initialRoom.toUpperCase() : null);
+  const [roomView, setRoomView] = useState<RoomView | null>(null);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+  const [waitingForOpp, setWaitingForOpp] = useState(false);
+  const offsetRef = useRef(0);
+  const activeSeqRef = useRef(0);
+  const appliedRoundRef = useRef(0);
+  const roomViewRef = useRef<RoomView | null>(null);
+  const codeRef = useRef<string | null>(null);
+  const serverNow = useCallback(() => Date.now() + offsetRef.current, []);
+
   const simRef = useRef({
     running: false,
     leftTowers: createCastleTowers("left"),
@@ -218,57 +257,22 @@ function TowerSiegeContent() {
     return found >= 0 ? found : 0;
   };
 
-  const loadGrilaRound = useCallback(
-    async (nextRound: number) => {
-      clearTimer();
-      answeredRef.current = false;
-      setSelectedOpt(null);
-      setTieQ(null);
-      setTieInput("");
-      setEventBanner(null);
-      setRoundNum(nextRound);
-      setPhase("loading");
-
-      const nextTarget = pickNextStandingTower(simRef.current.rightTowers, simRef.current.targetEnemyIdx);
-      simRef.current.targetEnemyIdx = nextTarget;
-      setTargetTowerIdx(nextTarget);
-
-      try {
-        const res = await fetch(`/api/questions?mode=grila&count=1&lang=${lang}`);
-        const data = await res.json();
-        const q: GrilaQ | undefined = data?.questions?.[0];
-        if (!q) return;
-        setGrilaQ(q);
-        setTimeLeft(GRILA_SECONDS);
-        qStartRef.current = Date.now();
-        setPhase("grila");
-
-        timerRef.current = setInterval(() => {
-          const left = Math.max(0, GRILA_SECONDS - (Date.now() - qStartRef.current) / 1000);
-          setTimeLeft(left);
-          if (left <= 0) {
-            clearTimer();
-            if (!answeredRef.current) {
-              resolveGrilaRef.current(q, -1);
-            }
-          }
-        }, 80);
-      } catch {
-        /* ignore */
-      }
-    },
-    [lang]
-  );
-
   const launchCatapultAttack = useCallback(
-    (attackerSide: "left" | "right", headline: string, detail: string, tone: "good" | "bad") => {
+    (
+      attackerSide: "left" | "right",
+      headline: string,
+      detail: string,
+      tone: "good" | "bad",
+      targetSeed?: number
+    ) => {
       const s = simRef.current;
       const targetSide = attackerSide === "left" ? "right" : "left";
       const targetTowers = targetSide === "right" ? s.rightTowers : s.leftTowers;
-      const chosenIdx =
-        attackerSide === "left"
-          ? pickNextStandingTower(targetTowers, s.targetEnemyIdx)
-          : pickNextStandingTower(targetTowers, Math.floor(Math.random() * 3));
+      // Deterministic target: both clients hit the same tower for the same round.
+      const chosenIdx = pickNextStandingTower(
+        targetTowers,
+        attackerSide === "left" ? s.targetEnemyIdx : (targetSeed ?? 0) % 3
+      );
 
       const targetTower = targetTowers[chosenIdx];
       setEventBanner({ headline, detail, tone });
@@ -313,163 +317,134 @@ function TowerSiegeContent() {
           setPhase("matchOver");
           stoneSound.victoryFanfare();
         } else {
-          loadGrilaRound(roundNum + 1);
+          finishRoundRef.current(appliedRoundRef.current);
         }
       };
     },
-    [loadGrilaRound, roundNum]
+    []
   );
+  const launchCatapultAttackRef = useRef(launchCatapultAttack);
+  launchCatapultAttackRef.current = launchCatapultAttack;
 
-  const startTiebreaker = useCallback(
-    async (grilaCorrectText: string) => {
-      clearTimer();
-      answeredRef.current = false;
-      setTieInput("");
-      setEventBanner({
-        headline: t("siegeTiebreakerPhase"),
-        detail: `${t("fightAnswerWas")} ${grilaCorrectText}`,
-        tone: "tie",
+  // ---------- server-authoritative rounds ----------
+
+  const finishRound = useCallback(async (round: number) => {
+    const code = codeRef.current;
+    if (!code || !round) return;
+    setPhase("loading");
+    try {
+      await fetch("/api/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "advance", code, round }),
       });
-      stoneSound.bell();
+    } catch {
+      /* the poll loop recovers on the next tick */
+    }
+  }, []);
+  const finishRoundRef = useRef(finishRound);
+  finishRoundRef.current = finishRound;
 
-      try {
-        const res = await fetch(`/api/questions?mode=rapide&count=1&lang=${lang}`);
-        const data = await res.json();
-        const q: RapideQ | undefined = data?.questions?.[0];
-        if (!q) {
-          launchCatapultAttack("left", t("siegeDirectHit"), grilaCorrectText, "good");
-          return;
-        }
-        setTieQ(q);
-        setTimeLeft(TIE_SECONDS);
-        qStartRef.current = Date.now();
-        setPhase("tiebreaker");
-        setTimeout(() => tieInputRef.current?.focus(), 40);
+  const mySide: SiegeSide =
+    roomView?.seats.find((x) => x.userId === myUserId)?.seatIndex === 1 ? "right" : "left";
+  const mySideRef = useRef<SiegeSide>(mySide);
+  mySideRef.current = mySide;
+  roomViewRef.current = roomView;
+  codeRef.current = roomCode;
 
-        timerRef.current = setInterval(() => {
-          const left = Math.max(0, TIE_SECONDS - (Date.now() - qStartRef.current) / 1000);
-          setTimeLeft(left);
-          if (left <= 0) {
-            clearTimer();
-            if (!answeredRef.current) {
-              resolveTieRef.current(q, null, TIE_SECONDS * 1000);
-            }
-          }
-        }, 80);
-      } catch {
-        launchCatapultAttack("left", t("siegeDirectHit"), grilaCorrectText, "good");
+  const applyServerResult = useCallback(
+    (res: SiegeResult) => {
+      const side: SiegeSide = mySideRef.current;
+      const oppSide: SiegeSide = side === "left" ? "right" : "left";
+      const f = (ms: number) => (ms / 1000).toFixed(2);
+      const tag = `⏱ ${lang === "ro" ? "Tu" : "You"}: ${f(res.times[side] ?? 0)}s · ${p2Name}: ${f(
+        res.times[oppSide] ?? 0
+      )}s`;
+      let detail = `${t("fightAnswerWas")} ${res.correctText}  •  ${tag}`;
+      if (res.tie && res.guesses) {
+        detail = `${t("fightAnswerWas")} ${res.exact ?? res.correctText}  •  ${
+          lang === "ro" ? "Tu" : "You"
+        }: ${res.guesses[side] ?? "—"} / ${p2Name}: ${res.guesses[oppSide] ?? "—"}  •  ${tag}`;
       }
-    },
-    [lang, launchCatapultAttack, t]
-  );
 
-  const resolveTiebreaker = useCallback(
-    (q: RapideQ, playerGuess: number | null, elapsedMs: number) => {
-      if (answeredRef.current) return;
+      if (res.kind === "both-wrong") {
+        setEventBanner({ headline: t("siegeBothWrong"), detail, tone: "neutral" });
+        setPhase("animating");
+        stoneSound.block();
+        setTimeout(() => finishRoundRef.current(res.round), 1700);
+        return;
+      }
+
+      const mine = res.attacker === side;
+      const headline = mine
+        ? res.tie
+          ? t("siegeYouWonTie")
+          : t("siegeFiring")
+        : res.tie
+        ? t("siegeOppWonTie")
+        : `${p2Name} — ${t("siegeFiring")}`;
+
+      launchCatapultAttackRef.current(
+        mine ? "left" : "right",
+        headline,
+        detail,
+        mine ? "good" : "bad",
+        res.targetSeed ?? res.round
+      );
+    },
+    [lang, p2Name, t]
+  );
+  const applyServerResultRef = useRef(applyServerResult);
+  applyServerResultRef.current = applyServerResult;
+
+  const submitAnswer = useCallback(
+    async (payload: { choice?: number | null; guess?: number | null }) => {
+      const rv = roomViewRef.current;
+      if (!rv || answeredRef.current) return;
       answeredRef.current = true;
       clearTimer();
-
-      // Simulate opponent numeric estimate scaled by bot difficulty
-      const spread = botDiff === "easy" ? 0.35 : botDiff === "medium" ? 0.16 : 0.06;
-      const baseScale = Math.max(Math.abs(q.answer), 12);
-      const offset = Math.round((Math.random() * 2 - 1) * baseScale * spread);
-      const oppGuess = q.answer + offset;
-      const oppTimeMs =
-        botDiff === "easy"
-          ? 5200 + Math.random() * 3500
-          : botDiff === "medium"
-          ? 3400 + Math.random() * 3200
-          : 2200 + Math.random() * 2600;
-
-      const playerDist = playerGuess === null ? Infinity : Math.abs(playerGuess - q.answer);
-      const oppDist = Math.abs(oppGuess - q.answer);
-      const playerWins = playerDist < oppDist || (playerDist === oppDist && elapsedMs <= oppTimeMs);
-
-      const detail = `${t("fightAnswerWas")} ${q.answer} | ${t("siegeYourGuess")}: ${
-        playerGuess === null ? "—" : playerGuess
-      } (⏱ ${(elapsedMs / 1000).toFixed(2)}s) vs ${t("siegeOppGuess")}: ${oppGuess} (⏱ ${(oppTimeMs / 1000).toFixed(2)}s)`;
-
-      if (playerWins) {
-        launchCatapultAttack("left", t("siegeYouWonTie"), detail, "good");
-      } else {
-        launchCatapultAttack("right", t("siegeOppWonTie"), detail, "bad");
+      setWaitingForOpp(true);
+      const elapsedMs = Math.max(0, Math.round(serverNow() - rv.roundStartedAt));
+      try {
+        await fetch("/api/rooms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "submitAnswer",
+            code: rv.code,
+            seq: rv.roundSeq,
+            elapsedMs,
+            ...payload,
+          }),
+        });
+      } catch {
+        /* the server deadline resolves the round regardless */
       }
     },
-    [botDiff, launchCatapultAttack, t]
+    [serverNow]
   );
-
-  const resolveTieRef = useRef(resolveTiebreaker);
-  resolveTieRef.current = resolveTiebreaker;
 
   const resolveGrila = useCallback(
     (q: GrilaQ, chosenIdx: number) => {
       if (answeredRef.current) return;
-      answeredRef.current = true;
-      clearTimer();
-      setSelectedOpt(chosenIdx);
-
-      const elapsedSec = chosenIdx === -1 ? GRILA_SECONDS : Math.max(0.05, (Date.now() - qStartRef.current) / 1000);
-      const oppSec =
-        botDiff === "easy" ? 4.8 + Math.random() * 4.2 : botDiff === "medium" ? 3.1 + Math.random() * 3.8 : 1.9 + Math.random() * 2.9;
-      const timeTag = `⏱ ${lang === "ro" ? "Tu" : "You"}: ${elapsedSec.toFixed(2)}s · ${p2Name}: ${oppSec.toFixed(2)}s`;
-
-      const playerCorrect = chosenIdx === q.correctIndex;
-      const oppAcc = botDiff === "easy" ? 0.45 : botDiff === "medium" ? 0.64 : 0.8;
-      const oppCorrect = Math.random() < oppAcc;
-      const correctText = q.options[q.correctIndex] ?? "";
-
-      if (playerCorrect && oppCorrect) {
-        // TIED! Decided on a Fast Numeric Question!
-        startTiebreaker(`${correctText} (${timeTag})`);
-      } else if (playerCorrect && !oppCorrect) {
-        launchCatapultAttack(
-          "left",
-          t("siegeFiring"),
-          `${t("fightAnswerWas")} ${correctText}  •  ${timeTag}`,
-          "good"
-        );
-      } else if (!playerCorrect && oppCorrect) {
-        launchCatapultAttack(
-          "right",
-          `${p2Name} — ${t("siegeFiring")}`,
-          `${t("fightAnswerWas")} ${correctText}  •  ${timeTag}`,
-          "bad"
-        );
-      } else {
-        // Both wrong: no catapult fires, brief pause then next round
-        setEventBanner({
-          headline: t("siegeBothWrong"),
-          detail: `${t("fightAnswerWas")} ${correctText}  •  ${timeTag}`,
-          tone: "neutral",
-        });
-        setPhase("animating");
-        stoneSound.block();
-        setTimeout(() => loadGrilaRound(roundNum + 1), 1700);
-      }
+      if (chosenIdx >= 0) setSelectedOpt(chosenIdx);
+      submitAnswer({ choice: chosenIdx >= 0 ? chosenIdx : null });
     },
-    [botDiff, launchCatapultAttack, loadGrilaRound, p2Name, roundNum, startTiebreaker, t]
+    [submitAnswer]
   );
-
   const resolveGrilaRef = useRef(resolveGrila);
   resolveGrilaRef.current = resolveGrila;
 
-  const startSiege = async () => {
-    setLobbyError("");
-    // Auto-fill 2nd seat with a bot if still open so user can jump straight in!
-    let activeSeats = seats;
-    if (activeSeats.length < 2 && room) {
-      const res = await fetch("/api/rooms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "fillBots", code: room.code, difficulty: botDiff }),
-      });
-      if (res.ok) {
-        const d = await res.json();
-        activeSeats = d.room?.seats ?? activeSeats;
-        setSeats(activeSeats);
-      }
-    }
+  const resolveTiebreaker = useCallback(
+    (q: RapideQ, playerGuess: number | null) => {
+      if (answeredRef.current) return;
+      const ok = playerGuess !== null && !Number.isNaN(playerGuess);
+      submitAnswer({ guess: ok ? playerGuess : null });
+    },
+    [submitAnswer]
+  );
 
+  const enterBattle = useCallback(() => {
     const s = simRef.current;
     s.running = true;
     s.leftTowers = createCastleTowers("left");
@@ -484,11 +459,182 @@ function TowerSiegeContent() {
     s.targetEnemyIdx = 0;
     s.postAnimFrames = 0;
     s.animDoneCallback = null;
+    activeSeqRef.current = 0;
+    appliedRoundRef.current = 0;
+    answeredRef.current = false;
+    setSelectedOpt(null);
+    setEventBanner(null);
+    setWaitingForOpp(false);
+    setTieInput("");
     setHud({ leftAlive: 3, rightAlive: 3, winner: null });
+    setPhase("loading");
     setScreen("battle");
     stoneSound.warHorn();
-    loadGrilaRound(1);
+  }, []);
+
+  // Both players must press START: the first press only readies that seat, and
+  // the server flips the room to "playing" when every human seat is ready.
+  const startSiege = async () => {
+    setLobbyError("");
+    if (!room || starting) return;
+    setStarting(true);
+    let activeSeats = seats;
+    if (activeSeats.length < 2) {
+      try {
+        const res = await fetch("/api/rooms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "fillBots", code: room.code, difficulty: botDiff }),
+        });
+        if (res.ok) {
+          const d = await res.json();
+          activeSeats = d.room?.seats ?? activeSeats;
+          setSeats(activeSeats);
+        }
+      } catch {
+        /* ignore, we still try to ready up */
+      }
+    }
+    setRoomCode(room.code);
+    try {
+      const res = await fetch("/api/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "start", code: room.code }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        if (d.room) setRoom(d.room);
+        if (d.room?.status === "playing") enterBattle();
+      } else {
+        setStarting(false);
+      }
+    } catch {
+      setStarting(false);
+      setLobbyError(lang === "ro" ? "Conexiune eșuată. Încearcă din nou." : "Connection failed. Try again.");
+    }
   };
+
+  // The other player pressed START -> jump in together.
+  useEffect(() => {
+    if (screen !== "lobby" || !starting) return;
+    if (room?.status !== "playing") return;
+    setStarting(false);
+    enterBattle();
+  }, [screen, starting, room, enterBattle]);
+
+  const resetRematch = async () => {
+    clearTimer();
+    simRef.current.running = false;
+    const code = roomCode ?? room?.code ?? null;
+    if (code) {
+      setStarting(true);
+      try {
+        await fetch("/api/rooms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "reset", code }),
+        });
+      } catch {
+        /* ignore */
+      }
+    }
+    setPhase("loading");
+    setStarting(false);
+    setScreen("lobby");
+  };
+
+  // Poll the room: server clock + authoritative round state.
+  useEffect(() => {
+    if (screen !== "battle" || !roomCode) return;
+    let alive = true;
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/rooms?code=${roomCode}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const d = await res.json();
+        if (!alive || !d?.room) return;
+        if (typeof d.serverNow === "number") offsetRef.current = d.serverNow - Date.now();
+        if (d.me?.userId) setMyUserId(d.me.userId);
+        setRoomView(d.room as RoomView);
+      } catch {
+        /* keep polling */
+      }
+    };
+    poll();
+    const id = setInterval(poll, 700);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [screen, roomCode]);
+
+  // Arm a fresh question the moment the room publishes a new round.
+  useEffect(() => {
+    const rv = roomView;
+    if (!rv || rv.status !== "playing" || !rv.roundQuestion) return;
+
+    if (rv.roundSeq !== activeSeqRef.current) {
+      activeSeqRef.current = rv.roundSeq;
+      answeredRef.current = false;
+      qStartRef.current = rv.roundStartedAt;
+      clearTimer();
+      setSelectedOpt(null);
+      setTieInput("");
+      setEventBanner(null);
+      setWaitingForOpp(false);
+      setRoundNum(rv.currentRound);
+      if (rv.roundMode === "grila") {
+        setGrilaQ(rv.roundQuestion as GrilaQ);
+        setTieQ(null);
+      } else {
+        setTieQ(rv.roundQuestion as RapideQ);
+        setGrilaQ(null);
+      }
+      const nextTarget = pickNextStandingTower(simRef.current.rightTowers, (rv.roundSeq * 7) % 3);
+      simRef.current.targetEnemyIdx = nextTarget;
+      setTargetTowerIdx(nextTarget);
+    }
+
+    if (rv.lastResult || answeredRef.current || phase === "matchOver") return;
+
+    const limitSec = rv.roundMode === "grila" ? GRILA_SECONDS : TIE_SECONDS;
+    const deadline = rv.roundStartedAt + limitSec * 1000;
+
+    // Both screens wait out the same lead-in, counted on the server clock.
+    if (rv.roundStartedAt > serverNow()) {
+      clearTimer();
+      setTimeLeft(limitSec);
+      setPhase((p) => (p === "animating" || p === "matchOver" ? p : "loading"));
+      return;
+    }
+
+    setPhase((p) =>
+      p === "animating" || p === "matchOver" ? p : rv.roundMode === "grila" ? "grila" : "tiebreaker"
+    );
+    setTimeLeft(Math.max(0, (deadline - serverNow()) / 1000));
+    if (timerRef.current === null) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft(Math.max(0, (deadline - serverNow()) / 1000));
+      }, 80);
+    }
+  }, [roomView, phase, serverNow]);
+
+  // Paint the round verdict exactly once per round.
+  useEffect(() => {
+    const rv = roomView;
+    if (!rv || !rv.lastResult) return;
+    if (appliedRoundRef.current === rv.lastResult.round) return;
+    appliedRoundRef.current = rv.lastResult.round;
+    clearTimer();
+    answeredRef.current = true;
+    setWaitingForOpp(false);
+    applyServerResultRef.current(rv.lastResult);
+  }, [roomView]);
+
+  useEffect(() => {
+    if (phase === "tiebreaker") setTimeout(() => tieInputRef.current?.focus(), 40);
+  }, [phase]);
 
   // Keyboard shortcuts 1-4 / Numpad1-4 / A-D during Grilă
   useEffect(() => {
@@ -1122,14 +1268,20 @@ function TowerSiegeContent() {
             </div>
           )}
 
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-2">
             <button
               type="button"
               onClick={startSiege}
-              className="btn-crimson rounded-2xl px-14 py-4 font-cinzel font-extrabold text-lg sm:text-xl tracking-[0.2em] uppercase cursor-pointer animate-gold-glow"
+              disabled={starting || !room}
+              className={`btn-crimson rounded-2xl px-14 py-4 font-cinzel font-extrabold text-lg sm:text-xl tracking-[0.2em] uppercase cursor-pointer animate-gold-glow ${
+                starting ? "opacity-60 cursor-wait" : ""
+              }`}
             >
               🔥 {t("siegeStart")} 🔥
             </button>
+            <span className="text-[0.72rem] font-cinzel text-amber-200/90 text-center">
+              {starting ? `⏳ ${t("siegeWaitingStart")}` : t("siegeBothReady")}
+            </span>
           </div>
         </div>
       )}
@@ -1203,7 +1355,7 @@ function TowerSiegeContent() {
                 <div className="flex gap-3 mt-6">
                   <button
                     type="button"
-                    onClick={startSiege}
+                    onClick={resetRematch}
                     className="btn-crimson rounded-xl px-6 py-3 font-cinzel font-bold text-xs sm:text-sm uppercase cursor-pointer"
                   >
                     🔥 {t("fightRematch")}
@@ -1241,6 +1393,12 @@ function TowerSiegeContent() {
 
           {/* ==================== QUESTION / TIEBREAKER CONSOLE ==================== */}
           <div className="royal-panel rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
+            {waitingForOpp && phase !== "matchOver" && phase !== "animating" && (
+              <div className="text-center text-xs font-cinzel text-amber-300/90 animate-pulse">
+                ⏳ {t("siegeWaitingAnswer")}
+              </div>
+            )}
+
             {phase === "loading" && (
               <div className="py-5 text-center font-cinzel text-[#f7d279] text-sm">
                 ⏳ {t("trainLoading")}
@@ -1337,11 +1495,7 @@ function TowerSiegeContent() {
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && tieInput !== "" && !answeredRef.current) {
-                        resolveTiebreaker(
-                          tieQ,
-                          parseInt(tieInput, 10),
-                          Date.now() - qStartRef.current
-                        );
+                        resolveTiebreaker(tieQ, parseInt(tieInput, 10));
                       }
                     }}
                     placeholder={t("trainNumericPlaceholder")}
@@ -1351,11 +1505,7 @@ function TowerSiegeContent() {
                     type="button"
                     disabled={tieInput === ""}
                     onClick={() =>
-                      resolveTiebreaker(
-                        tieQ,
-                        parseInt(tieInput, 10),
-                        Date.now() - qStartRef.current
-                      )
+                      resolveTiebreaker(tieQ, parseInt(tieInput, 10))
                     }
                     className="btn-crimson rounded-xl px-7 font-cinzel font-extrabold text-sm uppercase cursor-pointer disabled:opacity-40"
                   >
