@@ -1,0 +1,8 @@
+# Override Nixpacks auto-detected cache directories for the build phase.
+# Nixpacks always adds "tsconfig.tsbuildinfo" as a cache dir, which makes it
+# bind-mount a cache directory onto the file /app/tsconfig.tsbuildinfo ->
+# "error mounting ... not a directory" and the whole Coolify build fails.
+# Incremental TS state now lives in .next/cache (see tsconfig.json
+# tsBuildInfoFile), so it is still cached through the .next/cache mount.
+[phases.build]
+cacheDirectories = [".next/cache", "node_modules/.cache"]
