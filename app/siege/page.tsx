@@ -636,9 +636,20 @@ function TowerSiegeContent() {
     applyServerResultRef.current(rv.lastResult);
   }, [roomView]);
 
+  // Numeric tiebreaker: ready to type the instant the box unlocks.
   useEffect(() => {
-    if (phase === "tiebreaker") setTimeout(() => tieInputRef.current?.focus(), 40);
-  }, [phase]);
+    if (phase !== "tiebreaker" || locked || waitingForOpp || answeredRef.current) return;
+    const id = setTimeout(() => {
+      const el = tieInputRef.current;
+      if (!el || document.activeElement === el) return;
+      el.focus({ preventScroll: true });
+      const end = el.value.length;
+      try {
+        el.setSelectionRange(end, end);
+      } catch {}
+    }, 25);
+    return () => clearTimeout(id);
+  }, [phase, locked, waitingForOpp, tieQ?.id]);
 
   // Keyboard shortcuts 1-4 / Numpad1-4 / A-D during Grilă
   useEffect(() => {
@@ -1507,6 +1518,8 @@ function TowerSiegeContent() {
                       }
                     }}
                     disabled={locked || waitingForOpp}
+                    autoFocus
+                    autoComplete="off"
                     placeholder={t("trainNumericPlaceholder")}
                     className="flex-1 bg-[#0b0910] border-2 border-yellow-400 rounded-xl text-[#ffe59e] text-2xl font-cinzel font-bold text-center py-2.5 outline-none"
                   />
