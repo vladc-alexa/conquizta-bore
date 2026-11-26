@@ -708,6 +708,13 @@ function TowerSiegeContent() {
 
     if (rv.roundSeq !== activeSeqRef.current) {
       activeSeqRef.current = rv.roundSeq;
+      // a new question supersedes any verdict still on screen (the opponent may
+      // have advanced first); never leave a stale result card floating
+      if (resultTimer.current) {
+        clearInterval(resultTimer.current);
+        resultTimer.current = null;
+      }
+      setResultCard(null);
       answeredRef.current = false;
       qStartRef.current = rv.roundStartedAt;
       if (resultTimer.current) {
