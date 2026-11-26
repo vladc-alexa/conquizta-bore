@@ -141,6 +141,7 @@ function QuizFighterContent() {
   const [outcomeBanner, setOutcomeBanner] = useState<{
     headline: string;
     correctAnswer: string;
+    timeSummary: string;
     tone: "good" | "bad" | "neutral" | "super";
   } | null>(null);
 
@@ -281,12 +282,15 @@ function QuizFighterContent() {
       let damage = 18;
       let headline = t("fightCorrectStrike");
       let tone: "good" | "bad" | "neutral" | "super" = "good";
+      const myTimeStr = isTimeout ? `${QUESTION_SECONDS.toFixed(2)}s` : `${elapsedSec.toFixed(2)}s`;
+      let timeSummary = `⏱ ${myTimeStr}`;
 
       if (gameMode === "1p") {
         // 1P vs AI: AI also answers based on difficulty
         const aiAccuracy = aiDiff === "easy" ? 0.42 : aiDiff === "medium" ? 0.65 : 0.82;
         const aiCorrect = Math.random() < aiAccuracy;
         const aiSpeed = aiDiff === "easy" ? 5 + Math.random() * 5 : aiDiff === "medium" ? 3.2 + Math.random() * 4.5 : 2.0 + Math.random() * 3.5;
+        timeSummary = `⏱ ${lang === "ro" ? "Tu" : "You"}: ${myTimeStr} · AI: ${aiSpeed.toFixed(2)}s`;
 
         if (isCorrect && (!aiCorrect || elapsedSec <= aiSpeed)) {
           attackerSlot = 1;
@@ -387,7 +391,7 @@ function QuizFighterContent() {
         }
       }
 
-      setOutcomeBanner({ headline, correctAnswer: correctText, tone });
+      setOutcomeBanner({ headline, correctAnswer: correctText, timeSummary, tone });
       setBattlePhase("attacking");
 
       const dur = seqType === "critCombo" ? 115 : seqType === "superWave" ? 110 : seqType === "miss" ? 65 : 95;
@@ -432,13 +436,30 @@ function QuizFighterContent() {
     fetchNextQuestion(1, 1);
   };
 
-  // Keyboard shortcuts 1-4 / A-D while answering a question
+  // Keyboard shortcuts 1-4 / Numpad1-4 / A-D while answering a question
   useEffect(() => {
     if (screen !== "battle" || battlePhase !== "question" || !question) return;
     const onKey = (e: KeyboardEvent) => {
-      const map: Record<string, number> = { "1": 0, "2": 1, "3": 2, "4": 3, a: 0, b: 1, c: 2, d: 3 };
-      const idx = map[e.key.toLowerCase()];
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const codeMap: Record<string, number> = {
+        Digit1: 0,
+        Numpad1: 0,
+        KeyA: 0,
+        Digit2: 1,
+        Numpad2: 1,
+        KeyB: 1,
+        Digit3: 2,
+        Numpad3: 2,
+        KeyC: 2,
+        Digit4: 3,
+        Numpad4: 3,
+        KeyD: 3,
+      };
+      const keyMap: Record<string, number> = { "1": 0, "2": 1, "3": 2, "4": 3, a: 0, b: 1, c: 2, d: 3 };
+      const idx = codeMap[e.code] ?? keyMap[e.key.toLowerCase()];
       if (idx !== undefined && idx < question.options.length) {
+        e.preventDefault();
         const elapsed = (Date.now() - questionStartRef.current) / 1000;
         triggerResolution(question, idx, elapsed, activeTurn);
       }
@@ -1494,8 +1515,11 @@ function QuizFighterContent() {
                 >
                   {outcomeBanner.headline}
                 </div>
-                <div className="mt-1 bg-black/75 border border-[#b68635]/60 rounded-lg px-3 py-0.5 text-[0.72rem] text-[#f5dfb4]">
-                  {t("fightAnswerWas")} <strong className="text-[#ffe28a]">{outcomeBanner.correctAnswer}</strong>
+                <div className="mt-1 bg-black/75 border border-[#b68635]/60 rounded-lg px-3 py-0.5 text-[0.72rem] text-[#f5dfb4] flex items-center gap-2">
+                  <span>
+                    {t("fightAnswerWas")} <strong className="text-[#ffe28a]">{outcomeBanner.correctAnswer}</strong>
+                  </span>
+                  <span className="font-mono text-sky-300">{outcomeBanner.timeSummary}</span>
                 </div>
               </div>
             )}
@@ -1550,13 +1574,20 @@ function QuizFighterContent() {
             )}
 
             {battlePhase === "attacking" && (
-              <div className="py-4 text-center flex flex-col items-center gap-1">
+              <div className="py-4 text-center flex flex-col items-center gap-1.5">
                 <span className="font-cinzel font-extrabold text-base sm:text-lg gold-title">
                   ⚔ {outcomeBanner?.headline}
                 </span>
-                <span className="text-xs text-[#d6be92]">
-                  {t("fightAnswerWas")} <strong className="text-[#ffe28a]">{outcomeBanner?.correctAnswer}</strong>
-                </span>
+                <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-[#d6be92]">
+                  <span>
+                    {t("fightAnswerWas")} <strong className="text-[#ffe28a]">{outcomeBanner?.correctAnswer}</strong>
+                  </span>
+                  {outcomeBanner?.timeSummary && (
+                    <span className="font-mono text-sky-300 bg-[#0d1424]/90 border border-sky-400/50 rounded-md px-2 py-0.5">
+                      {outcomeBanner.timeSummary}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1610,8 +1641,13 @@ function QuizFighterContent() {
                       }}
                       className="bg-[#130f1c]/95 border-2 border-[#8c6429] hover:border-[#ffe28a] hover:bg-[#231932] rounded-xl text-left px-4 py-3 text-sm font-medium text-[#f6ead0] cursor-pointer transition-all flex items-start gap-2.5"
                     >
-                      <span className="font-cinzel font-extrabold text-[#f3c35c] shrink-0">
-                        {String.fromCharCode(65 + idx)}.
+                      <span className="inline-flex items-center gap-1 shrink-0">
+                        <kbd className="px-1.5 py-0.5 text-[0.65rem] font-mono font-bold rounded bg-[#0c0912] border border-[#b68635]/70 text-[#ffe28a]">
+                          {idx + 1}
+                        </kbd>
+                        <span className="font-cinzel font-extrabold text-[#f3c35c]">
+                          {String.fromCharCode(65 + idx)}.
+                        </span>
                       </span>
                       <span className="leading-snug">{opt}</span>
                     </button>

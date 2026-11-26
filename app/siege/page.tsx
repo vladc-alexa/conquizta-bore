@@ -387,7 +387,7 @@ function TowerSiegeContent() {
 
       const detail = `${t("fightAnswerWas")} ${q.answer} | ${t("siegeYourGuess")}: ${
         playerGuess === null ? "—" : playerGuess
-      } vs ${t("siegeOppGuess")}: ${oppGuess}`;
+      } (⏱ ${(elapsedMs / 1000).toFixed(2)}s) vs ${t("siegeOppGuess")}: ${oppGuess} (⏱ ${(oppTimeMs / 1000).toFixed(2)}s)`;
 
       if (playerWins) {
         launchCatapultAttack("left", t("siegeYouWonTie"), detail, "good");
@@ -408,6 +408,11 @@ function TowerSiegeContent() {
       clearTimer();
       setSelectedOpt(chosenIdx);
 
+      const elapsedSec = chosenIdx === -1 ? GRILA_SECONDS : Math.max(0.05, (Date.now() - qStartRef.current) / 1000);
+      const oppSec =
+        botDiff === "easy" ? 4.8 + Math.random() * 4.2 : botDiff === "medium" ? 3.1 + Math.random() * 3.8 : 1.9 + Math.random() * 2.9;
+      const timeTag = `⏱ ${lang === "ro" ? "Tu" : "You"}: ${elapsedSec.toFixed(2)}s · ${p2Name}: ${oppSec.toFixed(2)}s`;
+
       const playerCorrect = chosenIdx === q.correctIndex;
       const oppAcc = botDiff === "easy" ? 0.45 : botDiff === "medium" ? 0.64 : 0.8;
       const oppCorrect = Math.random() < oppAcc;
@@ -415,26 +420,26 @@ function TowerSiegeContent() {
 
       if (playerCorrect && oppCorrect) {
         // TIED! Decided on a Fast Numeric Question!
-        startTiebreaker(correctText);
+        startTiebreaker(`${correctText} (${timeTag})`);
       } else if (playerCorrect && !oppCorrect) {
         launchCatapultAttack(
           "left",
           t("siegeFiring"),
-          `${t("fightAnswerWas")} ${correctText}`,
+          `${t("fightAnswerWas")} ${correctText}  •  ${timeTag}`,
           "good"
         );
       } else if (!playerCorrect && oppCorrect) {
         launchCatapultAttack(
           "right",
           `${p2Name} — ${t("siegeFiring")}`,
-          `${t("fightAnswerWas")} ${correctText}`,
+          `${t("fightAnswerWas")} ${correctText}  •  ${timeTag}`,
           "bad"
         );
       } else {
         // Both wrong: no catapult fires, brief pause then next round
         setEventBanner({
           headline: t("siegeBothWrong"),
-          detail: `${t("fightAnswerWas")} ${correctText}`,
+          detail: `${t("fightAnswerWas")} ${correctText}  •  ${timeTag}`,
           tone: "neutral",
         });
         setPhase("animating");
@@ -485,13 +490,30 @@ function TowerSiegeContent() {
     loadGrilaRound(1);
   };
 
-  // Keyboard shortcuts 1-4 / A-D during Grilă
+  // Keyboard shortcuts 1-4 / Numpad1-4 / A-D during Grilă
   useEffect(() => {
     if (screen !== "battle" || phase !== "grila" || !grilaQ) return;
     const onKey = (e: KeyboardEvent) => {
-      const map: Record<string, number> = { "1": 0, "2": 1, "3": 2, "4": 3, a: 0, b: 1, c: 2, d: 3 };
-      const idx = map[e.key.toLowerCase()];
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const codeMap: Record<string, number> = {
+        Digit1: 0,
+        Numpad1: 0,
+        KeyA: 0,
+        Digit2: 1,
+        Numpad2: 1,
+        KeyB: 1,
+        Digit3: 2,
+        Numpad3: 2,
+        KeyC: 2,
+        Digit4: 3,
+        Numpad4: 3,
+        KeyD: 3,
+      };
+      const keyMap: Record<string, number> = { "1": 0, "2": 1, "3": 2, "4": 3, a: 0, b: 1, c: 2, d: 3 };
+      const idx = codeMap[e.code] ?? keyMap[e.key.toLowerCase()];
       if (idx !== undefined && idx < grilaQ.options.length) {
+        e.preventDefault();
         resolveGrila(grilaQ, idx);
       }
     };
@@ -1267,8 +1289,13 @@ function TowerSiegeContent() {
                       onClick={() => resolveGrila(grilaQ, idx)}
                       className="bg-[#130f1c]/95 border-2 border-[#8c6429] hover:border-[#ffe28a] hover:bg-[#231932] rounded-xl text-left px-4 py-3 text-sm font-medium text-[#f6ead0] cursor-pointer transition-all flex items-start gap-2.5"
                     >
-                      <span className="font-cinzel font-extrabold text-[#f3c35c] shrink-0">
-                        {String.fromCharCode(65 + idx)}.
+                      <span className="inline-flex items-center gap-1 shrink-0">
+                        <kbd className="px-1.5 py-0.5 text-[0.65rem] font-mono font-bold rounded bg-[#0c0912] border border-[#b68635]/70 text-[#ffe28a]">
+                          {idx + 1}
+                        </kbd>
+                        <span className="font-cinzel font-extrabold text-[#f3c35c]">
+                          {String.fromCharCode(65 + idx)}.
+                        </span>
                       </span>
                       <span className="leading-snug">{opt}</span>
                     </button>

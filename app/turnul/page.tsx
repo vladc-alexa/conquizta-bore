@@ -18,6 +18,7 @@ interface Climber {
   shields: number; // 2..0
   eliminated: boolean;
   lastOutcome: null | "climb" | "hit" | "ko";
+  lastTimeMs: number | null;
   streak: number;
 }
 
@@ -71,6 +72,7 @@ function TurnulContent() {
   const [revealInfo, setRevealInfo] = useState<{
     correctText: string;
     playerOk: boolean;
+    elapsedMs: number;
   } | null>(null);
   const [winner, setWinner] = useState<Climber | null>(null);
 
@@ -156,14 +158,19 @@ function TurnulContent() {
       answeredRef.current = true;
       clearTimer();
 
+      const playerElapsedMs = Math.max(50, Date.now() - startRef.current);
       const updated: Climber[] = climbersRef.current.map((c, idx) => {
         if (c.eliminated) return { ...c, lastOutcome: null };
         let ok = false;
+        let tMs = playerElapsedMs;
         if (idx === 0) {
           ok = playerCorrect;
         } else {
           const acc = c.botDifficulty === "easy" ? 0.52 : c.botDifficulty === "medium" ? 0.7 : 0.84;
           ok = Math.random() < acc;
+          tMs = Math.round(
+            (c.botDifficulty === "easy" ? 4200 + Math.random() * 4500 : c.botDifficulty === "medium" ? 2600 + Math.random() * 4200 : 1600 + Math.random() * 3000)
+          );
         }
 
         if (ok) {
@@ -172,6 +179,7 @@ function TurnulContent() {
             floor: Math.min(MAX_FLOOR, c.floor + 1),
             streak: c.streak + 1,
             lastOutcome: "climb",
+            lastTimeMs: tMs,
           };
         }
         const nextShields = Math.max(0, c.shields - 1);
@@ -181,11 +189,12 @@ function TurnulContent() {
           eliminated: nextShields === 0,
           streak: 0,
           lastOutcome: nextShields === 0 ? "ko" : "hit",
+          lastTimeMs: tMs,
         };
       });
 
       setClimbers(updated);
-      setRevealInfo({ correctText, playerOk: playerCorrect });
+      setRevealInfo({ correctText, playerOk: playerCorrect, elapsedMs: playerElapsedMs });
       setPhase("reveal");
 
       if (playerCorrect) stoneSound.climbStep(updated[0]?.floor ?? 1);
@@ -242,6 +251,7 @@ function TurnulContent() {
       shields: 2,
       eliminated: false,
       lastOutcome: null,
+      lastTimeMs: null,
       streak: 0,
     }));
 
@@ -253,13 +263,30 @@ function TurnulContent() {
     loadFloorRound(1);
   };
 
-  // Keyboard shortcuts 1-4 / A-D in Grilă floors
+  // Keyboard shortcuts 1-4 / Numpad1-4 / A-D in Grilă floors
   useEffect(() => {
     if (screen !== "playing" || phase !== "question" || roundKind !== "grila" || !grilaQ) return;
     const onKey = (e: KeyboardEvent) => {
-      const map: Record<string, number> = { "1": 0, "2": 1, "3": 2, "4": 3, a: 0, b: 1, c: 2, d: 3 };
-      const idx = map[e.key.toLowerCase()];
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const codeMap: Record<string, number> = {
+        Digit1: 0,
+        Numpad1: 0,
+        KeyA: 0,
+        Digit2: 1,
+        Numpad2: 1,
+        KeyB: 1,
+        Digit3: 2,
+        Numpad3: 2,
+        KeyC: 2,
+        Digit4: 3,
+        Numpad4: 3,
+        KeyD: 3,
+      };
+      const keyMap: Record<string, number> = { "1": 0, "2": 1, "3": 2, "4": 3, a: 0, b: 1, c: 2, d: 3 };
+      const idx = codeMap[e.code] ?? keyMap[e.key.toLowerCase()];
       if (idx !== undefined && idx < grilaQ.options.length) {
+        e.preventDefault();
         setSelectedOpt(idx);
         resolveRound(idx === grilaQ.correctIndex, grilaQ.options[grilaQ.correctIndex]);
       }
@@ -455,10 +482,15 @@ function TurnulContent() {
                     <div className="font-cinzel font-bold text-xs text-[#ffefc8] truncate">
                       {c.name}
                     </div>
-                    <div className="text-[0.68rem] text-[#ffd977] flex items-center justify-between">
+                    <div className="text-[0.68rem] text-[#ffd977] flex items-center justify-between gap-1">
                       <span>
                         {t("turnulFloor")} {c.floor}
                       </span>
+                      {c.lastTimeMs !== null && (
+                        <span className="font-mono text-[0.62rem] text-sky-300">
+                          ⏱ {(c.lastTimeMs / 1000).toFixed(2)}s
+                        </span>
+                      )}
                       <span>{c.eliminated ? t("turnulEliminated") : "🛡".repeat(c.shields)}</span>
                     </div>
                   </div>
@@ -580,12 +612,24 @@ function TurnulContent() {
                               setSelectedOpt(i);
                               resolveRound(i === grilaQ.correctIndex, grilaQ.options[grilaQ.correctIndex]);
                             }}
-                            className={`${cls} rounded-xl text-left px-4 py-3.5 text-sm font-medium cursor-pointer disabled:cursor-default transition-all flex items-start gap-2.5`}
+                            className={`${cls} rounded-xl text-left px-4 py-3.5 text-sm font-medium cursor-pointer disabled:cursor-default transition-all flex items-center justify-between gap-2.5`}
                           >
-                            <span className="font-cinzel font-extrabold text-[#f3c35c] shrink-0">
-                              {String.fromCharCode(65 + i)}.
+                            <span className="flex items-start gap-2.5">
+                              <span className="inline-flex items-center gap-1 shrink-0">
+                                <kbd className="px-1.5 py-0.5 text-[0.65rem] font-mono font-bold rounded bg-[#0c0912] border border-[#b68635]/70 text-[#ffe28a]">
+                                  {i + 1}
+                                </kbd>
+                                <span className="font-cinzel font-extrabold text-[#f3c35c]">
+                                  {String.fromCharCode(65 + i)}.
+                                </span>
+                              </span>
+                              <span>{opt}</span>
                             </span>
-                            <span>{opt}</span>
+                            {phase === "reveal" && revealInfo && i === selectedOpt && (
+                              <span className="shrink-0 font-mono text-xs text-sky-300 bg-[#0d1424]/90 border border-sky-400/50 rounded-md px-2 py-0.5">
+                                ⏱ {(revealInfo.elapsedMs / 1000).toFixed(2)}s
+                              </span>
+                            )}
                           </button>
                         );
                       })}
@@ -625,8 +669,13 @@ function TurnulContent() {
                           : "bg-rose-950/65 border-rose-400"
                       }`}
                     >
-                      <div className="font-cinzel font-extrabold text-base">
-                        {revealInfo.playerOk ? `⬆ ${t("turnulYouClimbed")}` : `🛡💥 ${t("turnulShieldBroken")}`}
+                      <div className="font-cinzel font-extrabold text-base flex items-center justify-center gap-2.5">
+                        <span>
+                          {revealInfo.playerOk ? `⬆ ${t("turnulYouClimbed")}` : `🛡💥 ${t("turnulShieldBroken")}`}
+                        </span>
+                        <span className="font-mono text-xs text-sky-300 bg-[#0d1424]/90 border border-sky-400/50 rounded-md px-2 py-0.5">
+                          ⏱ {(revealInfo.elapsedMs / 1000).toFixed(2)}s
+                        </span>
                       </div>
                       <div className="text-xs text-[#e8d5b0] mt-1">
                         {t("fightAnswerWas")}{" "}

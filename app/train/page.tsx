@@ -27,6 +27,10 @@ interface GrilaQuestion {
 
 const TIMER_SECONDS = 10;
 
+function fmtSec(ms: number): string {
+  return `${(ms / 1000).toFixed(2)}s`;
+}
+
 function TrainContent() {
   const { lang, t } = useI18n();
   const searchParams = useSearchParams();
@@ -37,7 +41,14 @@ function TrainContent() {
   const [correct, setCorrect] = useState(0);
   const [wrong, setWrong] = useState(0);
   const [timeouts, setTimeouts] = useState(0);
-  const [feedback, setFeedback] = useState<{ state: "correct" | "wrong" | "timeout"; reveal: string } | null>(null);
+  const [feedback, setFeedback] = useState<{
+    state: "correct" | "wrong" | "timeout";
+    reveal: string;
+    elapsedMs: number;
+  } | null>(null);
+  const [answerHistory, setAnswerHistory] = useState<
+    Array<{ prompt: string; reveal: string; state: "correct" | "wrong" | "timeout"; elapsedMs: number }>
+  >([]);
   const [timeLeft, setTimeLeft] = useState(TIMER_SECONDS);
   const [inputValue, setInputValue] = useState("");
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -58,6 +69,7 @@ function TrainContent() {
   const idxRef = useRef(0);
   const modeRef = useRef<Mode>(null);
   const deadlineRef = useRef(0);
+  const questionStartRef = useRef(0);
   const answeredRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -103,7 +115,8 @@ function TrainContent() {
     setTimeLeft(TIMER_SECONDS);
     setInputValue("");
     setSelectedOption(null);
-    deadlineRef.current = Date.now() + TIMER_SECONDS * 1000;
+    questionStartRef.current = Date.now();
+    deadlineRef.current = questionStartRef.current + TIMER_SECONDS * 1000;
     clearTimer();
     timerRef.current = setInterval(tick, 100);
     setTimeout(() => inputRef.current?.focus(), 20);
@@ -115,7 +128,14 @@ function TrainContent() {
     clearTimer();
     setTimeLeft(0);
     setTimeouts((x) => x + 1);
-    setFeedback({ state: "timeout", reveal: revealAnswer() });
+    const rev = revealAnswer();
+    const elapsedMs = TIMER_SECONDS * 1000;
+    const curQ = questionsRef.current[idxRef.current];
+    setAnswerHistory((prev) => [
+      ...prev,
+      { prompt: curQ?.prompt ?? "", reveal: rev, state: "timeout", elapsedMs },
+    ]);
+    setFeedback({ state: "timeout", reveal: rev, elapsedMs });
     setTimeout(nextQuestion, 1400);
   };
 
@@ -132,6 +152,7 @@ function TrainContent() {
     if (answeredRef.current) return;
     answeredRef.current = true;
     clearTimer();
+    const elapsedMs = Math.max(50, Date.now() - questionStartRef.current);
     if (isCorrect) {
       setCorrect((c) => c + 1);
       stoneSound.climbStep(correct + 1);
@@ -149,7 +170,13 @@ function TrainContent() {
         return next;
       });
     }
-    setFeedback({ state: isCorrect ? "correct" : "wrong", reveal: revealAnswer() });
+    const rev = revealAnswer();
+    const curQ = questionsRef.current[idxRef.current];
+    setAnswerHistory((prev) => [
+      ...prev,
+      { prompt: curQ?.prompt ?? "", reveal: rev, state: isCorrect ? "correct" : "wrong", elapsedMs },
+    ]);
+    setFeedback({ state: isCorrect ? "correct" : "wrong", reveal: rev, elapsedMs });
     setTimeout(nextQuestion, 1400);
   };
 
@@ -165,6 +192,7 @@ function TrainContent() {
     setWrong(0);
     setTimeouts(0);
     setRivalScores({});
+    setAnswerHistory([]);
     try {
       const catParam =
         m === "grila" && selectedCategory !== "all"
@@ -188,7 +216,8 @@ function TrainContent() {
       setTimeLeft(TIMER_SECONDS);
       setInputValue("");
       setSelectedOption(null);
-      deadlineRef.current = Date.now() + TIMER_SECONDS * 1000;
+      questionStartRef.current = Date.now();
+      deadlineRef.current = questionStartRef.current + TIMER_SECONDS * 1000;
       clearTimer();
       timerRef.current = setInterval(tick, 100);
       setTimeout(() => inputRef.current?.focus(), 0);
@@ -213,10 +242,27 @@ function TrainContent() {
   useEffect(() => {
     if (phase !== "playing" || mode !== "grila" || feedback) return;
     const onKey = (e: KeyboardEvent) => {
-      const map: Record<string, number> = { "1": 0, "2": 1, "3": 2, "4": 3, a: 0, b: 1, c: 2, d: 3 };
-      const picked = map[e.key.toLowerCase()];
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const codeMap: Record<string, number> = {
+        Digit1: 0,
+        Numpad1: 0,
+        KeyA: 0,
+        Digit2: 1,
+        Numpad2: 1,
+        KeyB: 1,
+        Digit3: 2,
+        Numpad3: 2,
+        KeyC: 2,
+        Digit4: 3,
+        Numpad4: 3,
+        KeyD: 3,
+      };
+      const keyMap: Record<string, number> = { "1": 0, "2": 1, "3": 2, "4": 3, a: 0, b: 1, c: 2, d: 3 };
+      const picked = codeMap[e.code] ?? keyMap[e.key.toLowerCase()];
       const q = questionsRef.current[idxRef.current] as GrilaQuestion | undefined;
       if (picked !== undefined && q && picked < q.options.length) {
+        e.preventDefault();
         setSelectedOption(picked);
         handleAnswer(picked === q.correctIndex);
       }
@@ -370,28 +416,61 @@ function TrainContent() {
         (() => {
           const total = correct + wrong + timeouts;
           const accuracy = total ? Math.round((correct / total) * 100) : 0;
+          const avgMs = answerHistory.length
+            ? answerHistory.reduce((acc, r) => acc + r.elapsedMs, 0) / answerHistory.length
+            : 0;
           return (
-            <div className="royal-panel rounded-2xl w-full max-w-[540px] p-8 flex flex-col gap-5 text-center my-auto">
+            <div className="royal-panel rounded-2xl w-full max-w-[580px] p-7 sm:p-8 flex flex-col gap-5 text-center my-auto">
               <div className="text-5xl">🏆</div>
               <h2 className="font-cinzel font-extrabold text-2xl sm:text-3xl gold-title">
                 {t("trainFinished")}
               </h2>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 <div className="bg-[#120e1a]/80 border border-emerald-500/40 rounded-xl p-3">
                   <div className="text-2xl font-cinzel font-extrabold text-emerald-400">{correct}</div>
-                  <div className="text-[0.7rem] text-[#cbb894] uppercase">{t("trainCorrect")}</div>
+                  <div className="text-[0.68rem] text-[#cbb894] uppercase">{t("trainCorrect")}</div>
                 </div>
                 <div className="bg-[#120e1a]/80 border border-rose-500/40 rounded-xl p-3">
                   <div className="text-2xl font-cinzel font-extrabold text-rose-400">{wrong}</div>
-                  <div className="text-[0.7rem] text-[#cbb894] uppercase">{t("trainWrong")}</div>
+                  <div className="text-[0.68rem] text-[#cbb894] uppercase">{t("trainWrong")}</div>
                 </div>
                 <div className="bg-[#120e1a]/80 border border-amber-500/40 rounded-xl p-3">
                   <div className="text-2xl font-cinzel font-extrabold text-amber-300">{accuracy}%</div>
-                  <div className="text-[0.7rem] text-[#cbb894] uppercase">
+                  <div className="text-[0.68rem] text-[#cbb894] uppercase">
                     {t("trainTimeouts")}: {timeouts}
                   </div>
                 </div>
+                <div className="bg-[#120e1a]/80 border border-sky-400/40 rounded-xl p-3">
+                  <div className="text-2xl font-cinzel font-extrabold text-sky-300">{fmtSec(avgMs)}</div>
+                  <div className="text-[0.68rem] text-[#cbb894] uppercase">
+                    {lang === "ro" ? "Timp Mediu" : "Avg Time"}
+                  </div>
+                </div>
               </div>
+
+              {answerHistory.length > 0 && (
+                <div className="bg-[#100c18]/85 border border-[#8e672b]/50 rounded-xl p-3 max-h-[210px] overflow-y-auto flex flex-col gap-1.5 text-left">
+                  {answerHistory.map((h, hIdx) => (
+                    <div
+                      key={hIdx}
+                      className="flex items-center justify-between gap-2 text-xs px-2.5 py-1.5 rounded-lg bg-[#171222]/80 border border-[#7a5828]/25"
+                    >
+                      <span className="truncate flex-1 text-[#ead7b0]">
+                        <span className="mr-1.5">
+                          {h.state === "correct" ? "✅" : h.state === "wrong" ? "❌" : "⏱"}
+                        </span>
+                        {h.prompt}
+                      </span>
+                      <span className="shrink-0 font-cinzel font-bold text-[#ffe28a] text-[0.7rem]">
+                        {h.reveal}
+                      </span>
+                      <span className="shrink-0 font-mono text-[0.7rem] text-sky-300 bg-[#0d1424] border border-sky-500/40 rounded px-1.5 py-0.5">
+                        ⏱ {fmtSec(h.elapsedMs)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {roomSeats.length > 1 && (
                 <div className="bg-[#120e1a]/80 border border-[#b68635]/60 rounded-xl p-3 flex flex-col gap-1.5 text-left">
@@ -525,12 +604,24 @@ function TrainContent() {
                             setSelectedOption(i);
                             handleAnswer(i === (q as GrilaQuestion).correctIndex);
                           }}
-                          className={`${cls} rounded-xl text-left px-4 py-3.5 text-sm font-medium cursor-pointer disabled:cursor-default transition-all flex items-start gap-2.5`}
+                          className={`${cls} rounded-xl text-left px-4 py-3.5 text-sm font-medium cursor-pointer disabled:cursor-default transition-all flex items-center justify-between gap-2.5`}
                         >
-                          <span className="font-cinzel font-extrabold text-[#f3c35c] shrink-0">
-                            {String.fromCharCode(65 + i)}.
+                          <span className="flex items-start gap-2.5">
+                            <span className="inline-flex items-center gap-1 shrink-0">
+                              <kbd className="px-1.5 py-0.5 text-[0.65rem] font-mono font-bold rounded bg-[#0c0912] border border-[#b68635]/70 text-[#ffe28a]">
+                                {i + 1}
+                              </kbd>
+                              <span className="font-cinzel font-extrabold text-[#f3c35c]">
+                                {String.fromCharCode(65 + i)}.
+                              </span>
+                            </span>
+                            <span className="leading-snug">{opt}</span>
                           </span>
-                          <span className="leading-snug">{opt}</span>
+                          {feedback && i === selectedOption && (
+                            <span className="shrink-0 font-mono text-xs text-sky-300 bg-[#0d1424]/90 border border-sky-400/50 rounded-md px-2 py-0.5">
+                              ⏱ {fmtSec(feedback.elapsedMs)}
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -579,12 +670,17 @@ function TrainContent() {
                     <div className="text-2xl">
                       {feedback.state === "correct" ? "✔" : feedback.state === "wrong" ? "✖" : "⏱"}
                     </div>
-                    <div className="font-cinzel font-bold text-base tracking-wider">
-                      {feedback.state === "correct"
-                        ? t("trainCorrectMsg")
-                        : feedback.state === "wrong"
-                        ? t("trainWrongMsg")
-                        : t("trainTimeoutMsg")}
+                    <div className="font-cinzel font-bold text-base tracking-wider flex items-center justify-center gap-2.5">
+                      <span>
+                        {feedback.state === "correct"
+                          ? t("trainCorrectMsg")
+                          : feedback.state === "wrong"
+                          ? t("trainWrongMsg")
+                          : t("trainTimeoutMsg")}
+                      </span>
+                      <span className="font-mono text-xs text-sky-300 bg-[#0d1424]/90 border border-sky-400/50 rounded-md px-2 py-0.5">
+                        ⏱ {fmtSec(feedback.elapsedMs)}
+                      </span>
                     </div>
                     <div className="text-xs text-[#e5cfa3] mt-1">
                       {t("trainCorrectAnswer")}{" "}
