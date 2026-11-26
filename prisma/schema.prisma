@@ -48,6 +48,7 @@ model User {
   invitesReceived     GameInvite[]       @relation("InviteTo")
   trainRuns           TrainRun[]
   speedRuns           SpeedRun[]
+  bankReports         BankQuestionReport[]
 
   @@index([lastSeenAt])
 }
@@ -423,6 +424,21 @@ model GameInvite {
 
   @@index([toId, status])
   @@index([expiresAt])
+}
+
+// Reports about questions served from the JSON bank (ids like "trivia-1234"),
+// which have no Question row to attach a report to. Same queue, own table.
+model BankQuestionReport {
+  id         String   @id @default(uuid()) @db.Uuid
+  bankId     String   @db.VarChar(64)
+  userId     String   @db.Uuid
+  note       String?  @db.VarChar(500)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([bankId, userId])
+  @@index([createdAt])
+  @@index([userId, createdAt])
 }
 
 // One finished "Măsoară viteza" (PRC) sprint: 30 seconds of mental arithmetic.

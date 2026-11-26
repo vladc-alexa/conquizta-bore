@@ -49,6 +49,26 @@ interface RoomView {
   seats: LobbySeat[];
 }
 
+interface SiegeCard {
+  round: number;
+  prompt: string;
+  correctText: string;
+  mine: boolean;
+  myAnswer: string;
+  oppAnswer: string;
+  questionId: string;
+  left: number;
+}
+
+interface SiegeReviewRow {
+  round: number;
+  prompt: string;
+  my: string;
+  correct: string;
+  ok: boolean;
+  questionId: string;
+}
+
 interface TowerState {
   id: number; // 0, 1, 2
   hp: number; // 2 -> 1 -> 0
@@ -188,6 +208,11 @@ function TowerSiegeContent() {
   const [starting, setStarting] = useState(false);
   const [waitingForOpp, setWaitingForOpp] = useState(false);
   const [locked, setLocked] = useState(false);
+  const [resultCard, setResultCard] = useState<SiegeCard | null>(null);
+  const [review, setReview] = useState<SiegeReviewRow[]>([]);
+  const [reported, setReported] = useState<Set<string>>(new Set());
+  const lastAnswerRef = useRef<{ text: string; ok: boolean; questionId: string } | null>(null);
+  const resultTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const offsetRef = useRef(0);
   const activeSeqRef = useRef(0);
   const appliedRoundRef = useRef(0);
@@ -362,37 +387,108 @@ function TowerSiegeContent() {
   roomViewRef.current = roomView;
   codeRef.current = roomCode;
 
+  const reportQuestion = useCallback(
+    async (qid: string) => {
+      if (!qid || reported.has(qid)) return;
+      try {
+        const res = await fetch(`/api/questions/${qid}/report`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ note: "raportata din asediu" }),
+        });
+        if (res.ok || res.status === 409) setReported((prev) => new Set(prev).add(qid));
+      } catch {
+        /* the player can retry from the post-match review */
+      }
+    },
+    [reported]
+  );
+
+  // 5-second verdict window: results stay on screen (and can be reported)
+  // before the next question is requested.
+  const startResultWindow = useCallback((res: SiegeResult, card: Omit<SiegeCard, "left">) => {
+    if (resultTimer.current) clearInterval(resultTimer.current);
+    let left = 5;
+    setResultCard({ ...card, left });
+    resultTimer.current = setInterval(() => {
+      left -= 1;
+      if (left <= 0) {
+        if (resultTimer.current) clearInterval(resultTimer.current);
+        resultTimer.current = null;
+        setResultCard(null);
+        finishRoundRef.current(res.round);
+        return;
+      }
+      setResultCard((c) => (c ? { ...c, left } : c));
+    }, 1000);
+  }, []);
+
   const applyServerResult = useCallback(
     (res: SiegeResult) => {
       const side: SiegeSide = mySideRef.current;
       const oppSide: SiegeSide = side === "left" ? "right" : "left";
       const f = (ms: number) => (ms / 1000).toFixed(2);
-      const tag = `⏱ ${lang === "ro" ? "Tu" : "You"}: ${f(res.times[side] ?? 0)}s · ${p2Name}: ${f(
+      const tag = `\u23f1 ${lang === "ro" ? "Tu" : "You"}: ${f(res.times[side] ?? 0)}s \u00b7 ${p2Name}: ${f(
         res.times[oppSide] ?? 0
       )}s`;
-      let detail = `${t("fightAnswerWas")} ${res.correctText}  •  ${tag}`;
+      let detail = `${t("fightAnswerWas")} ${res.correctText}  \u2022  ${tag}`;
       if (res.tie && res.guesses) {
-        detail = `${t("fightAnswerWas")} ${res.exact ?? res.correctText}  •  ${
+        detail = `${t("fightAnswerWas")} ${res.exact ?? res.correctText}  \u2022  ${
           lang === "ro" ? "Tu" : "You"
-        }: ${res.guesses[side] ?? "—"} / ${p2Name}: ${res.guesses[oppSide] ?? "—"}  •  ${tag}`;
+        }: ${res.guesses[side] ?? "\u2014"} / ${p2Name}: ${res.guesses[oppSide] ?? "\u2014"}  \u2022  ${tag}`;
       }
+
+      const rv = roomViewRef.current;
+      const prompt = (rv?.roundQuestion as { prompt?: string } | null)?.prompt ?? "";
+      const last = lastAnswerRef.current;
+      const mine = res.kind !== "both-wrong" && res.attacker === side;
+      const ok = res.kind === "both-wrong" ? false : res.tie ? mine : mine;
+      const myAnswer = last?.text ?? "\u2014";
+      const oppAnswer = res.tie
+        ? String(res.guesses?.[oppSide] ?? "\u2014")
+        : res.kind === "both-wrong"
+          ? "\u2718"
+          : res.attacker === oppSide
+            ? "\u2714"
+            : "\u2718";
+
+      setReview((prev) => [
+        ...prev,
+        {
+          round: res.round,
+          prompt,
+          my: myAnswer,
+          correct: res.correctText,
+          ok,
+          questionId: last?.questionId ?? "",
+        },
+      ]);
+
+      const card = {
+        round: res.round,
+        prompt,
+        correctText: res.correctText,
+        mine,
+        myAnswer,
+        oppAnswer,
+        questionId: last?.questionId ?? "",
+      };
 
       if (res.kind === "both-wrong") {
         setEventBanner({ headline: t("siegeBothWrong"), detail, tone: "neutral" });
         setPhase("animating");
         stoneSound.block();
-        setTimeout(() => finishRoundRef.current(res.round), 1700);
+        startResultWindow(res, card);
         return;
       }
 
-      const mine = res.attacker === side;
       const headline = mine
         ? res.tie
           ? t("siegeYouWonTie")
           : t("siegeFiring")
         : res.tie
-        ? t("siegeOppWonTie")
-        : `${p2Name} — ${t("siegeFiring")}`;
+          ? t("siegeOppWonTie")
+          : `${p2Name} \u2014 ${t("siegeFiring")}`;
 
       launchCatapultAttackRef.current(
         mine ? "left" : "right",
@@ -401,9 +497,11 @@ function TowerSiegeContent() {
         mine ? "good" : "bad",
         res.targetSeed ?? res.round
       );
+      startResultWindow(res, card);
     },
-    [lang, p2Name, t]
+    [lang, p2Name, t, startResultWindow]
   );
+
   const applyServerResultRef = useRef(applyServerResult);
   applyServerResultRef.current = applyServerResult;
 
@@ -439,6 +537,11 @@ function TowerSiegeContent() {
       if (answeredRef.current || lockedRef.current) return;
       if (chosenIdx >= 0) setSelectedOpt(chosenIdx);
       const isCorrect = chosenIdx === q.correctIndex;
+      lastAnswerRef.current = {
+        text: chosenIdx >= 0 && q.options ? q.options[chosenIdx] : "—",
+        ok: isCorrect,
+        questionId: q.id,
+      };
       fetch("/api/stats/daily", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -455,6 +558,11 @@ function TowerSiegeContent() {
     (q: RapideQ, playerGuess: number | null) => {
       if (answeredRef.current || lockedRef.current) return;
       const ok = playerGuess !== null && !Number.isNaN(playerGuess);
+      lastAnswerRef.current = {
+        text: ok ? String(playerGuess) : "—",
+        ok: ok && playerGuess === q.answer,
+        questionId: q.id,
+      };
       submitAnswer({ guess: ok ? playerGuess : null });
     },
     [submitAnswer]
@@ -478,6 +586,14 @@ function TowerSiegeContent() {
     activeSeqRef.current = 0;
     appliedRoundRef.current = 0;
     answeredRef.current = false;
+    lastAnswerRef.current = null;
+    if (resultTimer.current) {
+      clearInterval(resultTimer.current);
+      resultTimer.current = null;
+    }
+    setResultCard(null);
+    setReview([]);
+    setReported(new Set());
     setSelectedOpt(null);
     setEventBanner(null);
     setWaitingForOpp(false);
@@ -594,6 +710,11 @@ function TowerSiegeContent() {
       activeSeqRef.current = rv.roundSeq;
       answeredRef.current = false;
       qStartRef.current = rv.roundStartedAt;
+      if (resultTimer.current) {
+        clearInterval(resultTimer.current);
+        resultTimer.current = null;
+      }
+      setResultCard(null);
       clearTimer();
       setSelectedOpt(null);
       setTieInput("");
@@ -1371,6 +1492,45 @@ function TowerSiegeContent() {
               </div>
             )}
 
+            {/* Verdict window: stays up for 5s so the result can be read and the
+                question reported before the next round is requested. */}
+            {resultCard && phase !== "matchOver" && (
+              <div className="absolute inset-x-2 bottom-10 z-20">
+                <div className="royal-panel rounded-xl px-3 py-2 flex flex-col gap-1 text-[0.72rem] shadow-2xl">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-cinzel font-extrabold text-[#ffefc8] text-[0.78rem]">
+                      {resultCard.mine ? "✔" : "✘"} {t("siegeResultTitle")} · {t("siegeRound")} {resultCard.round}
+                    </span>
+                    <span className="font-mono text-[0.7rem] bg-[#0c0a14] border border-[#7a5828]/50 rounded px-1.5 py-0.5 text-[#ffd977]">
+                      {resultCard.left}s
+                    </span>
+                  </div>
+                  <p className="text-[#e8d5b0] leading-snug">{resultCard.prompt}</p>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem]">
+                    <span className="text-emerald-300">
+                      {t("siegeCorrectWas")}: <strong>{resultCard.correctText}</strong>
+                    </span>
+                    <span className="text-[#f7d279]">
+                      {t("siegeYourAnswer")}: <strong>{resultCard.myAnswer}</strong>
+                    </span>
+                    <span className="text-[#cbb07e]">
+                      {p2Name}: <strong>{resultCard.oppAnswer}</strong>
+                    </span>
+                    {resultCard.questionId && (
+                      <button
+                        type="button"
+                        onClick={() => void reportQuestion(resultCard.questionId)}
+                        disabled={reported.has(resultCard.questionId)}
+                        className="ml-auto rounded border border-[#7a3a2a] bg-[#2a1310] px-1.5 py-0.5 text-[0.65rem] text-[#f0a08a] hover:border-[#a8503a] disabled:opacity-50 cursor-pointer"
+                      >
+                        {reported.has(resultCard.questionId) ? `✓ ${t("reported")}` : `⚠ ${t("reportQuestion")}`}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Victory Overlay */}
             {phase === "matchOver" && hud.winner && (
               <div className="absolute inset-0 z-30 bg-black/65 flex flex-col items-center justify-center px-4 text-center">
@@ -1552,6 +1712,49 @@ function TowerSiegeContent() {
             )}
           </div>
         </div>
+      )}
+      {screen === "battle" && phase === "matchOver" && review.length > 0 && (
+        <section className="w-full max-w-[1000px] royal-panel rounded-2xl p-4 flex flex-col gap-2 mb-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[#b68635]/40 pb-2">
+            <h2 className="font-cinzel font-bold text-[#f7d279] text-sm sm:text-base tracking-wider uppercase">
+              📜 {t("siegeReviewTitle")}
+            </h2>
+            <span className="text-[#cbb07e] text-[0.7rem]">
+              {review.length} {review.length === 1 ? t("siegeRoundOne") : t("siegeRoundsMany")}
+            </span>
+          </div>
+          <div className="flex flex-col gap-1.5 max-h-[360px] overflow-y-auto pr-1">
+            {review.map((r) => (
+              <details key={r.round} className="rounded-lg border border-[#7a5828]/50 bg-[#120e1a]/80 px-2.5 py-1.5">
+                <summary className="flex items-start gap-2 cursor-pointer text-[0.78rem] text-[#e8d5b0]">
+                  <span className={r.ok ? "shrink-0 font-bold text-emerald-300" : "shrink-0 font-bold text-rose-300"}>
+                    {r.ok ? "✔" : "✘"}
+                  </span>
+                  <span className="shrink-0 font-cinzel text-[#ffd977]">{r.round}.</span>
+                  <span className="min-w-0 flex-1">{r.prompt}</span>
+                  {r.questionId && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        void reportQuestion(r.questionId);
+                      }}
+                      disabled={reported.has(r.questionId)}
+                      className="shrink-0 rounded border border-[#7a3a2a] bg-[#2a1310] px-1.5 py-0.5 text-[0.62rem] text-[#f0a08a] hover:border-[#a8503a] disabled:opacity-50 cursor-pointer"
+                    >
+                      {reported.has(r.questionId) ? "✔ " + t("reported") : "⚠ " + t("reportQuestion")}
+                    </button>
+                  )}
+                </summary>
+                <div className="mt-1.5 flex flex-col gap-0.5 text-[0.72rem] border-t border-[#7a5828]/30 pt-1.5">
+                  <span className="text-emerald-300">{t("siegeCorrectWas")}: {r.correct}</span>
+                  <span className="text-[#f7d279]">{t("siegeYourAnswer")}: {r.my}</span>
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );
