@@ -39,6 +39,8 @@ export default function Dashboard() {
   const { lang, t } = useI18n();
   const { art } = useArtTheme();
   const [name, setName] = useState<string | null>(null);
+  const [myPrc, setMyPrc] = useState<number | null>(null);
+  const [myWins, setMyWins] = useState<number>(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [siteOff, setSiteOff] = useState(false);
   const [rows, setRows] = useState<DailyLeaderRow[]>([]);
@@ -103,6 +105,8 @@ export default function Dashboard() {
       .then((d) => {
         if (!d) return;
         setName(d.name);
+        if (typeof d.prc === "number") setMyPrc(d.prc);
+        if (typeof d.winsAllTime === "number") setMyWins(d.winsAllTime);
         if (d.isAdmin) setIsAdmin(true);
         if (typeof d.siteOff === "boolean") setSiteOff(d.siteOff);
       })
@@ -226,19 +230,29 @@ export default function Dashboard() {
             <div className="w-12 h-12 rounded-full border-2 border-[#f2c86b] overflow-hidden shadow-[0_0_16px_rgba(242,200,107,0.45)] bg-[#1c1420]">
               <img src={art.avatar} alt="Hero avatar" className="w-full h-full object-cover" />
             </div>
-            <span className="absolute -bottom-1 -left-1 px-1.5 h-5 rounded-full bg-gradient-to-b from-[#f7d277] to-[#9c6419] border border-[#fff2c2] text-[#1a0f05] font-cinzel font-extrabold text-[0.62rem] flex items-center justify-center shadow">
-              ⚡{prcBest}
+            <span
+              className="absolute -bottom-1 -left-1 px-1.5 h-5 rounded-full bg-gradient-to-b from-[#f7d277] to-[#9c6419] border border-[#fff2c2] text-[#1a0f05] font-cinzel font-extrabold text-[0.6rem] flex items-center justify-center shadow"
+              title={lang === "ro" ? "Victorii din toate timpurile" : "All-time wins"}
+            >
+              🏆{myWins}
             </span>
           </div>
-          <div className="min-w-[115px]">
+          <div className="min-w-[130px]">
             <div className="flex items-center gap-1.5">
               <span className="font-cinzel font-bold text-[#ffefc8] text-sm tracking-wide truncate max-w-[140px]">
                 {heroName}
               </span>
               <span className="text-[#f5c85c] text-xs">👑</span>
             </div>
-            <div className="text-[0.68rem] text-[#cbb07e]">
-              {t("prcRecord")} <strong className="text-[#ffe28a]">{prcBest}</strong>
+            <div className="flex items-center gap-2 text-[0.68rem] text-[#cbb07e]">
+              <span>
+                PRC <strong className="text-[#ffe28a]">{myPrc != null ? myPrc : "—"}</strong>
+              </span>
+              <span className="opacity-40">·</span>
+              <span>
+                🏆 <strong className="text-[#ffe28a]">{myWins}</strong>{" "}
+                {lang === "ro" ? "victorii" : "wins"}
+              </span>
             </div>
           </div>
         </div>
@@ -389,28 +403,21 @@ export default function Dashboard() {
                 </div>
               </div>
             </button>
-          </div>
 
-          {/* Wide Royal Sapphire Training Banner */}
-          <div className="wood-desk-strip rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="hidden sm:flex items-center gap-2 text-2xl opacity-90 pl-1" aria-hidden>
-              <span>🌍</span>
-              <span>📚</span>
-            </div>
-            <Link
-              href="/train"
-              className="btn-sapphire flex-1 w-full rounded-xl px-5 py-3 flex flex-col items-center text-center"
-            >
-              <div className="flex items-center gap-2 font-cinzel font-extrabold text-base sm:text-lg tracking-[0.14em]">
-                <span>🎓</span>
-                <span>{t("trainingBannerTitle")}</span>
+            {/* Card 5: ANTRENAMENT (equal-sized card on row 2, no subtitle) */}
+            <Link href="/train" className="mode-card group aspect-[3/4] flex flex-col justify-end">
+              <img
+                src={art.cardTrain}
+                alt={t("trainingBannerTitle")}
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#09060b] via-[#0e1526]/35 to-transparent" />
+              <div className="relative z-10 p-3.5 text-center w-full">
+                <div className="font-cinzel font-extrabold text-base sm:text-lg tracking-wider gold-title">
+                  {t("trainingBannerTitle")}
+                </div>
               </div>
-              <div className="text-[0.72rem] text-[#cde2ff] mt-0.5">{t("trainingBannerSub")}</div>
             </Link>
-            <div className="hidden sm:flex items-center gap-2 text-2xl opacity-90 pr-1" aria-hidden>
-              <span>🪶</span>
-              <span>🕯️</span>
-            </div>
           </div>
 
           {/* Bottom Grid: Clasamentul Zilei + Online Players */}

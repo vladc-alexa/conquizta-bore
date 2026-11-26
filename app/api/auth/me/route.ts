@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
 import { isSiteOff } from "@/lib/siteOff";
 import { getClientIp, getIpRule, touchUserIp } from "@/lib/ip";
+import { getLeaderboardSnapshot } from "@/lib/leaderboardCache";
 
 export async function GET(req: Request) {
   const ip = getClientIp(req);
@@ -56,6 +57,16 @@ export async function GET(req: Request) {
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  let prc: number | null = null;
+  let winsAllTime = 0;
+  try {
+    const snap = await getLeaderboardSnapshot(prisma);
+    const mine = snap.prcByUser.get(user.id);
+    prc = mine?.total ?? null;
+    winsAllTime = mine?.wins ?? 0;
+  } catch {
+    /* ignore if snapshot unavailable */
+  }
   return NextResponse.json({
     id: user.id,
     name: user.displayName,
@@ -64,6 +75,8 @@ export async function GET(req: Request) {
     nameColor: user.nameColor,
     hideScore: user.hideScore,
     canEditQuestions: user.canEditQuestions,
+    prc,
+    winsAllTime,
     siteOff: await isSiteOff(prisma),
   });
 }

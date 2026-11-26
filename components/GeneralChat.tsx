@@ -82,7 +82,13 @@ export default function GeneralChat({
   const [showColors, setShowColors] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const didInitialScroll = useRef(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const scrollToBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, []);
 
   // dock: collapsed by default, remembered per browser
   const [open, setOpen] = useState(false);
@@ -139,7 +145,12 @@ export default function GeneralChat({
         // every tick: dedupe by id *before* counting, or unread/mention badges inflate.
         const brandNew = incoming.filter((m) => !seenIds.current.has(m.id));
         incoming.forEach((m) => seenIds.current.add(m.id));
-        if (brandNew.length) setMessages((prev) => [...prev, ...brandNew]);
+        if (brandNew.length) {
+          const el = scrollRef.current;
+          const wasNearBottom = !!el && el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+          setMessages((prev) => [...prev, ...brandNew]);
+          if (wasNearBottom) requestAnimationFrame(scrollToBottom);
+        }
         // count what arrived while the player wasn't looking at the chat
         const fresh = brandNew.filter((m) => m.authorName !== me?.name);
         const watching = !dock || openRef.current;
@@ -202,7 +213,14 @@ export default function GeneralChat({
     }
   }, [dock, open]);
 
-  // (intentionally no scrollIntoView on new messages — the view never jumps)
+  // Start chat at the lowest position (newest messages) once on initial load,
+  // using scrollTop on the chat box itself so the outer page never jumps.
+  useEffect(() => {
+    if (didInitialScroll.current || messages.length === 0) return;
+    if (dock && !open) return;
+    didInitialScroll.current = true;
+    requestAnimationFrame(scrollToBottom);
+  }, [messages.length, dock, open, scrollToBottom]);
 
   // toast retires on its own
   useEffect(() => {
@@ -294,7 +312,8 @@ export default function GeneralChat({
         setChatInput("");
         setMention(null);
         setReplyTo(null);
-        loadChat(true);
+        await loadChat(true);
+        requestAnimationFrame(scrollToBottom);
       } else {
         const d = await res.json().catch(() => ({}));
         setChatError(d.error || "Mesajul nu a fost trimis.");

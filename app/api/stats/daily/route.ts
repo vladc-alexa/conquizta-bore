@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
+import { _resetLeaderboardCache } from "@/lib/leaderboardCache";
 
 export const dynamic = "force-dynamic";
 
@@ -213,6 +214,7 @@ export async function POST(req: Request) {
     prev.correct += correct;
     prev.wrong += wrong;
   }
+  _resetLeaderboardCache();
 
   return NextResponse.json({ ok: true });
 }

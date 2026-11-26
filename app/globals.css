@@ -153,6 +153,10 @@ body {
 .mode-card:nth-child(4)::after {
   animation-delay: 2.7s;
 }
+.mode-card:nth-child(5)::before,
+.mode-card:nth-child(5)::after {
+  animation-delay: 3.6s;
+}
 .mode-card:hover {
   transform: translateY(-6px) scale(1.015);
   border-color: #ffe399;

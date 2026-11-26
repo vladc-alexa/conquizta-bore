@@ -16,6 +16,7 @@ interface ThemeContextValue {
     cardSiege: string;
     cardTurnul: string;
     cardPrc: string;
+    cardTrain: string;
     cardCrown: string;
     cardBanners: string;
     fightStage: string;
@@ -30,6 +31,7 @@ const ART_MAP: Record<ArtTheme, ThemeContextValue["art"]> = {
     cardSiege: "/art/card-siege.jpg",
     cardTurnul: "/art/card-crown.jpg",
     cardPrc: "/art/card-map.jpg",
+    cardTrain: "/art/card-train.jpg",
     cardCrown: "/art/card-crown.jpg",
     cardBanners: "/art/card-banners.jpg",
     fightStage: "/art/bg-arena-fight.jpg",
@@ -41,6 +43,7 @@ const ART_MAP: Record<ArtTheme, ThemeContextValue["art"]> = {
     cardSiege: "/art/scifi/card-siege.jpg",
     cardTurnul: "/art/scifi/card-turnul.jpg",
     cardPrc: "/art/scifi/card-prc.jpg",
+    cardTrain: "/art/scifi/card-train.jpg",
     cardCrown: "/art/scifi/card-turnul.jpg",
     cardBanners: "/art/scifi/card-siege.jpg",
     fightStage: "/art/scifi/bg-arena-fight.jpg",
