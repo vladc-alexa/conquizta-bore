@@ -39,6 +39,7 @@ export default function Dashboard() {
   const { art } = useArtTheme();
   const [name, setName] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [siteOff, setSiteOff] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatError, setChatError] = useState<string | null>(null);
@@ -103,6 +104,7 @@ export default function Dashboard() {
         if (!d) return;
         setName(d.name);
         if (d.isAdmin) setIsAdmin(true);
+        if (typeof d.siteOff === "boolean") setSiteOff(d.siteOff);
       })
       .catch(() => {});
     fetch(`/api/questions?meta=1&lang=${lang}`)
@@ -222,6 +224,20 @@ export default function Dashboard() {
     }
   }, [prcTimeLeft, prcActive, prcCount, prcWrong, loadLeaderboard]);
 
+  const toggleSiteOff = useCallback(async () => {
+    const goingOff = !siteOff;
+    const ok = window.confirm(goingOff ? t("siteOffConfirm") : t("siteOnConfirm"));
+    if (!ok) return;
+    try {
+      const res = await fetch("/api/admin/site-off", { method: "POST" });
+      if (!res.ok) return;
+      const d = await res.json();
+      setSiteOff(Boolean(d.off));
+    } catch {
+      /* ignore */
+    }
+  }, [siteOff, t]);
+
   const heroName = name || "Champion";
 
   return (
@@ -270,6 +286,22 @@ export default function Dashboard() {
 
           <ThemeSwitcher />
           <LanguageSwitcher compact />
+
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={toggleSiteOff}
+              title={siteOff ? t("siteOnTitle") : t("siteOffTitle")}
+              aria-label={siteOff ? t("siteOnTitle") : t("siteOffTitle")}
+              className={`font-cinzel font-bold text-xs rounded-xl px-3 py-1.5 border-2 cursor-pointer transition-all ${
+                siteOff
+                  ? "text-[#8ef0b0] border-[#2f7a4e] bg-[#10251a] hover:brightness-125"
+                  : "text-[#e9b48b] border-[#8a4322] bg-[#2a1108] hover:text-[#ff8b6b]"
+              }`}
+            >
+              ⏻ {siteOff ? "ON" : "OFF"}
+            </button>
+          )}
 
           <button
             onClick={logout}

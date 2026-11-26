@@ -10,6 +10,10 @@ export const TRANSLATIONS = {
   ro: {
     brandTitle: "STONE QUIZ",
     logout: "Ieșire",
+    siteOffTitle: "Oprește site-ul (mentenanță)",
+    siteOnTitle: "Repornește site-ul",
+    siteOffConfirm: "Oprești site-ul? Doar adminii vor mai vedea ceva.",
+    siteOnConfirm: "Repornești site-ul pentru toată lumea?",
     level: "Jucător",
     navHome: "Acasă",
     navDuel: "Quiz Fighter",
@@ -209,6 +213,10 @@ export const TRANSLATIONS = {
   en: {
     brandTitle: "STONE QUIZ",
     logout: "Sign Out",
+    siteOffTitle: "Switch the site off (maintenance)",
+    siteOnTitle: "Switch the site back on",
+    siteOffConfirm: "Switch the site off? Only admins will see anything.",
+    siteOnConfirm: "Switch the site back on for everyone?",
     level: "Player",
     navHome: "Home",
     navDuel: "Quiz Fighter",
