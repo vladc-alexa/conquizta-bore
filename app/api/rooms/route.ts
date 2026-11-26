@@ -14,6 +14,7 @@ import {
   type SiegeRoomLike,
   type SiegeRoundResult,
 } from "@/lib/siegeRoom";
+import { serveQuestion } from "@/lib/questionBank";
 
 export const dynamic = "force-dynamic";
 
@@ -137,16 +138,11 @@ function siegeState(room: GameRoom): SiegeRoomLike {
   return room as unknown as SiegeRoomLike;
 }
 
-/** Pull one question from the same endpoint the solo modes use. */
-async function fetchSiegeQuestion(req: Request, mode: SiegeMode, lang: "ro" | "en") {
+/** Pull one question straight from the shared picker (no self-HTTP: the prod proxy blocks it). */
+async function fetchSiegeQuestion(_req: Request, mode: SiegeMode, lang: "ro" | "en") {
   try {
-    const origin = new URL(req.url).origin;
-    const res = await fetch(`${origin}/api/questions?mode=${mode}&count=1&lang=${lang}`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return (data?.questions?.[0] as SiegeQuestion) ?? null;
+    const data = await serveQuestion(mode, 1, lang, null);
+    return ((data as { questions?: SiegeQuestion[] })?.questions?.[0] as SiegeQuestion) ?? null;
   } catch {
     return null;
   }
@@ -183,8 +179,15 @@ async function resolveSiegeRound(req: Request, room: GameRoom) {
 async function tickSiege(req: Request, room: GameRoom) {
   if (room.gameType !== "siege" || room.status !== "playing") return;
   const s = siegeState(room);
-  if (!s.roundQuestion || s.lastResult) return;
+  if (s.lastResult) return;
   const now = Date.now();
+  if (!s.roundQuestion) {
+    // a question fetch failed when the round was armed — keep retrying
+    if (now >= (s.roundStartedAt || 0)) {
+      await armSiegeRound(req, room, s.roundMode || "grila", 1200, room.currentRound || 1);
+    }
+    return;
+  }
   if (now < (s.roundStartedAt || 0)) return;
   if (!allHumansAnswered(s) && now <= roundDeadline(s)) return;
   await resolveSiegeRound(req, room);
