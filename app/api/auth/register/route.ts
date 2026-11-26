@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
-import { signSession, sessionCookie } from "@/lib/session";
 import { invalidateChatNames } from "@/lib/chatNames";
 import { getClientIp, getIpRule } from "@/lib/ip";
+import { issueToken } from "@/lib/authTokens";
+import { mailConfigured, sendMail } from "@/lib/mailer";
+import { verificationEmail } from "@/lib/emailTemplates";
 
 // Simple in-memory throttle: max 5 sign-ups per IP per hour. Best-effort
 // (resets on deploy, per-replica) — enough to stop scripted spam.
@@ -46,6 +48,14 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Prea multe conturi create de pe această conexiune. Încearcă mai târziu." },
         { status: 429 }
+      );
+    }
+
+    // Registration only works if we can actually send the confirmation mail.
+    if (!mailConfigured()) {
+      return NextResponse.json(
+        { error: "Înregistrarea e indisponibilă momentan. Încearcă mai târziu." },
+        { status: 503 }
       );
     }
 
@@ -98,15 +108,26 @@ export async function POST(req: Request) {
     // a brand-new player must be @-mentionable on the very next chat poll
     invalidateChatNames();
 
-    const token = await signSession({
-      sub: user.id,
-      name: user.displayName,
-      exp: Math.floor(Date.now() / 1000) + 30 * 86400,
-    });
-    return new NextResponse(JSON.stringify({ ok: true, name: user.displayName }), {
-      status: 201,
-      headers: { "Content-Type": "application/json", "Set-Cookie": sessionCookie(token) },
-    });
+    // A real mailbox is required: no session is handed out until the link is clicked.
+    try {
+      const token = await issueToken(user.id, "verify");
+      const mail = verificationEmail(user.displayName, token);
+      await sendMail({ to: email, ...mail });
+    } catch (mailErr) {
+      // Don't leave an unusable half-account behind if the mail never left.
+      await prisma.user.delete({ where: { id: user.id } }).catch(() => {});
+      invalidateChatNames();
+      console.error("[register] verification mail failed:", mailErr);
+      return NextResponse.json(
+        { error: "Nu am putut trimite emailul de confirmare. Încearcă din nou în câteva minute." },
+        { status: 503 }
+      );
+    }
+
+    return NextResponse.json(
+      { ok: true, requiresVerification: true, email, name: user.displayName },
+      { status: 201 }
+    );
   } catch (e) {
     // Unique-constraint race between the check above and the insert.
     const code = (e as { code?: string })?.code;

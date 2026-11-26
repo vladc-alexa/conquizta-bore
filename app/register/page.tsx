@@ -10,6 +10,8 @@ export default function RegisterPage() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sentTo, setSentTo] = useState("");
+  const [resent, setResent] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +40,8 @@ export default function RegisterPage() {
         setError(data.error || "Înregistrare eșuată.");
         return;
       }
-      window.location.href = "/";
+      // No session yet — the account unlocks when the emailed link is clicked.
+      setSentTo(email.trim().toLowerCase());
     } catch {
       setError("Eroare de rețea. Încearcă din nou.");
     } finally {
@@ -49,6 +52,47 @@ export default function RegisterPage() {
   const inputCls =
     "bg-[#050d0b] border-2 border-[#1e3a34] rounded-lg text-[#9ec6c1] p-2.5 outline-none focus:border-[#6f9c99]";
   const labelCls = "flex flex-col gap-1.5 text-[0.8rem] text-[#8fb0ac]";
+
+  const resend = async () => {
+    try {
+      await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: sentTo }),
+      });
+    } finally {
+      setResent(true);
+    }
+  };
+
+  if (sentTo) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh] w-full">
+        <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl w-full max-w-[420px] p-7 flex flex-col gap-4 text-center">
+          <p className="text-3xl">📜</p>
+          <p className="text-center text-[#d7e6e3] font-cinzel">Verifică-ți emailul</p>
+          <p className="text-[0.85rem] text-[#9ec6c1] leading-relaxed">
+            Am trimis un link de confirmare la <span className="text-[#e2eeeb] font-semibold">{sentTo}</span>.
+            Contul se activează după ce apeși linkul (valabil 24 de ore).
+          </p>
+          <p className="text-[0.75rem] text-[#75938f]">
+            Nu-l găsești? Verifică folderul spam sau retrimite.
+          </p>
+          <button
+            type="button"
+            onClick={resend}
+            disabled={resent}
+            className="bg-[#1e3a34] border border-[#6f9c99]/60 rounded-lg text-[#d7e6e3] p-2.5 text-[0.85rem] hover:brightness-110 disabled:opacity-60 cursor-pointer"
+          >
+            {resent ? "Email retrimis." : "Retrimite emailul"}
+          </button>
+          <Link href="/login" className="text-center text-[0.78rem] text-[#9ec6c1] underline hover:text-[#d7e6e3]">
+            Am confirmat — intră în cont
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-[80vh] w-full">

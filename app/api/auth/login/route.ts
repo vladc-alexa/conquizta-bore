@@ -44,6 +44,17 @@ export async function POST(req: Request) {
     if (!user?.passwordHash || !verifyPassword(password, user.passwordHash)) {
       return NextResponse.json({ error: "Email sau parolă incorecte." }, { status: 401 });
     }
+    // Accounts created through /register stay locked until the mailbox is proven.
+    if (!user.emailVerifiedAt) {
+      return NextResponse.json(
+        {
+          error:
+            "Confirmă-ți adresa de email ca să intri în cont. Verifică inboxul (și folderul spam) pentru linkul de activare.",
+          code: "EMAIL_UNVERIFIED",
+        },
+        { status: 403 }
+      );
+    }
     await touchUserIp(user.id, ip);
     const token = await signSession({
       sub: user.id,

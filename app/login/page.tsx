@@ -10,10 +10,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [unverified, setUnverified] = useState(false);
+  const [resent, setResent] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setUnverified(false);
+    setResent(false);
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
@@ -24,6 +28,7 @@ export default function LoginPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error || t("loginFailed"));
+        setUnverified(data?.code === "EMAIL_UNVERIFIED");
         return;
       }
       window.location.href = "/";
@@ -31,6 +36,20 @@ export default function LoginPage() {
       setError(t("loginNetError"));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const resend = async () => {
+    setResent(false);
+    try {
+      await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      setResent(true);
+    } catch {
+      setError(t("loginNetError"));
     }
   };
 
@@ -94,6 +113,22 @@ export default function LoginPage() {
           </div>
         )}
 
+        {unverified && (
+          <button
+            type="button"
+            onClick={resend}
+            className="text-xs text-[#ffe28a] underline hover:text-white bg-transparent cursor-pointer"
+          >
+            {resent
+              ? lang === "ro"
+                ? "Email retrimis — verifică inboxul."
+                : "Email re-sent — check your inbox."
+              : lang === "ro"
+                ? "Retrimite emailul de confirmare"
+                : "Resend confirmation email"}
+          </button>
+        )}
+
         <button
           type="submit"
           disabled={loading}
@@ -106,6 +141,12 @@ export default function LoginPage() {
           {lang === "ro" ? "Nu ai cont? " : "No account yet? "}
           <a href="/register" className="text-[#ffe28a] underline hover:text-white font-semibold">
             {lang === "ro" ? "Creează unul" : "Create one"}
+          </a>
+        </p>
+
+        <p className="text-center text-xs text-[#bfa576]">
+          <a href="/forgot-password" className="underline hover:text-white">
+            {lang === "ro" ? "Ai uitat parola?" : "Forgot password?"}
           </a>
         </p>
 
