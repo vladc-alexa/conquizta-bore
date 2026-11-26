@@ -108,15 +108,126 @@ body {
     0 14px 36px rgba(0, 0, 0, 0.78),
     0 0 0 1px rgba(40, 22, 6, 0.9),
     inset 0 1px 0 rgba(255, 240, 190, 0.6);
+  animation: cardAuraStone 4.4s ease-in-out infinite;
   transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease, border-color 220ms ease;
+}
+.mode-card::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 34%,
+    rgba(255, 232, 165, 0.08) 44%,
+    rgba(255, 248, 220, 0.36) 50%,
+    rgba(255, 232, 165, 0.08) 56%,
+    transparent 66%
+  );
+  transform: translateX(-120%) skewX(-16deg);
+  animation: cardShineSweep 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.mode-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -30%;
+  right: -30%;
+  height: 2px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 238, 175, 0.85), transparent);
+  opacity: 0.7;
+  animation: cardRimGlint 4.2s ease-in-out infinite;
+}
+.mode-card:nth-child(2)::before,
+.mode-card:nth-child(2)::after {
+  animation-delay: 0.9s;
+}
+.mode-card:nth-child(3)::before,
+.mode-card:nth-child(3)::after {
+  animation-delay: 1.8s;
+}
+.mode-card:nth-child(4)::before,
+.mode-card:nth-child(4)::after {
+  animation-delay: 2.7s;
 }
 .mode-card:hover {
   transform: translateY(-6px) scale(1.015);
   border-color: #ffe399;
   box-shadow:
     0 22px 44px rgba(0, 0, 0, 0.85),
-    0 0 26px rgba(245, 190, 72, 0.42),
+    0 0 28px rgba(245, 190, 72, 0.48),
     inset 0 1px 0 rgba(255, 248, 214, 0.85);
+}
+.mode-card:hover::before {
+  animation: cardShineHover 0.95s ease-out forwards;
+}
+
+@keyframes cardShineSweep {
+  0%, 58% {
+    transform: translateX(-125%) skewX(-16deg);
+  }
+  84%, 100% {
+    transform: translateX(125%) skewX(-16deg);
+  }
+}
+
+@keyframes cardShineHover {
+  0% {
+    transform: translateX(-125%) skewX(-16deg);
+  }
+  100% {
+    transform: translateX(125%) skewX(-16deg);
+  }
+}
+
+@keyframes cardRimGlint {
+  0%, 100% {
+    transform: translateX(-25%);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateX(25%);
+    opacity: 0.9;
+  }
+}
+
+@keyframes cardAuraStone {
+  0%, 100% {
+    box-shadow:
+      0 14px 36px rgba(0, 0, 0, 0.78),
+      0 0 12px rgba(245, 190, 72, 0.16),
+      inset 0 1px 0 rgba(255, 240, 190, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 16px 40px rgba(0, 0, 0, 0.82),
+      0 0 24px rgba(245, 190, 72, 0.34),
+      inset 0 1px 0 rgba(255, 246, 205, 0.78);
+  }
+}
+
+@keyframes cardAuraScifi {
+  0%, 100% {
+    box-shadow:
+      0 14px 36px rgba(0, 0, 0, 0.8),
+      0 0 14px rgba(56, 189, 248, 0.22);
+  }
+  50% {
+    box-shadow:
+      0 16px 40px rgba(0, 0, 0, 0.85),
+      0 0 28px rgba(56, 189, 248, 0.45);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mode-card,
+  .mode-card::before,
+  .mode-card::after {
+    animation: none !important;
+  }
 }
 
 .btn-crimson {
@@ -223,9 +334,23 @@ html[data-theme="scifi"] .parchment-panel p {
 
 html[data-theme="scifi"] .mode-card {
   border-color: #38bdf8;
+  animation: cardAuraScifi 4.4s ease-in-out infinite;
   box-shadow:
     0 14px 36px rgba(0, 0, 0, 0.8),
     0 0 16px rgba(56, 189, 248, 0.25);
+}
+html[data-theme="scifi"] .mode-card::before {
+  background: linear-gradient(
+    115deg,
+    transparent 34%,
+    rgba(125, 211, 252, 0.1) 44%,
+    rgba(224, 242, 254, 0.4) 50%,
+    rgba(125, 211, 252, 0.1) 56%,
+    transparent 66%
+  );
+}
+html[data-theme="scifi"] .mode-card::after {
+  background: linear-gradient(90deg, transparent, rgba(125, 211, 252, 0.9), transparent);
 }
 html[data-theme="scifi"] .mode-card:hover {
   border-color: #7dd3fc;
