@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { signSession, sessionCookie } from "@/lib/session";
 import { invalidateChatNames } from "@/lib/chatNames";
+import { getClientIp, getIpRule } from "@/lib/ip";
 
 // Simple in-memory throttle: max 5 sign-ups per IP per hour. Best-effort
 // (resets on deploy, per-replica) — enough to stop scripted spam.
@@ -33,10 +34,14 @@ const RESERVED = new Set(["test", "test@test.com", "admin", "administrator"]);
 // POST /api/auth/register { displayName, email, password }
 export async function POST(req: Request) {
   try {
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
-      req.headers.get("x-real-ip")?.trim() ||
-      "unknown";
+    const ip = getClientIp(req);
+    const ipRule = await getIpRule(ip);
+    if (ipRule?.isBanned) {
+      return NextResponse.json(
+        { error: "Accesul de pe această adresă IP a fost blocat." },
+        { status: 403 }
+      );
+    }
     if (tooManyAttempts(ip)) {
       return NextResponse.json(
         { error: "Prea multe conturi create de pe această conexiune. Încearcă mai târziu." },
@@ -87,7 +92,7 @@ export async function POST(req: Request) {
     }
 
     const user = await prisma.user.create({
-      data: { displayName, email, passwordHash: hashPassword(password) },
+      data: { displayName, email, passwordHash: hashPassword(password), lastIp: ip !== "unknown" ? ip : null },
       select: { id: true, displayName: true },
     });
     // a brand-new player must be @-mentionable on the very next chat poll

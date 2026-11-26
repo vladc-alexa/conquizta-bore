@@ -41,6 +41,7 @@ export default function Dashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
+  const [chatError, setChatError] = useState<string | null>(null);
   const [rows, setRows] = useState<DailyLeaderRow[]>([]);
   const [onlinePlayers, setOnlinePlayers] = useState<OnlinePlayer[]>([]);
   const [sending, setSending] = useState(false);
@@ -131,6 +132,7 @@ export default function Dashboard() {
     const text = chatInput.trim();
     if (!text || sending) return;
     setSending(true);
+    setChatError(null);
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -140,6 +142,9 @@ export default function Dashboard() {
       if (res.ok) {
         setChatInput("");
         loadChat();
+      } else {
+        const data = await res.json().catch(() => null);
+        setChatError(data?.error || (lang === "ro" ? "Mesajul nu a putut fi trimis." : "Failed to send message."));
       }
     } finally {
       setSending(false);
@@ -319,6 +324,11 @@ export default function Dashboard() {
             )}
             <div ref={chatEndRef} />
           </div>
+          {chatError && (
+            <div className="px-3 py-1.5 bg-[#3a1419]/90 border-t border-[#b54545]/50 text-[#ffbdbd] text-[11px]">
+              {chatError}
+            </div>
+          )}
           <div className="p-2.5 border-t border-[#b68635]/40 flex gap-2 bg-[#120e19]/80 rounded-b-2xl">
             <input
               value={chatInput}

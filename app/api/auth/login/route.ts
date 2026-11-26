@@ -2,9 +2,19 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 import { signSession, sessionCookie } from "@/lib/session";
+import { getClientIp, getIpRule, touchUserIp } from "@/lib/ip";
 
 export async function POST(req: Request) {
   try {
+    const ip = getClientIp(req);
+    const ipRule = await getIpRule(ip);
+    if (ipRule?.isBanned) {
+      return NextResponse.json(
+        { error: "Accesul de pe această adresă IP a fost blocat." },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json().catch(() => null);
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
     const password = typeof body?.password === "string" ? body.password : "";
@@ -34,6 +44,7 @@ export async function POST(req: Request) {
     if (!user?.passwordHash || !verifyPassword(password, user.passwordHash)) {
       return NextResponse.json({ error: "Email sau parolă incorecte." }, { status: 401 });
     }
+    await touchUserIp(user.id, ip);
     const token = await signSession({
       sub: user.id,
       name: user.displayName,

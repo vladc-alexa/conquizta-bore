@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
 import { hashPassword } from "@/lib/password";
+import { listIpRules } from "@/lib/ip";
 
 async function requireAdmin(): Promise<{ id: string } | NextResponse> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
@@ -16,11 +17,35 @@ async function requireAdmin(): Promise<{ id: string } | NextResponse> {
 export async function GET() {
   const auth = await requireAdmin();
   if (auth instanceof NextResponse) return auth;
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: "asc" },
-    select: { id: true, displayName: true, email: true, isAdmin: true, isMuted: true, hideScore: true, canEditQuestions: true, createdAt: true },
+  const [users, ipRules] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        displayName: true,
+        email: true,
+        isAdmin: true,
+        isMuted: true,
+        hideScore: true,
+        canEditQuestions: true,
+        lastIp: true,
+        createdAt: true,
+      },
+    }),
+    listIpRules(),
+  ]);
+  const ruleByIp = new Map(ipRules.map((r) => [r.ip, r]));
+  return NextResponse.json({
+    users: users.map((u) => {
+      const rule = u.lastIp ? ruleByIp.get(u.lastIp) : undefined;
+      return {
+        ...u,
+        ipBanned: rule?.isBanned ?? false,
+        ipMuted: rule?.isMuted ?? false,
+      };
+    }),
+    ipRules,
   });
-  return NextResponse.json({ users });
 }
 
 export async function POST(req: Request) {

@@ -6,6 +6,8 @@ import { DEFAULT_CHAT_COLOR } from "@/lib/chatColors";
 import { normalizeMessage } from "@/lib/messageText";
 import { findMentionedNames } from "@/lib/mentions";
 import { chatNames } from "@/lib/chatNames";
+import { getClientIp, getIpRule, touchUserIp } from "@/lib/ip";
+import { checkChatSpam } from "@/lib/chatSpam";
 
 const CHAT_PAGE = 100;
 
@@ -87,14 +89,31 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Mesajul nu poate fi gol." }, { status: 400 });
   }
 
+  const ip = getClientIp(req);
+  const ipRule = await getIpRule(ip);
+  if (ipRule?.isBanned) {
+    return NextResponse.json({ error: "Accesul de pe această adresă IP a fost blocat." }, { status: 403 });
+  }
+  if (ipRule?.isMuted) {
+    return NextResponse.json({ error: "Această adresă IP este mutată. Nu poți trimite mesaje." }, { status: 403 });
+  }
+
+  const spam = checkChatSpam(session.sub, ip, text);
+  if (!spam.ok && "error" in spam) {
+    return NextResponse.json({ error: spam.error }, { status: spam.status });
+  }
+
   try {
     const user = await prisma.user.findUnique({
       where: { id: session.sub },
-      select: { displayName: true, isMuted: true },
+      select: { displayName: true, isMuted: true, lastIp: true },
     });
     if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     if (user.isMuted) {
       return NextResponse.json({ error: "Ești mutat. Nu poți trimite mesaje." }, { status: 403 });
+    }
+    if (ip !== "unknown" && user.lastIp !== ip) {
+      await touchUserIp(session.sub, ip);
     }
     const replyToId = typeof body?.replyToId === "string" && body.replyToId ? body.replyToId : null;
     if (replyToId) {

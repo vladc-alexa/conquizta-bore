@@ -11,7 +11,17 @@ interface AdminUser {
   isMuted: boolean;
   hideScore: boolean;
   canEditQuestions: boolean;
+  lastIp: string | null;
+  ipBanned?: boolean;
+  ipMuted?: boolean;
   createdAt: string;
+}
+
+interface IpRule {
+  ip: string;
+  isBanned: boolean;
+  isMuted: boolean;
+  reason?: string | null;
 }
 
 type EditAction = "create" | "import" | "edit" | "publish" | "unpublish" | "delete";
@@ -61,6 +71,8 @@ const fmtWhen = (iso: string) =>
 export default function AdminPage() {
   const [me, setMe] = useState<{ name: string; isAdmin: boolean; canEditQuestions: boolean } | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [ipRules, setIpRules] = useState<IpRule[]>([]);
+  const [manualIp, setManualIp] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -124,6 +136,7 @@ export default function AdminPage() {
     if (res.ok) {
       const data = await res.json();
       setUsers(data.users ?? []);
+      setIpRules(data.ipRules ?? []);
     }
   }, []);
 
@@ -387,6 +400,23 @@ export default function AdminPage() {
     }
   };
 
+  const applyIpAction = async (ip: string, action: "ban" | "unban" | "mute" | "unmute") => {
+    setError("");
+    setOk("");
+    const res = await fetch("/api/admin/ip", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ip, action }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || "Eroare la actualizarea regulii IP.");
+      return;
+    }
+    setOk(`Regula IP pentru ${ip} a fost actualizată.`);
+    load();
+  };
+
   const renameUser = async (u: AdminUser) => {
     const newName = window.prompt(`Nume nou pentru ${u.displayName}:`, u.displayName);
     if (!newName || newName.trim() === u.displayName) return;
@@ -521,13 +551,19 @@ export default function AdminPage() {
               key={u.id}
               className="grid grid-cols-[1fr_auto_auto] gap-3 items-center text-[0.85rem] p-2 px-2.5 rounded odd:bg-white/5"
             >
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-wrap">
                 <span className="font-cinzel text-[#9ec6c1] truncate">{u.displayName}</span>
                 {u.isAdmin && (
                   <span className="text-[0.65rem] text-[#0c1a17] bg-[#9ec6c1] rounded px-1.5 py-0.5 font-bold">ADMIN</span>
                 )}
                 {u.isMuted && (
                   <span className="text-[0.65rem] text-red-400 bg-red-900/30 border border-red-500/40 rounded px-1.5 py-0.5">🔇 MUTAT</span>
+                )}
+                {u.ipBanned && (
+                  <span className="text-[0.65rem] text-red-300 bg-red-950/60 border border-red-500/60 rounded px-1.5 py-0.5">🚫 IP BAN</span>
+                )}
+                {u.ipMuted && (
+                  <span className="text-[0.65rem] text-amber-300 bg-amber-950/60 border border-amber-500/60 rounded px-1.5 py-0.5">🔇 IP MUT</span>
                 )}
                 {u.hideScore && (
                   <span className="text-[0.65rem] text-[#b57edc] bg-purple-900/30 border border-purple-500/40 rounded px-1.5 py-0.5">🔒 SCOR ASCUNS</span>
@@ -536,7 +572,12 @@ export default function AdminPage() {
                   <span className="text-[0.65rem] text-[#9ec6c1] bg-amber-900/30 border border-amber-500/40 rounded px-1.5 py-0.5">✏️ EDITOR</span>
                 )}
               </div>
-              <span className="text-[#8fb0ac] text-[0.75rem]">{u.email || "—"}</span>
+              <div className="flex flex-col text-right">
+                <span className="text-[#8fb0ac] text-[0.75rem]">{u.email || "—"}</span>
+                <span className="text-[#6f9993] font-mono text-[0.7rem]" title="Ultimul IP cunoscut">
+                  IP: {u.lastIp || "—"}
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 <span className="text-[#75938f] text-[0.7rem]">{new Date(u.createdAt).toLocaleDateString("ro-RO")}</span>
                 <button
@@ -581,6 +622,32 @@ export default function AdminPage() {
                     >
                       {u.isMuted ? "Dezmută" : "Mută"}
                     </button>
+                    {u.lastIp && (
+                      <>
+                        <button
+                          onClick={() => applyIpAction(u.lastIp!, u.ipMuted ? "unmute" : "mute")}
+                          className={`text-[0.7rem] border rounded px-1.5 py-0.5 cursor-pointer hover:brightness-110 ${
+                            u.ipMuted
+                              ? "text-green-400 border-green-500/40 hover:bg-green-900/30"
+                              : "text-amber-300 border-amber-500/40 hover:bg-amber-900/30"
+                          }`}
+                          title={u.ipMuted ? `Scoate mut IP ${u.lastIp}` : `Mută IP ${u.lastIp}`}
+                        >
+                          {u.ipMuted ? "Dezmută IP" : "Mut IP"}
+                        </button>
+                        <button
+                          onClick={() => applyIpAction(u.lastIp!, u.ipBanned ? "unban" : "ban")}
+                          className={`text-[0.7rem] border rounded px-1.5 py-0.5 cursor-pointer hover:brightness-110 ${
+                            u.ipBanned
+                              ? "text-green-400 border-green-500/40 hover:bg-green-900/30"
+                              : "text-red-300 border-red-500/50 hover:bg-red-900/30"
+                          }`}
+                          title={u.ipBanned ? `Debanează IP ${u.lastIp}` : `Banează IP ${u.lastIp}`}
+                        >
+                          {u.ipBanned ? "Debanează IP" : "Ban IP"}
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={() => remove(u)}
                       className="text-red-400/80 hover:text-red-300 text-[0.75rem] cursor-pointer"
@@ -594,6 +661,76 @@ export default function AdminPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* IP Ban / Mute rules */}
+      <div className="bg-gradient-to-br from-[#122420] to-[#0c1a17] border-2 border-[#1e3a34] rounded-2xl shadow-2xl p-5 flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h3 className="font-cinzel text-[#9ec6c1] text-[0.9rem] tracking-widest">
+            Reguli IP — Ban & Mut ({ipRules.length})
+          </h3>
+          <div className="flex items-center gap-2">
+            <input
+              value={manualIp}
+              onChange={(e) => setManualIp(e.target.value)}
+              placeholder="ex: 1.2.3.4"
+              className="bg-[#091412] border border-[#1e3a34] rounded px-2.5 py-1 text-xs text-[#e0efec] font-mono outline-none focus:border-[#4b8a82]"
+            />
+            <button
+              type="button"
+              disabled={!manualIp.trim()}
+              onClick={() => { applyIpAction(manualIp.trim(), "mute"); setManualIp(""); }}
+              className="text-[0.7rem] border border-amber-500/40 text-amber-300 rounded px-2 py-1 hover:bg-amber-900/30 cursor-pointer disabled:opacity-40"
+            >
+              Mut IP
+            </button>
+            <button
+              type="button"
+              disabled={!manualIp.trim()}
+              onClick={() => { applyIpAction(manualIp.trim(), "ban"); setManualIp(""); }}
+              className="text-[0.7rem] border border-red-500/50 text-red-300 rounded px-2 py-1 hover:bg-red-900/30 cursor-pointer disabled:opacity-40"
+            >
+              Ban IP
+            </button>
+          </div>
+        </div>
+        {ipRules.length === 0 ? (
+          <div className="text-[#75938f] text-xs">Nicio adresă IP blocată sau mutată momentan.</div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {ipRules.map((r) => (
+              <div key={r.ip} className="flex items-center justify-between gap-2 text-xs px-2.5 py-1.5 rounded bg-white/5">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[#9ec6c1]">{r.ip}</span>
+                  {r.isBanned && (
+                    <span className="text-[0.65rem] text-red-300 bg-red-950/60 border border-red-500/60 rounded px-1.5 py-0.5">🚫 BANNED</span>
+                  )}
+                  {r.isMuted && (
+                    <span className="text-[0.65rem] text-amber-300 bg-amber-950/60 border border-amber-500/60 rounded px-1.5 py-0.5">🔇 MUTED</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {r.isMuted && (
+                    <button
+                      onClick={() => applyIpAction(r.ip, "unmute")}
+                      className="text-[0.7rem] border border-green-500/40 text-green-400 rounded px-2 py-0.5 hover:bg-green-900/30 cursor-pointer"
+                    >
+                      Dezmută IP
+                    </button>
+                  )}
+                  {r.isBanned && (
+                    <button
+                      onClick={() => applyIpAction(r.ip, "unban")}
+                      className="text-[0.7rem] border border-green-500/40 text-green-400 rounded px-2 py-0.5 hover:bg-green-900/30 cursor-pointer"
+                    >
+                      Debanează IP
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       </>
       )}
