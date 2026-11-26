@@ -22,6 +22,14 @@ interface DailyLeaderRow {
   accuracy: number;
 }
 
+interface OnlinePlayer {
+  id: string;
+  name: string;
+  color?: string | null;
+  online?: boolean;
+  where?: string | null;
+}
+
 // Preserved localStorage key so existing players keep their PRC records
 const PRC_BEST_KEY = "conquizta_bore_prc_best";
 const PRC_SECONDS = 30;
@@ -34,6 +42,7 @@ export default function Dashboard() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [rows, setRows] = useState<DailyLeaderRow[]>([]);
+  const [onlinePlayers, setOnlinePlayers] = useState<OnlinePlayer[]>([]);
   const [sending, setSending] = useState(false);
   const [bankCount, setBankCount] = useState<number>(1660);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -75,6 +84,17 @@ export default function Dashboard() {
     }
   }, []);
 
+  const loadOnlinePlayers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/players");
+      if (!res.ok) return;
+      const data = await res.json();
+      setOnlinePlayers(data.players ?? []);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
@@ -90,15 +110,18 @@ export default function Dashboard() {
       .catch(() => {});
     loadChat();
     loadLeaderboard();
+    loadOnlinePlayers();
     const best = parseInt(localStorage.getItem(PRC_BEST_KEY) || "0", 10);
     if (!isNaN(best)) setPrcBest(best);
     const chatTimer = setInterval(loadChat, 5000);
     const lbTimer = setInterval(loadLeaderboard, 15000);
+    const playersTimer = setInterval(loadOnlinePlayers, 15000);
     return () => {
       clearInterval(chatTimer);
       clearInterval(lbTimer);
+      clearInterval(playersTimer);
     };
-  }, [lang, loadChat, loadLeaderboard]);
+  }, [lang, loadChat, loadLeaderboard, loadOnlinePlayers]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -120,6 +143,19 @@ export default function Dashboard() {
       }
     } finally {
       setSending(false);
+    }
+  };
+
+  const deleteMessage = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/chat/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setMessages((prev) => prev.filter((m) => m.id !== id));
+      }
+    } catch {
+      /* ignore */
     }
   };
 
@@ -254,17 +290,30 @@ export default function Dashboard() {
               {messages.length} {t("chatMessages")}
             </span>
           </div>
-          <div className="flex-1 overflow-y-auto p-3.5 flex flex-col gap-2">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 flex flex-col gap-2 min-w-0">
             {messages.length === 0 ? (
               <div className="text-[#b89f72] text-xs text-center my-auto">{t("chatEmpty")}</div>
             ) : (
               messages.map((m) => (
                 <div
                   key={m.id}
-                  className="text-xs leading-relaxed bg-[#0f0c16]/65 border border-[#7a5828]/25 rounded-lg px-2.5 py-1.5"
+                  className="text-xs leading-relaxed bg-[#0f0c16]/65 border border-[#7a5828]/25 rounded-lg px-2.5 py-1.5 flex items-start justify-between gap-2 min-w-0"
                 >
-                  <span className="font-cinzel font-bold text-[#f0ba58]">{m.authorName}:</span>{" "}
-                  <span className="text-[#efe2c6]">{m.text}</span>
+                  <div className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
+                    <span className="font-cinzel font-bold text-[#f0ba58]">{m.authorName}:</span>{" "}
+                    <span className="text-[#efe2c6]">{m.text}</span>
+                  </div>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => deleteMessage(m.id)}
+                      className="shrink-0 text-[#d88989] hover:text-[#ff6b6b] hover:bg-[#3a1419]/60 rounded px-1.5 py-0.5 text-[0.7rem] cursor-pointer transition-colors"
+                      title={lang === "ro" ? "Șterge mesajul" : "Delete message"}
+                      aria-label={lang === "ro" ? "Șterge mesajul" : "Delete message"}
+                    >
+                      🗑
+                    </button>
+                  )}
                 </div>
               ))
             )}
@@ -406,23 +455,23 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Bottom Grid: Clasamentul Zilei (combined wins + correct/wrong) & PRC Speed Trial */}
-          <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-4">
-            {/* Clasamentul Zilei */}
-            <section ref={ranksSectionRef} className="royal-panel rounded-2xl p-4 flex flex-col gap-3 min-h-[260px]">
-              <div className="flex items-center justify-between border-b border-[#b68635]/40 pb-2">
+          {/* Bottom Grid: Narrower Clasamentul Zilei + Online Players + PRC Speed Trial */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.95fr_1fr_0.9fr] gap-4">
+            {/* Clasamentul Zilei (narrower) */}
+            <section ref={ranksSectionRef} className="royal-panel rounded-2xl p-3.5 flex flex-col gap-2.5 min-h-[260px]">
+              <div className="flex items-center justify-between border-b border-[#b68635]/40 pb-2 gap-2">
                 <Link
                   href="/leaderboard"
-                  className="font-cinzel font-bold text-[#f7d279] hover:text-[#fff0b3] text-xs sm:text-sm tracking-[0.14em] uppercase flex items-center gap-2"
+                  className="font-cinzel font-bold text-[#f7d279] hover:text-[#fff0b3] text-xs tracking-[0.12em] uppercase flex items-center gap-1.5 truncate"
                 >
                   <span>👑</span> {t("leaderboardTitle")}
                 </Link>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <Link
                     href="/leaderboard"
-                    className="text-[0.68rem] font-cinzel text-[#d6b77f] hover:text-[#ffe49e] underline"
+                    className="text-[0.65rem] font-cinzel text-[#d6b77f] hover:text-[#ffe49e] underline"
                   >
-                    {lang === "ro" ? "Tot clasamentul" : "Full Standings"}
+                    {lang === "ro" ? "Tot" : "All"}
                   </Link>
                   <button
                     onClick={loadLeaderboard}
@@ -442,7 +491,7 @@ export default function Dashboard() {
                   rows.map((r, i) => (
                     <div
                       key={(r.id || r.name) + i}
-                      className="grid grid-cols-[26px_1fr_auto_auto_auto] gap-2.5 text-xs px-2.5 py-2 rounded-lg items-center bg-[#120e1a]/70 border border-[#7a5828]/30"
+                      className="grid grid-cols-[22px_minmax(0,1fr)_auto_auto] gap-1.5 text-[11px] px-2 py-1.5 rounded-lg items-center bg-[#120e1a]/70 border border-[#7a5828]/30"
                     >
                       <span
                         className={`font-cinzel font-extrabold text-center ${
@@ -458,19 +507,85 @@ export default function Dashboard() {
                         {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
                       </span>
                       <span className="font-cinzel font-bold truncate text-[#f6ead0]">{r.name}</span>
-                      <span className="text-[#f7cf70] font-bold">
-                        🏆 {r.wins} {t("wins")}
+                      <span className="text-[#f7cf70] font-bold whitespace-nowrap">
+                        🏆 {r.wins}
                       </span>
-                      <span className="font-mono text-[0.72rem] bg-[#0c0a14] border border-[#7a5828]/40 rounded px-2 py-0.5">
+                      <span
+                        className="font-mono text-[10px] bg-[#0c0a14] border border-[#7a5828]/40 rounded px-1.5 py-0.5 whitespace-nowrap"
+                        title={`${r.accuracy}%`}
+                      >
                         <span className="text-emerald-400 font-bold">{r.correct}✓</span>
-                        <span className="text-[#8e7a56] mx-1">/</span>
+                        <span className="text-[#8e7a56] mx-0.5">/</span>
                         <span className="text-rose-400 font-bold">{r.wrong}✗</span>
-                      </span>
-                      <span className="text-[#9cc5f0] text-right font-semibold text-[0.7rem] min-w-[34px]">
-                        {r.accuracy}%
                       </span>
                     </div>
                   ))
+                )}
+              </div>
+            </section>
+
+            {/* Jucători Online */}
+            <section className="royal-panel rounded-2xl p-3.5 flex flex-col gap-2.5 min-h-[260px]">
+              <div className="flex items-center justify-between border-b border-[#b68635]/40 pb-2 gap-2">
+                <h3 className="font-cinzel font-bold text-[#f7d279] text-xs tracking-[0.12em] uppercase flex items-center gap-1.5 truncate">
+                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+                  {lang === "ro" ? "Jucători online" : "Online Players"}
+                </h3>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[0.65rem] font-cinzel font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 rounded-full px-2 py-0.5">
+                    {onlinePlayers.filter((p) => p.online).length}
+                  </span>
+                  <button
+                    onClick={loadOnlinePlayers}
+                    className="text-[#d6b77f] hover:text-[#ffe49e] text-sm cursor-pointer transition-colors"
+                    title={t("refresh")}
+                  >
+                    ⟳
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto flex flex-col gap-1.5 max-h-[240px]">
+                {onlinePlayers.length === 0 ? (
+                  <div className="text-[#b89f72] text-xs text-center my-auto p-4">
+                    {lang === "ro" ? "Niciun jucător online momentan." : "No online players right now."}
+                  </div>
+                ) : (
+                  onlinePlayers
+                    .slice()
+                    .sort((a, b) => Number(Boolean(b.online)) - Number(Boolean(a.online)))
+                    .map((p) => (
+                      <div
+                        key={p.id}
+                        className={`flex items-center justify-between gap-2 text-xs px-2.5 py-1.5 rounded-lg border ${
+                          p.online
+                            ? "bg-[#120e1a]/80 border-[#7a5828]/40"
+                            : "bg-[#0d0a13]/50 border-[#7a5828]/20 opacity-60"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={`w-2 h-2 rounded-full shrink-0 ${
+                              p.online ? "bg-emerald-400 shadow-[0_0_6px_#34d399]" : "bg-[#6b5c43]"
+                            }`}
+                          />
+                          <span
+                            className="font-cinzel font-bold truncate"
+                            style={{ color: p.color || "#f6ead0" }}
+                          >
+                            {p.name}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-cinzel shrink-0 text-[#c9b285]">
+                          {p.where
+                            ? p.where === "tower"
+                              ? "🗼 Turnul"
+                              : "⚔️ În joc"
+                            : p.online
+                            ? "Online"
+                            : "Offline"}
+                        </span>
+                      </div>
+                    ))
                 )}
               </div>
             </section>
