@@ -403,8 +403,11 @@ export default function Dashboard() {
                 </div>
               </div>
             </button>
+          </div>
 
-            {/* Card 5: ANTRENAMENT (equal-sized card on row 2, no subtitle) */}
+          {/* Row 2: Equal-sized Antrenament card on left + Daily Leaderboard & Online Players to its right */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 items-stretch">
+            {/* Card 5: ANTRENAMENT (equal-sized card, no subtitle) */}
             <Link href="/train" className="mode-card group aspect-[3/4] flex flex-col justify-end">
               <img
                 src={art.cardTrain}
@@ -418,12 +421,11 @@ export default function Dashboard() {
                 </div>
               </div>
             </Link>
-          </div>
 
-          {/* Bottom Grid: Clasamentul Zilei + Online Players */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.95fr_1fr_0.9fr] gap-4">
-            {/* Clasamentul Zilei (narrower) */}
-            <section ref={ranksSectionRef} className="royal-panel rounded-2xl p-3.5 flex flex-col gap-2.5 min-h-[260px]">
+            {/* Daily Leaderboard + Online Players to the right of Training Grounds */}
+            <div className="sm:col-span-1 xl:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {/* Clasamentul Zilei */}
+              <section ref={ranksSectionRef} className="royal-panel rounded-2xl p-3.5 flex flex-col gap-2.5 min-h-[260px]">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-[#b68635]/40 pb-2">
                 <Link
                   href="/leaderboard"
@@ -577,7 +579,7 @@ export default function Dashboard() {
                 )}
               </div>
             </section>
-
+            </div>
           </div>
         </section>
       {(prcActive || prcDone) && (
