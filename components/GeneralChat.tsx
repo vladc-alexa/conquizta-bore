@@ -189,22 +189,17 @@ export default function GeneralChat({
     if (refreshToken) loadChat(true);
   }, [refreshToken, loadChat]);
 
-  // opening the dock clears the badge and starts from the newest message
+  // opening the dock clears the badge; the transcript stays where the reader
+  // left it (no automatic jump to the newest message)
   useEffect(() => {
     if (dock && open) {
       setUnread(0);
       setMentionUnread(0);
       setToast(null);
-      requestAnimationFrame(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: "auto" });
-      });
     }
   }, [dock, open]);
 
-  useEffect(() => {
-    if (dock && !open) return;
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, dock, open]);
+  // (intentionally no scrollIntoView on new messages — the view never jumps)
 
   // toast retires on its own
   useEffect(() => {

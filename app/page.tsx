@@ -16,10 +16,10 @@ interface ChatMessage {
 interface DailyLeaderRow {
   id?: string;
   name: string;
-  wins: number;
+  wins?: number;
   correct: number;
   wrong: number;
-  accuracy: number;
+  accuracy?: number;
 }
 
 interface OnlinePlayer {
@@ -44,6 +44,9 @@ export default function Dashboard() {
   const [chatInput, setChatInput] = useState("");
   const [chatError, setChatError] = useState<string | null>(null);
   const [rows, setRows] = useState<DailyLeaderRow[]>([]);
+  const [rankTab, setRankTab] = useState<"day" | "speed">("day");
+  const [speedRows, setSpeedRows] = useState<DailyLeaderRow[]>([]);
+  const [speedBest, setSpeedBest] = useState<number | null>(null);
   const [onlinePlayers, setOnlinePlayers] = useState<OnlinePlayer[]>([]);
   const [sending, setSending] = useState(false);
   const [bankCount, setBankCount] = useState<number>(1660);
@@ -70,6 +73,19 @@ export default function Dashboard() {
       if (!res.ok) return;
       const data = await res.json();
       setRows(data.rows ?? []);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const loadSpeedBoard = useCallback(async () => {
+    try {
+      const res = await fetch("/api/speed");
+      if (!res.ok) return;
+      const data = await res.json();
+      setSpeedRows(data.rows ?? []);
+      const mine = (data.rows ?? []).find((r: DailyLeaderRow) => r.id === data.me);
+      if (mine) setSpeedBest(mine.correct);
     } catch {
       /* ignore */
     }
@@ -113,6 +129,7 @@ export default function Dashboard() {
       .catch(() => {});
     loadChat();
     loadLeaderboard();
+    loadSpeedBoard();
     loadOnlinePlayers();
     const best = parseInt(localStorage.getItem(PRC_BEST_KEY) || "0", 10);
     if (!isNaN(best)) setPrcBest(best);
@@ -126,10 +143,8 @@ export default function Dashboard() {
     };
   }, [lang, loadChat, loadLeaderboard, loadOnlinePlayers]);
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
+  // No auto-scroll on purpose: the page and the chat stay exactly where the
+  // player left them (new messages no longer yank the view around).
   const sendMessage = async () => {
     const text = chatInput.trim();
     if (!text || sending) return;
@@ -221,8 +236,16 @@ export default function Dashboard() {
       })
         .then(() => loadLeaderboard())
         .catch(() => {});
+      // persist the sprint itself so it lands on the all-time speed board
+      fetch("/api/speed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correct: prcCount, wrong: prcWrong, seconds: PRC_SECONDS }),
+      })
+        .then(() => loadSpeedBoard())
+        .catch(() => {});
     }
-  }, [prcTimeLeft, prcActive, prcCount, prcWrong, loadLeaderboard]);
+  }, [prcTimeLeft, prcActive, prcCount, prcWrong, loadLeaderboard, loadSpeedBoard]);
 
   const toggleSiteOff = useCallback(async () => {
     const goingOff = !siteOff;
@@ -509,6 +532,29 @@ export default function Dashboard() {
                   <span>👑</span> {t("leaderboardTitle")}
                 </Link>
                 <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => setRankTab("day")}
+                    className={`text-[0.62rem] font-cinzel px-1.5 py-0.5 rounded border cursor-pointer ${
+                      rankTab === "day"
+                        ? "text-[#1a0f05] bg-[#e8bf65] border-[#fff2c2] font-bold"
+                        : "text-[#d6b77f] border-[#7a5828]/60 hover:text-[#ffe49e]"
+                    }`}
+                  >
+                    {t("leaderboardTabDay")}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRankTab("speed");
+                      loadSpeedBoard();
+                    }}
+                    className={`text-[0.62rem] font-cinzel px-1.5 py-0.5 rounded border cursor-pointer ${
+                      rankTab === "speed"
+                        ? "text-[#04121c] bg-[#7fd8ff] border-[#d6f4ff] font-bold"
+                        : "text-[#d6b77f] border-[#7a5828]/60 hover:text-[#ffe49e]"
+                    }`}
+                  >
+                    ⚡ {t("leaderboardTabSpeed")}
+                  </button>
                   <Link
                     href="/leaderboard"
                     className="text-[0.65rem] font-cinzel text-[#d6b77f] hover:text-[#ffe49e] underline"
@@ -516,7 +562,7 @@ export default function Dashboard() {
                     {lang === "ro" ? "Tot" : "All"}
                   </Link>
                   <button
-                    onClick={loadLeaderboard}
+                    onClick={() => (rankTab === "day" ? loadLeaderboard() : loadSpeedBoard())}
                     className="text-[#d6b77f] hover:text-[#ffe49e] text-sm cursor-pointer transition-colors"
                     title={t("refresh")}
                   >
@@ -525,12 +571,12 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto flex flex-col gap-1.5 max-h-[240px]">
-                {rows.length === 0 ? (
+                {(rankTab === "day" ? rows : speedRows).length === 0 ? (
                   <div className="text-[#b89f72] text-xs text-center my-auto p-4">
-                    {t("leaderboardEmpty")}
+                    {rankTab === "day" ? t("leaderboardEmpty") : t("leaderboardSpeedEmpty")}
                   </div>
                 ) : (
-                  rows.map((r, i) => (
+                  (rankTab === "day" ? rows : speedRows).map((r, i) => (
                     <div
                       key={(r.id || r.name) + i}
                       className="grid grid-cols-[22px_minmax(0,1fr)_auto_auto] gap-1.5 text-[11px] px-2 py-1.5 rounded-lg items-center bg-[#120e1a]/70 border border-[#7a5828]/30"
@@ -550,11 +596,11 @@ export default function Dashboard() {
                       </span>
                       <span className="font-cinzel font-bold truncate text-[#f6ead0]">{r.name}</span>
                       <span className="text-[#f7cf70] font-bold whitespace-nowrap">
-                        🏆 {r.wins}
+                        {rankTab === "day" ? `🏆 ${r.wins ?? 0}` : `⚡ ${r.correct}`}
                       </span>
                       <span
                         className="font-mono text-[10px] bg-[#0c0a14] border border-[#7a5828]/40 rounded px-1.5 py-0.5 whitespace-nowrap"
-                        title={`${r.accuracy}%`}
+                        title={r.accuracy != null ? `${r.accuracy}%` : undefined}
                       >
                         <span className="text-emerald-400 font-bold">{r.correct}✓</span>
                         <span className="text-[#8e7a56] mx-0.5">/</span>

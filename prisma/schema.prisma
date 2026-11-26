@@ -47,6 +47,7 @@ model User {
   invitesSent         GameInvite[]       @relation("InviteFrom")
   invitesReceived     GameInvite[]       @relation("InviteTo")
   trainRuns           TrainRun[]
+  speedRuns           SpeedRun[]
 
   @@index([lastSeenAt])
 }
@@ -422,6 +423,22 @@ model GameInvite {
 
   @@index([toId, status])
   @@index([expiresAt])
+}
+
+// One finished "Măsoară viteza" (PRC) sprint: 30 seconds of mental arithmetic.
+// `correct` is the score that ranks the speed board, `wrong` is kept for the
+// accuracy column, `seconds` is the sprint length so older runs stay comparable.
+model SpeedRun {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  correct   Int
+  wrong     Int      @default(0)
+  seconds   Int      @default(30)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([correct, createdAt])
+  @@index([userId, createdAt])
 }
 
 // One finished 2-minute training blitz. `correct` is the score that ranks the
