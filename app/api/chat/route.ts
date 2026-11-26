@@ -106,13 +106,13 @@ export async function POST(req: Request) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: session.sub },
-      select: { displayName: true, isMuted: true, lastIp: true },
+      select: { displayName: true, isMuted: true },
     });
     if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     if (user.isMuted) {
       return NextResponse.json({ error: "Ești mutat. Nu poți trimite mesaje." }, { status: 403 });
     }
-    if (ip !== "unknown" && user.lastIp !== ip) {
+    if (ip !== "unknown") {
       await touchUserIp(session.sub, ip);
     }
     const replyToId = typeof body?.replyToId === "string" && body.replyToId ? body.replyToId : null;

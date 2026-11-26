@@ -281,11 +281,11 @@ export default function Dashboard() {
       </header>
 
       {/* ================= MAIN 2-COLUMN LAYOUT (NO LEFT MENU, NO MISIUNI ZILNICE): TALL CHAT LEFT + GAMES & CLASAMENT RIGHT ================= */}
-      <main className="w-full max-w-[1480px] mx-auto px-3 sm:px-6 mt-3 flex-1 grid grid-cols-1 lg:grid-cols-[360px_1fr] xl:grid-cols-[400px_1fr] gap-4 items-start z-10">
-        {/* ---- LEFT: TALL GENERAL CHAT BOX (more messages visible at once) ---- */}
+      <main className="w-full max-w-[1480px] mx-auto px-3 sm:px-6 mt-3 flex-1 grid grid-cols-1 lg:grid-cols-[420px_1fr] xl:grid-cols-[460px_1fr] gap-4 items-start z-10">
+        {/* ---- LEFT: LARGE GENERAL CHAT BOX (more messages visible at once) ---- */}
         <section
           ref={chatSectionRef}
-          className="royal-panel rounded-2xl flex flex-col h-[460px] lg:h-[calc(100vh-248px)] lg:min-h-[460px]"
+          className="royal-panel rounded-2xl flex flex-col h-[520px] lg:h-[calc(100vh-238px)] lg:min-h-[580px]"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#b68635]/40 bg-[#1a1322]/75 rounded-t-2xl">
             <h3 className="font-cinzel font-bold text-[#f7d279] text-xs sm:text-sm tracking-[0.14em] uppercase flex items-center gap-2">

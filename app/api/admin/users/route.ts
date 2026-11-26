@@ -17,29 +17,46 @@ async function requireAdmin(): Promise<{ id: string } | NextResponse> {
 export async function GET() {
   const auth = await requireAdmin();
   if (auth instanceof NextResponse) return auth;
-  const [users, ipRules] = await Promise.all([
-    prisma.user.findMany({
+  const baseSelect = {
+    id: true,
+    displayName: true,
+    email: true,
+    isAdmin: true,
+    isMuted: true,
+    hideScore: true,
+    canEditQuestions: true,
+    createdAt: true,
+  } as const;
+  let users: Array<{
+    id: string;
+    displayName: string;
+    email: string | null;
+    isAdmin: boolean;
+    isMuted: boolean;
+    hideScore: boolean;
+    canEditQuestions: boolean;
+    lastIp?: string | null;
+    createdAt: Date;
+  }>;
+  try {
+    users = await prisma.user.findMany({
       orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        displayName: true,
-        email: true,
-        isAdmin: true,
-        isMuted: true,
-        hideScore: true,
-        canEditQuestions: true,
-        lastIp: true,
-        createdAt: true,
-      },
-    }),
-    listIpRules(),
-  ]);
+      select: { ...baseSelect, lastIp: true },
+    });
+  } catch {
+    users = await prisma.user.findMany({
+      orderBy: { createdAt: "asc" },
+      select: baseSelect,
+    });
+  }
+  const ipRules = await listIpRules();
   const ruleByIp = new Map(ipRules.map((r) => [r.ip, r]));
   return NextResponse.json({
     users: users.map((u) => {
       const rule = u.lastIp ? ruleByIp.get(u.lastIp) : undefined;
       return {
         ...u,
+        lastIp: u.lastIp ?? null,
         ipBanned: rule?.isBanned ?? false,
         ipMuted: rule?.isMuted ?? false,
       };

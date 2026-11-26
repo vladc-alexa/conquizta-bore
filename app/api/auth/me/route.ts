@@ -16,15 +16,45 @@ export async function GET(req: Request) {
   if (!session) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const user = await prisma.user.findUnique({
-    where: { id: session.sub },
-    select: { id: true, displayName: true, isAdmin: true, isMuted: true, nameColor: true, hideScore: true, canEditQuestions: true, lastIp: true },
-  });
+  const selectBase = {
+    id: true,
+    displayName: true,
+    isAdmin: true,
+    isMuted: true,
+    nameColor: true,
+    hideScore: true,
+    canEditQuestions: true,
+  } as const;
+
+  let user: {
+    id: string;
+    displayName: string;
+    isAdmin: boolean;
+    isMuted: boolean;
+    nameColor: string | null;
+    hideScore: boolean;
+    canEditQuestions: boolean;
+    lastIp?: string | null;
+  } | null = null;
+
+  try {
+    user = await prisma.user.findUnique({
+      where: { id: session.sub },
+      select: { ...selectBase, lastIp: true },
+    });
+    if (user && ip !== "unknown" && user.lastIp !== ip) {
+      await touchUserIp(user.id, ip);
+    }
+  } catch {
+    // Fallback if lastIp column is not yet migrated in DB
+    user = await prisma.user.findUnique({
+      where: { id: session.sub },
+      select: selectBase,
+    });
+  }
+
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  if (ip !== "unknown" && user.lastIp !== ip) {
-    await touchUserIp(user.id, ip);
   }
   return NextResponse.json({
     id: user.id,
