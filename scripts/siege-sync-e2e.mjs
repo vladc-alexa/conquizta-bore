@@ -46,6 +46,11 @@ async function api(p, body, cookie) {
   return { status: res.status, json };
 }
 
+async function view(code, cookie) {
+  const res = await fetch(`${BASE}/api/rooms?code=${code}`, { headers: { cookie } });
+  return res.json();
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 console.log(`siege-sync-e2e against ${BASE}`);
@@ -102,8 +107,16 @@ ok("the correct answer is the one that fires", doneA.lastResult?.kind === "hit" 
 ok("verdict carries a deterministic target seed", typeof doneA.lastResult?.targetSeed === "number");
 
 // --- advance is idempotent: two clients calling it must not skip a round ---
+const seqBefore = (await view(code, A.cookie)).room.roundSeq;
+const tAdv = Date.now();
 const advA = await api("/api/rooms", { action: "advance", code, round: 1 }, A.cookie);
 const advB = await api("/api/rooms", { action: "advance", code, round: 1 }, B.cookie);
+const advanced = advA.json?.room;
+console.log(`  ·   advance POST round-trip: ${Date.now() - tAdv}ms`);
+ok(
+  "next question is already armed on the same response (prefetched)",
+  !!advanced?.roundQuestion && advanced.roundSeq > seqBefore
+);
 ok("advance moves to round 2 exactly once", advA.json?.room?.currentRound === 2 && advB.json?.room?.currentRound === 2, `${advA.json?.room?.currentRound}/${advB.json?.room?.currentRound}`);
 ok("round 2 question is served", !!advA.json?.room?.roundQuestion?.prompt);
 

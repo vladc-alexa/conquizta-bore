@@ -9,9 +9,9 @@
 
 export const SIEGE_GRILA_SECONDS = 12;
 export const SIEGE_TIE_SECONDS = 10;
-export const SIEGE_LEAD_MS = 2600; // "ready?" countdown before the first question
-export const SIEGE_NEXT_LEAD_MS = 1500; // short countdown between rounds
-export const SIEGE_TIE_LEAD_MS = 2200; // countdown before the tiebreaker question
+export const SIEGE_LEAD_MS = 700; // brief "ready?" beat before the first question
+export const SIEGE_NEXT_LEAD_MS = 350; // tiny beat between rounds (question is prefetched)
+export const SIEGE_TIE_LEAD_MS = 900; // beat before the tiebreaker question
 
 export type SiegeMode = "grila" | "rapide";
 export type SiegeSide = "left" | "right";

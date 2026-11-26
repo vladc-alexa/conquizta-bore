@@ -185,10 +185,13 @@ function TowerSiegeContent() {
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [waitingForOpp, setWaitingForOpp] = useState(false);
+  const [locked, setLocked] = useState(false);
   const offsetRef = useRef(0);
   const activeSeqRef = useRef(0);
   const appliedRoundRef = useRef(0);
   const roomViewRef = useRef<RoomView | null>(null);
+  const lockedRef = useRef(false);
+  lockedRef.current = locked;
   const codeRef = useRef<string | null>(null);
   const serverNow = useCallback(() => Date.now() + offsetRef.current, []);
 
@@ -426,7 +429,7 @@ function TowerSiegeContent() {
 
   const resolveGrila = useCallback(
     (q: GrilaQ, chosenIdx: number) => {
-      if (answeredRef.current) return;
+      if (answeredRef.current || lockedRef.current) return;
       if (chosenIdx >= 0) setSelectedOpt(chosenIdx);
       submitAnswer({ choice: chosenIdx >= 0 ? chosenIdx : null });
     },
@@ -437,7 +440,7 @@ function TowerSiegeContent() {
 
   const resolveTiebreaker = useCallback(
     (q: RapideQ, playerGuess: number | null) => {
-      if (answeredRef.current) return;
+      if (answeredRef.current || lockedRef.current) return;
       const ok = playerGuess !== null && !Number.isNaN(playerGuess);
       submitAnswer({ guess: ok ? playerGuess : null });
     },
@@ -562,7 +565,7 @@ function TowerSiegeContent() {
       }
     };
     poll();
-    const id = setInterval(poll, 700);
+    const id = setInterval(poll, 250);
     return () => {
       alive = false;
       clearInterval(id);
@@ -583,6 +586,7 @@ function TowerSiegeContent() {
       setTieInput("");
       setEventBanner(null);
       setWaitingForOpp(false);
+      setLocked(rv.roundStartedAt > serverNow());
       setRoundNum(rv.currentRound);
       if (rv.roundMode === "grila") {
         setGrilaQ(rv.roundQuestion as GrilaQ);
@@ -598,25 +602,25 @@ function TowerSiegeContent() {
 
     if (rv.lastResult || answeredRef.current || phase === "matchOver") return;
 
-    const limitSec = rv.roundMode === "grila" ? GRILA_SECONDS : TIE_SECONDS;
-    const deadline = rv.roundStartedAt + limitSec * 1000;
-
-    // Both screens wait out the same lead-in, counted on the server clock.
-    if (rv.roundStartedAt > serverNow()) {
-      clearTimer();
-      setTimeLeft(limitSec);
-      setPhase((p) => (p === "animating" || p === "matchOver" ? p : "loading"));
-      return;
-    }
-
+    // The question paints immediately; only answering waits for the shared start instant.
     setPhase((p) =>
       p === "animating" || p === "matchOver" ? p : rv.roundMode === "grila" ? "grila" : "tiebreaker"
     );
-    setTimeLeft(Math.max(0, (deadline - serverNow()) / 1000));
+    setLocked(rv.roundStartedAt > serverNow());
     if (timerRef.current === null) {
       timerRef.current = setInterval(() => {
-        setTimeLeft(Math.max(0, (deadline - serverNow()) / 1000));
-      }, 80);
+        const rv2 = roomViewRef.current;
+        if (!rv2) return;
+        const limit = (rv2.roundMode === "grila" ? GRILA_SECONDS : TIE_SECONDS) * 1000;
+        const now = serverNow();
+        if (now < rv2.roundStartedAt) {
+          setLocked(true);
+          setTimeLeft(Math.max(0, (rv2.roundStartedAt - now) / 1000));
+        } else {
+          setLocked(false);
+          setTimeLeft(Math.max(0, (rv2.roundStartedAt + limit - now) / 1000));
+        }
+      }, 60);
     }
   }, [roomView, phase, serverNow]);
 
@@ -1421,7 +1425,9 @@ function TowerSiegeContent() {
                     🎯 {t("siegeGrilaPhase")}
                     {grilaQ.category ? ` • ${grilaQ.category}` : ""}
                   </span>
-                  <span className="text-[#d6be92] text-[0.72rem]">{Math.ceil(timeLeft)}s</span>
+                  <span className="text-[#d6be92] text-[0.72rem]">
+                    {locked ? `⚔️ ${t("siegeBothReady")}` : `${Math.ceil(timeLeft)}s`}
+                  </span>
                 </div>
                 <div className="h-2 bg-[#0d0a12] rounded-full overflow-hidden border border-[#8e672b]/60">
                   <div
@@ -1443,9 +1449,11 @@ function TowerSiegeContent() {
                     <button
                       key={idx}
                       type="button"
-                      disabled={selectedOpt !== null}
+                      disabled={selectedOpt !== null || locked}
                       onClick={() => resolveGrila(grilaQ, idx)}
-                      className="bg-[#130f1c]/95 border-2 border-[#8c6429] hover:border-[#ffe28a] hover:bg-[#231932] rounded-xl text-left px-4 py-3 text-sm font-medium text-[#f6ead0] cursor-pointer transition-all flex items-start gap-2.5"
+                      className={`bg-[#130f1c]/95 border-2 border-[#8c6429] hover:border-[#ffe28a] hover:bg-[#231932] rounded-xl text-left px-4 py-3 text-sm font-medium text-[#f6ead0] cursor-pointer transition-all flex items-start gap-2.5 ${
+                        locked ? "opacity-55 saturate-50" : ""
+                      }`}
                     >
                       <span className="inline-flex items-center gap-1 shrink-0">
                         <kbd className="px-1.5 py-0.5 text-[0.65rem] font-mono font-bold rounded bg-[#0c0912] border border-[#b68635]/70 text-[#ffe28a]">
@@ -1498,12 +1506,13 @@ function TowerSiegeContent() {
                         resolveTiebreaker(tieQ, parseInt(tieInput, 10));
                       }
                     }}
+                    disabled={locked || waitingForOpp}
                     placeholder={t("trainNumericPlaceholder")}
                     className="flex-1 bg-[#0b0910] border-2 border-yellow-400 rounded-xl text-[#ffe59e] text-2xl font-cinzel font-bold text-center py-2.5 outline-none"
                   />
                   <button
                     type="button"
-                    disabled={tieInput === ""}
+                    disabled={tieInput === "" || locked || waitingForOpp}
                     onClick={() =>
                       resolveTiebreaker(tieQ, parseInt(tieInput, 10))
                     }

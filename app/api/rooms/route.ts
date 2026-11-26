@@ -58,6 +58,8 @@ export interface GameRoom {
   roundStartedAt?: number;
   roundAnswers?: Record<string, { seq: number; choice?: number | null; guess?: number | null; elapsedMs: number }>;
   lastResult?: SiegeRoundResult | null;
+  /** question fetched ahead of time so the next round opens instantly */
+  pendingQuestion?: { mode: SiegeMode; question: SiegeQuestion } | null;
   startAt?: number;
 }
 
@@ -156,7 +158,9 @@ async function armSiegeRound(
   leadMs: number,
   round: number
 ) {
-  const q = await fetchSiegeQuestion(req, mode, room.lang);
+  const warm = room.pendingQuestion && room.pendingQuestion.mode === mode ? room.pendingQuestion.question : null;
+  room.pendingQuestion = null;
+  const q = warm ?? (await fetchSiegeQuestion(req, mode, room.lang));
   if (!q) return false;
   armRound(siegeState(room), q, mode, leadMs, round);
   return true;
@@ -173,6 +177,15 @@ async function resolveSiegeRound(req: Request, room: GameRoom) {
   }
   s.lastResult = ev.result;
   room.updatedAt = Date.now();
+  void prefetchNextSiegeQuestion(req, room);
+}
+
+/** Warm the next question while both clients are watching the boulder fly. */
+async function prefetchNextSiegeQuestion(req: Request, room: GameRoom) {
+  if (room.gameType !== "siege") return;
+  if (room.pendingQuestion) return;
+  const q = await fetchSiegeQuestion(req, "grila", room.lang);
+  if (q) room.pendingQuestion = { mode: "grila", question: q };
 }
 
 /** Cheap housekeeping run on every room read/write. */
@@ -389,6 +402,7 @@ export async function POST(req: Request) {
         room.currentRound = 1;
         for (const s of room.seats) s.lastAnswer = undefined;
         await armSiegeRound(req, room, "grila", SIEGE_LEAD_MS, 1);
+        void prefetchNextSiegeQuestion(req, room);
         room.startAt = room.roundStartedAt;
       }
       return NextResponse.json({ room, serverNow: Date.now() });
@@ -480,6 +494,7 @@ export async function POST(req: Request) {
     room.roundQuestion = null;
     room.roundAnswers = {};
     room.lastResult = null;
+    room.pendingQuestion = null;
     room.roundStartedAt = 0;
     room.startAt = undefined;
     for (const s of room.seats) {
