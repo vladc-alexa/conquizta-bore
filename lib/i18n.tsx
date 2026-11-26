@@ -10,6 +10,7 @@ export const TRANSLATIONS = {
   ro: {
     brandTitle: "STONE QUIZ",
     logout: "Ieșire",
+    close: "Închide",
     siteOffTitle: "Oprește site-ul (mentenanță)",
     siteOnTitle: "Repornește site-ul",
     siteOffConfirm: "Oprești site-ul? Doar adminii vor mai vedea ceva.",
@@ -225,6 +226,7 @@ export const TRANSLATIONS = {
   en: {
     brandTitle: "STONE QUIZ",
     logout: "Sign Out",
+    close: "Close",
     siteOffTitle: "Switch the site off (maintenance)",
     siteOnTitle: "Switch the site back on",
     siteOffConfirm: "Switch the site off? Only admins will see anything.",

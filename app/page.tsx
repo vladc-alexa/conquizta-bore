@@ -59,7 +59,6 @@ export default function Dashboard() {
   const [prcDone, setPrcDone] = useState(false);
   const prcTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const prcInputRef = useRef<HTMLInputElement>(null);
-  const prcSectionRef = useRef<HTMLDivElement>(null);
   const chatSectionRef = useRef<HTMLElement>(null);
   const ranksSectionRef = useRef<HTMLElement>(null);
 
@@ -148,7 +147,15 @@ export default function Dashboard() {
         return t - 1;
       });
     }, 1000);
-    setTimeout(() => prcInputRef.current?.focus(), 0);
+    setTimeout(() => prcInputRef.current?.focus(), 60);
+  };
+
+  const closePrc = () => {
+    if (prcTimer.current) clearInterval(prcTimer.current);
+    prcTimer.current = null;
+    setPrcActive(false);
+    setPrcDone(false);
+    setPrcInput("");
   };
 
   const submitPrc = () => {
@@ -359,10 +366,7 @@ export default function Dashboard() {
             {/* Card 4: PRC SPRINT */}
             <button
               type="button"
-              onClick={() => {
-                prcSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-                startPrc();
-              }}
+              onClick={startPrc}
               className="mode-card group aspect-[3/4] flex flex-col justify-end text-left cursor-pointer"
             >
               <img
@@ -409,7 +413,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Bottom Grid: Narrower Clasamentul Zilei + Online Players + PRC Speed Trial */}
+          {/* Bottom Grid: Clasamentul Zilei + Online Players */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.95fr_1fr_0.9fr] gap-4">
             {/* Clasamentul Zilei (narrower) */}
             <section ref={ranksSectionRef} className="royal-panel rounded-2xl p-3.5 flex flex-col gap-2.5 min-h-[260px]">
@@ -567,76 +571,35 @@ export default function Dashboard() {
               </div>
             </section>
 
-            {/* PRC Speed Trial */}
-            <div ref={prcSectionRef} className="royal-panel rounded-2xl p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between border-b border-[#b68635]/40 pb-2">
-                <h3 className="font-cinzel font-bold text-[#f7d279] text-xs sm:text-sm tracking-[0.14em] uppercase">
-                  ⚡ {t("prcTitle")}
-                </h3>
-                {prcBest > 0 && (
-                  <span className="text-[0.68rem] font-cinzel text-[#ffd977] bg-[#2a1c0d] border border-[#b68635]/60 rounded-full px-2 py-0.5">
-                    ★ {prcBest}
-                  </span>
-                )}
-              </div>
-
-              {!prcActive && !prcDone && (
-                <>
-                  <p className="text-[#d9c49e] text-xs leading-relaxed">{t("prcDesc")}</p>
-                  {prcBest > 0 && (
-                    <p className="text-[#f7cf70] text-xs">
-                      {t("prcBest")} <strong>{prcBest}</strong>
-                    </p>
-                  )}
-                  <button
-                    onClick={startPrc}
-                    className="btn-crimson rounded-xl font-cinzel font-bold text-xs tracking-[0.14em] uppercase py-2.5 cursor-pointer mt-auto"
-                  >
-                    ⚡ {t("prcStart")}
-                  </button>
-                </>
-              )}
-
-              {prcActive && (
-                <div className="flex flex-col gap-2.5">
-                  <div className="text-center font-cinzel font-extrabold text-3xl gold-title py-1">
-                    {prcTarget}
-                  </div>
-                  <div className="text-center text-xs text-[#d6be92]">
-                    {t("prcTimeLeft")} <strong className="text-[#ffcf67]">{prcTimeLeft}s</strong> ·{" "}
-                    {t("prcCorrect")} <strong className="text-[#72e68a]">{prcCount}</strong>
-                  </div>
-                  <input
-                    ref={prcInputRef}
-                    type="number"
-                    value={prcInput}
-                    onChange={(e) => setPrcInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && submitPrc()}
-                    className="bg-[#0b0910] border-2 border-[#c9943b] rounded-xl text-[#ffebb8] text-xl font-bold text-center p-2 outline-none focus:border-[#ffe28a]"
-                  />
-                </div>
-              )}
-
-              {prcDone && (
-                <div className="flex flex-col gap-2.5 text-center">
-                  <div className="font-cinzel font-extrabold text-2xl gold-title">
-                    {prcCount} {t("prcCorrect")}
-                  </div>
-                  <div className="text-xs text-[#d6be92]">
-                    {t("prcWrong")} {prcWrong} · {t("prcRecord")} <strong>{prcBest}</strong>
-                  </div>
-                  <button
-                    onClick={startPrc}
-                    className="btn-crimson rounded-xl font-cinzel font-bold text-xs tracking-[0.14em] uppercase py-2.5 cursor-pointer"
-                  >
-                    {t("prcAgain")}
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </section>
-      </main>
+      {(prcActive || prcDone) && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" role="dialog" aria-modal="true">
+          <div className="royal-panel rounded-2xl p-5 w-full max-w-sm flex flex-col gap-3 relative">
+            <button onClick={closePrc} className="absolute right-3 top-3 h-6 w-6 rounded-md border border-[#7a4e22] bg-[#2a1608] text-[#c8a070] text-[0.7rem] cursor-pointer" aria-label="X">✕</button>
+            <div className="flex items-center justify-between border-b border-[#b68635]/40 pb-2 pr-8">
+              <h3 className="font-cinzel font-bold text-[#f7d279] text-xs tracking-[0.14em] uppercase">⚡ {t("prcTitle")}</h3>
+              {prcBest > 0 && (<span className="text-[0.68rem] font-cinzel text-[#ffd977] bg-[#2a1c0d] border border-[#b68635]/60 rounded-full px-2 py-0.5">★ {prcBest}</span>)}
+            </div>
+            {prcActive && (
+              <div className="flex flex-col gap-2.5">
+                <div className="text-center font-cinzel font-extrabold text-4xl gold-title py-1">{prcTarget}</div>
+                <div className="text-center text-xs text-[#d6be92]">{t("prcTimeLeft")} <strong className="text-[#ffcf67]">{prcTimeLeft}s</strong> · {t("prcCorrect")} <strong className="text-[#72e68a]">{prcCount}</strong></div>
+                <input ref={prcInputRef} type="number" value={prcInput} onChange={(e) => setPrcInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submitPrc()} autoFocus className="bg-[#0b0910] border-2 border-[#c9943b] rounded-xl text-[#ffebb8] text-2xl font-bold text-center p-3 outline-none focus:border-[#ffe28a]" />
+              </div>
+            )}
+            {prcDone && (
+              <div className="flex flex-col gap-2.5 text-center">
+                <div className="font-cinzel font-extrabold text-3xl gold-title">{prcCount} {t("prcCorrect")}</div>
+                <div className="text-xs text-[#d6be92]">{t("prcWrong")} {prcWrong} · {t("prcRecord")} <strong>{prcBest}</strong></div>
+                <button onClick={startPrc} className="btn-crimson rounded-xl font-cinzel font-bold text-xs tracking-[0.14em] uppercase py-2.5 cursor-pointer">{t("prcAgain")}</button>
+                <button onClick={closePrc} className="text-[0.7rem] font-cinzel text-[#c8a070] hover:text-[#ffe28a] underline underline-offset-2 cursor-pointer">{t("close")}</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </main>
 
       {/* ================= BOTTOM BAR WITH ALL NAVIGATION OPTIONS ================= */}
       <footer className="fixed bottom-0 inset-x-0 z-30 bg-gradient-to-t from-[#090810] via-[#12101d]/95 to-[#1a1527]/90 border-t-2 border-[#b68635]/80 shadow-[0_-8px_28px_rgba(0,0,0,0.8)]">
@@ -672,7 +635,7 @@ export default function Dashboard() {
             </Link>
             <button
               type="button"
-              onClick={() => prcSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}
+              onClick={startPrc}
               className="flex flex-col items-center text-[0.65rem] font-cinzel text-[#f3dfb4] hover:text-[#ffe396] transition-colors px-1.5 cursor-pointer shrink-0"
             >
               <span className="text-lg">⚡</span>
